@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles } from "lucide-react";
-import { getRandomPassage, type Passage } from "@/lib/passages";
+import { getRandomPassage, getAllPassages, type Passage } from "@/lib/passages";
 
 function PassageCard({ passage, onNext, onFavorite, isFavorited }: {
   passage: Passage;
@@ -97,10 +97,56 @@ export default function Home() {
           />
         )}
         {tab === "bookshelf" && (
-          <div className="text-center opacity-50">
-            <Heart size={48} className="mx-auto mb-4" />
-            <p>{favorites.length} 个收藏片段</p>
-            <p className="text-sm mt-2">Phase 2 功能</p>
+          <div className="w-full max-w-lg mx-auto">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Heart size={20} className="text-error" />
+              我的书架 · {favorites.length} 个收藏
+            </h2>
+            {favorites.length === 0 ? (
+              <div className="text-center opacity-50 py-12">
+                <Heart size={48} className="mx-auto mb-4" />
+                <p>还没有收藏片段</p>
+                <p className="text-sm mt-2">在「发现」页点击 ❤️ 收藏喜欢的片段</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {getAllPassages()
+                  .filter((p) => favorites.includes(p.id))
+                  .map((p) => (
+                    <div key={p.id} className="card bg-base-200 shadow-sm">
+                      <div className="card-body p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm opacity-60">
+                            <BookOpen size={14} />
+                            <span>《{p.bookTitle}》</span>
+                          </div>
+                          <button
+                            className="btn btn-ghost btn-xs text-error"
+                            onClick={() => {
+                              setFavorites((prev) => {
+                                const next = prev.filter((id) => id !== p.id);
+                                localStorage.setItem("rp-favorites", JSON.stringify(next));
+                                return next;
+                              });
+                            }}
+                          >
+                            <Heart size={14} fill="currentColor" />
+                          </button>
+                        </div>
+                        <p className="text-xs opacity-40">{p.author}</p>
+                        <blockquote className="text-sm leading-relaxed border-l-2 border-primary pl-3 my-2 italic line-clamp-3">
+                          &ldquo;{p.text}&rdquo;
+                        </blockquote>
+                        <div className="flex flex-wrap gap-1">
+                          {p.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="badge badge-outline badge-xs">{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
         )}
         {tab === "history" && (
