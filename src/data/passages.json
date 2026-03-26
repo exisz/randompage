@@ -1,20 +1,6 @@
 [
   {
     "id": "1",
-    "text": "By Jane Austen. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the HathiTrust Digital Library.",
-    "bookTitle": "Pride and Prejudice",
-    "author": "Jane Austen",
-    "tags": [
-      "romance",
-      "society",
-      "class",
-      "family",
-      "humorous"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "2",
     "text": "Mr. Wickham was the happy man towards whom almost every female eye was turned, and Elizabeth was the happy woman by whom he finally seated himself; and the agreeable manner in which he immediately fell into conversation, though it was only on its being a wet night, and on the probability of a rainy season, made her feel that the commonest, dullest, most threadbare topic might be rendered interesting by the skill of the speaker.",
     "bookTitle": "Pride and Prejudice",
     "author": "Jane Austen",
@@ -27,7 +13,7 @@
     "language": "en"
   },
   {
-    "id": "3",
+    "id": "2",
     "text": "Her fellow-travellers the next day were not of a kind to make her think him less agreeable. Sir William Lucas, and his daughter Maria, a good humoured girl, but as empty-headed as himself, had nothing to say that could be worth hearing, and were listened to with about as much delight as the rattle of the chaise. Elizabeth loved absurdities, but she had known Sir William’s too long. He could tell her nothing new of the wonders of his presentation and knighthood; and his civilities were worn out like his information.",
     "bookTitle": "Pride and Prejudice",
     "author": "Jane Austen",
@@ -40,7 +26,7 @@
     "language": "en"
   },
   {
-    "id": "4",
+    "id": "3",
     "text": "Had Elizabeth’s opinion been all drawn from her own family, she could not have formed a very pleasing picture of conjugal felicity or domestic comfort. Her father, captivated by youth and beauty, and that appearance of good humour which youth and beauty generally give, had married a woman whose weak understanding and illiberal mind, had very early in their marriage put an end to all real affection for her. Respect, esteem, and confidence, had vanished forever; and all his views of domestic happiness were overthrown. But Mr. Bennet was not of a disposition to seek comfort for the disappointment",
     "bookTitle": "Pride and Prejudice",
     "author": "Jane Austen",
@@ -54,7 +40,7 @@
     "language": "en"
   },
   {
-    "id": "5",
+    "id": "4",
     "text": "It was not to be supposed that time would give Lydia that embarrassment, from which she had been so wholly free at first. Her ease and good spirits increased. She longed to see Mrs. Philips, the Lucases, and all their other neighbours, and to hear herself called “Mrs. Wickham,” by each of them; and in the meantime, she went after dinner to show her ring and boast of being married, to Mrs. Hill and the two housemaids.",
     "bookTitle": "Pride and Prejudice",
     "author": "Jane Austen",
@@ -68,21 +54,7 @@
     "language": "en"
   },
   {
-    "id": "6",
-    "text": "By Fyodor Dostoevsky. Translated by Constance Garnett. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "Crime and Punishment",
-    "author": "Fyodor Dostoevsky",
-    "tags": [
-      "psychological",
-      "dark",
-      "morality",
-      "crime",
-      "identity"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "7",
+    "id": "5",
     "text": "“I don’t want⁠ ⁠… the money.” “Don’t want the money! Come, brother, that’s nonsense, I bear witness. Don’t trouble, please, it’s only that he is on his travels again. But that’s pretty common with him at all times though.⁠ ⁠… You are a man of judgment and we will take him in hand, that is, more simply, take his hand and he will sign it. Here.” “But I can come another time.” “No, no. Why should we trouble you? You are a man of judgment.⁠ ⁠… Now, Rodya, don’t keep your visitor, you see he is waiting,” and he made ready to hold Raskolnikov’s hand in earnest.",
     "bookTitle": "Crime and Punishment",
     "author": "Fyodor Dostoevsky",
@@ -95,7 +67,7 @@
     "language": "en"
   },
   {
-    "id": "8",
+    "id": "6",
     "text": "“Ach, Rodya, that was only till two o’clock. Dounia and I never go to bed before two at home.” “I don’t know how to thank him either,” Raskolnikov went on, suddenly frowning and looking down. “Setting aside the question of payment⁠—forgive me for referring to it (he turned to Zossimov)⁠—I really don’t know what I have done to deserve such special attention from you! I simply don’t understand it⁠ ⁠… and⁠ ⁠… and⁠ ⁠… it weighs upon me, indeed, because I don’t understand it. I tell you so candidly.”",
     "bookTitle": "Crime and Punishment",
     "author": "Fyodor Dostoevsky",
@@ -108,7 +80,7 @@
     "language": "en"
   },
   {
-    "id": "9",
+    "id": "7",
     "text": "“There are three ways before her,” he thought, “the canal, the madhouse, or⁠ ⁠… at last to sink into depravity which obscures the mind and turns the heart to stone.” The last idea was the most revolting, but he was a sceptic, he was young, abstract, and therefore cruel, and so he could not help believing that the last end was the most likely.",
     "bookTitle": "Crime and Punishment",
     "author": "Fyodor Dostoevsky",
@@ -122,7 +94,7 @@
     "language": "en"
   },
   {
-    "id": "10",
+    "id": "8",
     "text": "“Enough! It’s over! Farewell, poor thing! I am done for! I am broken!” she cried with vindictive despair, and her head fell heavily back on the pillow. She sank into unconsciousness again, but this time it did not last long. Her pale, yellow, wasted face dropped back, her mouth fell open, her leg moved convulsively, she gave a deep, deep sigh and died.",
     "bookTitle": "Crime and Punishment",
     "author": "Fyodor Dostoevsky",
@@ -135,21 +107,7 @@
     "language": "en"
   },
   {
-    "id": "11",
-    "text": "By Oscar Wilde. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "The Picture of Dorian Gray",
-    "author": "Oscar Wilde",
-    "tags": [
-      "gothic",
-      "philosophical",
-      "beauty",
-      "morality",
-      "identity"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "12",
+    "id": "9",
     "text": "“I would sooner come with you; yes, I feel I must come with you. Do let me. And you will promise to talk to me all the time? No one talks so wonderfully as you do.” “Ah! I have talked quite enough for today,” said Lord Henry, smiling. “All I want now is to look at life. You may come and look at it with me, if you care to.”",
     "bookTitle": "The Picture of Dorian Gray",
     "author": "Oscar Wilde",
@@ -163,7 +121,7 @@
     "language": "en"
   },
   {
-    "id": "13",
+    "id": "10",
     "text": "A low moan broke from her, and she flung herself at his feet and lay there like a trampled flower. “Dorian, Dorian, don’t leave me!” she whispered. “I am so sorry I didn’t act well. I was thinking of you all the time. But I will try⁠—indeed, I will try. It came so suddenly across me, my love for you. I think I should never have known it if you had not kissed me⁠—if we had not kissed each other. Kiss me again, my love. Don’t go away from me. I couldn’t bear it. Oh! don’t go away from me. My brother⁠ ⁠… No; never mind. He didn’t mean it. He was in jest.⁠ ⁠… But you, oh! can’t you forgive me for ",
     "bookTitle": "The Picture of Dorian Gray",
     "author": "Oscar Wilde",
@@ -177,7 +135,7 @@
     "language": "en"
   },
   {
-    "id": "14",
+    "id": "11",
     "text": "Then he turned his attention to embroideries and to the tapestries that performed the office of frescoes in the chill rooms of the northern nations of Europe. As he investigated the subject⁠—and he always had an extraordinary faculty of becoming absolutely absorbed for the moment in whatever he took up⁠—he was almost saddened by the reflection of the ruin that time brought on beautiful and wonderful things. He, at any rate, had escaped that. Summer followed summer, and the yellow jonquils bloomed and died many times, and nights of horror repeated the story of their shame, but he was unchanged.",
     "bookTitle": "The Picture of Dorian Gray",
     "author": "Oscar Wilde",
@@ -190,7 +148,7 @@
     "language": "en"
   },
   {
-    "id": "15",
+    "id": "12",
     "text": "The man shook his head. “It is too far for me,” he muttered. “Here is a sovereign for you,” said Dorian. “You shall have another if you drive fast.” “All right, sir,” answered the man, “you will be there in an hour,” and after his fare had got in he turned his horse round and drove rapidly towards the river.",
     "bookTitle": "The Picture of Dorian Gray",
     "author": "Oscar Wilde",
@@ -203,21 +161,7 @@
     "language": "en"
   },
   {
-    "id": "16",
-    "text": "By Mary Shelley. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "Frankenstein",
-    "author": "Mary Shelley",
-    "tags": [
-      "gothic",
-      "sci-fi",
-      "horror",
-      "morality",
-      "identity"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "17",
+    "id": "13",
     "text": "How can I describe my emotions at this catastrophe, or how delineate the wretch whom with such infinite pains and care I had endeavoured to form? His limbs were in proportion, and I had selected his features as beautiful. Beautiful!⁠—Great God! His yellow skin scarcely covered the work of muscles and arteries beneath; his hair was of a lustrous black, and flowing; his teeth of a pearly whiteness; but these luxuriances only formed a more horrid contrast with his watery eyes, that seemed almost of the same colour as the dun white sockets in which they were set, his shrivelled complexion and stra",
     "bookTitle": "Frankenstein",
     "author": "Mary Shelley",
@@ -231,7 +175,7 @@
     "language": "en"
   },
   {
-    "id": "18",
+    "id": "14",
     "text": "“How can I move thee? Will no entreaties cause thee to turn a favourable eye upon thy creature, who implores thy goodness and compassion? Believe me, Frankenstein: I was benevolent; my soul glowed with love and humanity: but am I not alone, miserably alone? You, my creator, abhor me; what hope can I gather from your fellow-creatures, who owe me nothing? They spurn and hate me. The desert mountains and dreary glaciers are my refuge. I have wandered here many days; the caves of ice, which I only do not fear, are a dwelling to me, and the only one which man does not grudge. These bleak skies I ha",
     "bookTitle": "Frankenstein",
     "author": "Mary Shelley",
@@ -245,7 +189,7 @@
     "language": "en"
   },
   {
-    "id": "19",
+    "id": "15",
     "text": "“I gazed on my victim, and my heart swelled with exultation and hellish triumph: clapping my hands, I exclaimed, ‘I, too, can create desolation; my enemy is not invulnerable; this death will carry despair to him, and a thousand other miseries shall torment and destroy him.’",
     "bookTitle": "Frankenstein",
     "author": "Mary Shelley",
@@ -259,7 +203,7 @@
     "language": "en"
   },
   {
-    "id": "20",
+    "id": "16",
     "text": "Still, as I urged our leaving Ireland with such inquietude and impatience, my father thought it best to yield. We took our passage on board a vessel bound for Havre-de-Grace, and sailed with a fair wind from the Irish shores. It was midnight. I lay on the deck, looking at the stars, and listening to the dashing of the waves. I hailed the darkness that shut Ireland from my sight; and my pulse beat with a feverish joy when I reflected that I should soon see Geneva. The past appeared to me in the light of a frightful dream; yet the vessel in which I was, the wind that blew me from the detested sh",
     "bookTitle": "Frankenstein",
     "author": "Mary Shelley",
@@ -272,21 +216,7 @@
     "language": "en"
   },
   {
-    "id": "21",
-    "text": "By Virginia Woolf. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg Australia and on digital scans from the Internet Archive.",
-    "bookTitle": "Mrs Dalloway",
-    "author": "Virginia Woolf",
-    "tags": [
-      "psychological",
-      "reflective",
-      "society",
-      "identity",
-      "time"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "22",
+    "id": "17",
     "text": "“Richard’s very well. Richard’s at a Committee,” said Clarissa. And she opened her scissors, and said, did he mind her just finishing what she was doing to her dress, for they had a party that night? “Which I shan’t ask you to,” she said. “My dear Peter!” she said. But it was delicious to hear her say that⁠—my dear Peter! Indeed, it was all so delicious⁠—the silver, the chairs; all so delicious! Why wouldn’t she ask him to her party? he asked.",
     "bookTitle": "Mrs Dalloway",
     "author": "Virginia Woolf",
@@ -299,7 +229,7 @@
     "language": "en"
   },
   {
-    "id": "23",
+    "id": "18",
     "text": "And of course she enjoyed life immensely. It was her nature to enjoy (though goodness only knows, she had her reserves; it was a mere sketch, he often felt, that even he, after all these years, could make of Clarissa). Anyhow there was no bitterness in her; none of that sense of moral virtue which is so repulsive in good women. She enjoyed practically everything. If you walked with her in Hyde Park now it was a bed of tulips, now a child in a perambulator, now some absurd little drama she made up on the spur of the moment. (Very likely, she would have talked to those lovers, if she had thought",
     "bookTitle": "Mrs Dalloway",
     "author": "Virginia Woolf",
@@ -313,7 +243,7 @@
     "language": "en"
   },
   {
-    "id": "24",
+    "id": "19",
     "text": "Since she was lying on the sofa, cloistered, exempt, the presence of this thing which she felt to be so obvious became physically existent; with robes of sound from the street, sunny, with hot breath, whispering, blowing out the blinds. But suppose Peter said to her, “Yes, yes, but your parties⁠—what’s the sense of your parties?” all she could say was (and nobody could be expected to understand): They’re an offering; which sounded horribly vague. But who was Peter to make out that life was all plain sailing?⁠—Peter always in love, always in love with the wrong woman? What’s your love? she migh",
     "bookTitle": "Mrs Dalloway",
     "author": "Virginia Woolf",
@@ -327,7 +257,7 @@
     "language": "en"
   },
   {
-    "id": "25",
+    "id": "20",
     "text": "It was not very profound⁠—only to the effect that London was crowded; had changed in thirty years; that Mr. Morris preferred Liverpool; that Mrs. Morris had been to the Westminster flower-show, and that they had all seen the Prince of Wales. Yet, thought Peter Walsh, no family in the world can compare with the Morrises; none whatever; and their relations to each other are perfect, and they don’t care a hang for the upper classes, and they like what they like, and Elaine is training for the family business, and the boy has won a scholarship at Leeds, and the old lady (who is about his own age) ",
     "bookTitle": "Mrs Dalloway",
     "author": "Virginia Woolf",
@@ -341,21 +271,7 @@
     "language": "en"
   },
   {
-    "id": "26",
-    "text": "By Herman Melville. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "Moby-Dick",
-    "author": "Herman Melville",
-    "tags": [
-      "adventure",
-      "epic",
-      "nature",
-      "fate",
-      "power"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "27",
+    "id": "21",
     "text": "It was curious and not unpleasing, how Peleg and Bildad were affected at this juncture, especially Captain Bildad. For loath to depart, yet; very loath to leave, for good, a ship bound on so long and perilous a voyage⁠—beyond both stormy Capes; a ship in which some thousands of his hard earned dollars were invested; a ship, in which an old shipmate sailed as captain; a man almost as old as he, once more starting to encounter all the terrors of the pitiless jaw; loath to say goodbye to a thing so every way brimful of every interest to him⁠—poor old Bildad lingered long; paced the deck with anxi",
     "bookTitle": "Moby-Dick",
     "author": "Herman Melville",
@@ -368,7 +284,7 @@
     "language": "en"
   },
   {
-    "id": "28",
+    "id": "22",
     "text": "Round the world! There is much in that sound to inspire proud feelings; but whereto does all that circumnavigation conduct? Only through numberless perils to the very point whence we started, where those that we left behind secure, were all the time before us.",
     "bookTitle": "Moby-Dick",
     "author": "Herman Melville",
@@ -382,7 +298,7 @@
     "language": "en"
   },
   {
-    "id": "29",
+    "id": "23",
     "text": "As an overladen Indiaman bearing down the Hindostan coast with a deck load of frightened horses, careens, buries, rolls, and wallows on her way; so did this old whale heave his aged bulk, and now and then partly turning over on his cumbrous rib-ends, expose the cause of his devious wake in the unnatural stump of his starboard fin. Whether he had lost that fin in battle, or had been born without it, it were hard to say. “Only wait a bit, old chap, and I’ll give ye a sling for that wounded arm,” cried cruel Flask, pointing to the whale-line near him.",
     "bookTitle": "Moby-Dick",
     "author": "Herman Melville",
@@ -395,7 +311,7 @@
     "language": "en"
   },
   {
-    "id": "30",
+    "id": "24",
     "text": "Hist, then. How dost thou know that some entire, living, thinking thing may not be invisibly and uninterpenetratingly standing precisely where thou now standest; aye, and standing there in thy spite? In thy most solitary hours, then, dost thou not fear eavesdroppers? Hold, don’t speak! And if I still feel the smart of my crushed leg, though it be now so long dissolved; then, why mayst not thou, carpenter, feel the fiery pains of hell forever, and without a body? Hah! Good Lord! Truly, sir, if it comes to that, I must calculate over again; I think I didn’t carry a small figure, sir.",
     "bookTitle": "Moby-Dick",
     "author": "Herman Melville",
@@ -409,21 +325,7 @@
     "language": "en"
   },
   {
-    "id": "31",
-    "text": "By Charles Dickens. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "A Tale of Two Cities",
-    "author": "Charles Dickens",
-    "tags": [
-      "political",
-      "dramatic",
-      "war",
-      "justice",
-      "fate"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "32",
+    "id": "25",
     "text": "“Really, Mr. Carton,” returned the other, oddly disconcerted, “I have not asked myself the question.” “But ask yourself the question now.” “You have acted as if you do; but I don’t think you do.” “I don’t think I do,” said Carton. “I begin to have a very good opinion of your understanding.” “Nevertheless,” pursued Darnay, rising to ring the bell, “there is nothing in that, I hope, to prevent my calling the reckoning, and our parting without ill-blood on either side.”",
     "bookTitle": "A Tale of Two Cities",
     "author": "Charles Dickens",
@@ -436,7 +338,7 @@
     "language": "en"
   },
   {
-    "id": "33",
+    "id": "26",
     "text": "Thus the evening wore away with the Cruncher family, until Young Jerry was ordered to bed, and his mother, laid under similar injunctions, obeyed them. Mr. Cruncher beguiled the earlier watches of the night with solitary pipes, and did not start upon his excursion until nearly one o’clock. Towards that small and ghostly hour, he rose up from his chair, took a key out of his pocket, opened a locked cupboard, and brought forth a sack, a crowbar of convenient size, a rope and chain, and other fishing tackle of that nature. Disposing these articles about him in skilful manner, he bestowed a partin",
     "bookTitle": "A Tale of Two Cities",
     "author": "Charles Dickens",
@@ -449,7 +351,7 @@
     "language": "en"
   },
   {
-    "id": "34",
+    "id": "27",
     "text": "The château was left to itself to flame and burn. In the roaring and raging of the conflagration, a red-hot wind, driving straight from the infernal regions, seemed to be blowing the edifice away. With the rising and falling of the blaze, the stone faces showed as if they were in torment. When great masses of stone and timber fell, the face with the two dints in the nose became obscured: anon struggled out of the smoke again, as if it were the face of the cruel Marquis, burning at the stake and contending with the fire.",
     "bookTitle": "A Tale of Two Cities",
     "author": "Charles Dickens",
@@ -463,7 +365,7 @@
     "language": "en"
   },
   {
-    "id": "35",
+    "id": "28",
     "text": "They were both silent. “Yours is a long life to look back upon, sir?” said Carton, wistfully. “I am in my seventy-eighth year.” “You have been useful all your life; steadily and constantly occupied; trusted, respected, and looked up to?” “I have been a man of business, ever since I have been a man. Indeed, I may say that I was a man of business when a boy.” “See what a place you fill at seventy-eight. How many people will miss you when you leave it empty!” “A solitary old bachelor,” answered Mr. Lorry, shaking his head. “There is nobody to weep for me.”",
     "bookTitle": "A Tale of Two Cities",
     "author": "Charles Dickens",
@@ -477,21 +379,7 @@
     "language": "en"
   },
   {
-    "id": "36",
-    "text": "By Leo Tolstoy. Translated by Constance Garnett. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the HathiTrust Digital Library.",
-    "bookTitle": "Anna Karenina",
-    "author": "Leo Tolstoy",
-    "tags": [
-      "romance",
-      "dramatic",
-      "love",
-      "family",
-      "society"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "37",
+    "id": "29",
     "text": "The place fixed on for the stand-shooting was not far above a stream in a little aspen copse. On reaching the copse, Levin got out of the trap and led Oblonsky to a corner of a mossy, swampy glade, already quite free from snow. He went back himself to a double birch tree on the other side, and leaning his gun on the fork of a dead lower branch, he took off his full overcoat, fastened his belt again, and worked his arms to see if they were free.",
     "bookTitle": "Anna Karenina",
     "author": "Leo Tolstoy",
@@ -504,7 +392,7 @@
     "language": "en"
   },
   {
-    "id": "38",
+    "id": "30",
     "text": "“If I’d only the heart to throw up what’s been set going⁠ ⁠… such a lot of trouble wasted⁠ ⁠… I’d turn my back on the whole business, sell up, go off like Nikolay Ivanovitch⁠ ⁠… to hear La Belle Hélène,” said the landowner, a pleasant smile lighting up his shrewd old face. “But you see you don’t throw it up,” said Nikolay Ivanovitch Sviazhsky; “so there must be something gained.”",
     "bookTitle": "Anna Karenina",
     "author": "Leo Tolstoy",
@@ -518,7 +406,7 @@
     "language": "en"
   },
   {
-    "id": "39",
+    "id": "31",
     "text": "Everything went rapidly in her hands, and before it was twelve o’clock all their things were arranged cleanly and tidily in her rooms, in such a way that the hotel rooms seemed like home: the beds were made, brushes, combs, looking-glasses were put out, table napkins were spread. Levin felt that it was unpardonable to eat, to sleep, to talk even now, and it seemed to him that every movement he made was unseemly. She arranged the brushes, but she did it all so that there was nothing shocking in it.",
     "bookTitle": "Anna Karenina",
     "author": "Leo Tolstoy",
@@ -531,7 +419,7 @@
     "language": "en"
   },
   {
-    "id": "40",
+    "id": "32",
     "text": "“Oh, this is such an original fellow!” said Stepan Arkadyevitch with his most soothing, almond-oil smile. “But come along; I think they’re voting.⁠ ⁠…” And they separated.",
     "bookTitle": "Anna Karenina",
     "author": "Leo Tolstoy",
@@ -544,21 +432,7 @@
     "language": "en"
   },
   {
-    "id": "41",
-    "text": "By F. Scott Fitzgerald. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Faded Page and on digital scans from the Internet Archive.",
-    "bookTitle": "The Great Gatsby",
-    "author": "F. Scott Fitzgerald",
-    "tags": [
-      "romance",
-      "dramatic",
-      "ambition",
-      "society",
-      "time"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "42",
+    "id": "33",
     "text": "The little dog was sitting on the table looking with blind eyes through the smoke, and from time to time groaning faintly. People disappeared, reappeared, made plans to go somewhere, and then lost each other, searched for each other, found each other a few feet away. Some time toward midnight Tom Buchanan and Mrs. Wilson stood face to face discussing, in impassioned voices, whether Mrs. Wilson had any right to mention Daisy’s name. “Daisy! Daisy! Daisy!” shouted Mrs. Wilson. “I’ll say it whenever I want to! Daisy! Dai⁠—”",
     "bookTitle": "The Great Gatsby",
     "author": "F. Scott Fitzgerald",
@@ -572,7 +446,7 @@
     "language": "en"
   },
   {
-    "id": "43",
+    "id": "34",
     "text": "—I was walking along from one place to another, half on the sidewalks and half on the lawns. I was happier on the lawns because I had on shoes from England with rubber knobs on the soles that bit into the soft ground. I had on a new plaid skirt also that blew a little in the wind, and whenever this happened the red, white, and blue banners in front of all the houses stretched out stiff and said tut-tut-tut-tut, in a disapproving way.",
     "bookTitle": "The Great Gatsby",
     "author": "F. Scott Fitzgerald",
@@ -585,7 +459,7 @@
     "language": "en"
   },
   {
-    "id": "44",
+    "id": "35",
     "text": "He talked a lot about the past, and I gathered that he wanted to recover something, some idea of himself perhaps, that had gone into loving Daisy. His life had been confused and disordered since then, but if he could once return to a certain starting place and go over it all slowly, he could find out what that thing was⁠ ⁠…",
     "bookTitle": "The Great Gatsby",
     "author": "F. Scott Fitzgerald",
@@ -599,7 +473,7 @@
     "language": "en"
   },
   {
-    "id": "45",
+    "id": "36",
     "text": "He might have despised himself, for he had certainly taken her under false pretences. I don’t mean that he had traded on his phantom millions, but he had deliberately given Daisy a sense of security; he let her believe that he was a person from much the same strata as herself⁠—that he was fully able to take care of her. As a matter of fact, he had no such facilities⁠—he had no comfortable family standing behind him, and he was liable at the whim of an impersonal government to be blown anywhere about the world.",
     "bookTitle": "The Great Gatsby",
     "author": "F. Scott Fitzgerald",
@@ -613,21 +487,7 @@
     "language": "en"
   },
   {
-    "id": "46",
-    "text": "By Marcus Aurelius. Translated by George Long. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from the Internet Classics Archive and on digital scans from Google Books.",
-    "bookTitle": "Meditations",
-    "author": "Marcus Aurelius",
-    "tags": [
-      "philosophy",
-      "reflective",
-      "morality",
-      "identity",
-      "time"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "47",
+    "id": "37",
     "text": "Unhappy am I because this has happened to me.⁠—Not so, but happy am I, though this has happened to me, because I continue free from pain, neither crushed by the present nor fearing the future. For such a thing as this might have happened to every man; but every man would not have continued free from pain on such an occasion. Why then is that rather a misfortune than this a good fortune? And dost thou in all cases call that a man’s misfortune, which is not a deviation from man’s nature? And does a thing seem to thee to be a deviation from man’s nature, when it is not contrary to the will of man",
     "bookTitle": "Meditations",
     "author": "Marcus Aurelius",
@@ -641,7 +501,7 @@
     "language": "en"
   },
   {
-    "id": "48",
+    "id": "38",
     "text": "How many after being celebrated by fame have been given up to oblivion; and how many who have celebrated the fame of others have long been dead. Be not ashamed to be helped; for it is thy business to do thy duty like a soldier in the assault on a town. How then, if being lame thou canst not mount up on the battlements alone, but with the help of another it is possible? Let not future things disturb thee, for thou wilt come to them, if it shall be necessary, having with thee the same reason which now thou usest for present things.",
     "bookTitle": "Meditations",
     "author": "Marcus Aurelius",
@@ -655,7 +515,7 @@
     "language": "en"
   },
   {
-    "id": "49",
+    "id": "39",
     "text": "It would be a man’s happiest lot to depart from mankind without having had any taste of lying and hypocrisy and luxury and pride. However to breathe out one’s life when a man has had enough of these things is the next best voyage, as the saying is. Hast thou determined to abide with vice, and has not experience yet induced thee to fly from this pestilence? For the destruction of the understanding is a pestilence, much more indeed than any such corruption and change of this atmosphere which surrounds us. For this corruption is a pestilence of animals so far as they are animals; but the other is",
     "bookTitle": "Meditations",
     "author": "Marcus Aurelius",
@@ -669,7 +529,7 @@
     "language": "en"
   },
   {
-    "id": "50",
+    "id": "40",
     "text": "Ninth, consider that a good disposition is invincible, if it be genuine, and not an affected smile and acting a part. For what will the most violent man do to thee, if thou continuest to be of a kind disposition towards him, and if, as opportunity offers, thou gently admonishest him and calmly correctest his errors at the very time when he is trying to do thee harm, saying, Not so, my child: we are constituted by nature for something else: I shall certainly not be injured, but thou art injuring thyself, my child.⁠—And show him with gentle tact and by general principles that this is so, and tha",
     "bookTitle": "Meditations",
     "author": "Marcus Aurelius",
@@ -683,20 +543,7 @@
     "language": "en"
   },
   {
-    "id": "51",
-    "text": "By Sun Tzu. Translated by Lionel Giles. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from various sources.",
-    "bookTitle": "The Art of War",
-    "author": "Sun Tzu",
-    "tags": [
-      "war",
-      "tense",
-      "power",
-      "strategy"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "52",
+    "id": "41",
     "text": "When he utilizes combined energy, his fighting men become as it were like unto rolling logs or stones. For it is the nature of a log or stone to remain motionless on level ground, and to move when on a slope; if four-cornered, to come to a standstill, but if round-shaped, to go rolling down.297 Thus the energy developed by good fighting men is as the momentum of a round stone rolled down a mountain thousands of feet in height. So much on the subject of energy.298 Weak Points and Strong299",
     "bookTitle": "The Art of War",
     "author": "Sun Tzu",
@@ -709,7 +556,7 @@
     "language": "en"
   },
   {
-    "id": "53",
+    "id": "42",
     "text": "It appears from what follows that Sun Tzǔ means by 道 a principle of harmony, not unlike the Tao of Lao Tzǔ in its moral aspect. One might be tempted to render it by “morale,” were it not considered as an attribute of the ruler in the first of the seven considerations. ↩ The original text omits 令民, inserts an 以 after each 可, and omits 民 after 而. Capt. Calthrop translates: “If the ruling authority be upright, the people are united”⁠—a very pretty sentiment, but wholly out of place in what purports to be a translation of Sun Tzǔ. ↩",
     "bookTitle": "The Art of War",
     "author": "Sun Tzu",
@@ -723,7 +570,7 @@
     "language": "en"
   },
   {
-    "id": "54",
+    "id": "43",
     "text": "For 罷, see note 212 on II. The moral is, as Tsʽao Kung and others point out: Don’t march a hundred li to gain a tactical advantage, either with or without impedimenta. Manoeuvres of this description should be confined to short distances. Stonewall Jackson said: “The hardships of forced marches are often more painful than the dangers of battle.” He did not often call upon his troops for extraordinary exertions. It was only when he intended a surprise, or when a rapid retreat was imperative, that he sacrificed everything to speed.777 ↩",
     "bookTitle": "The Art of War",
     "author": "Sun Tzu",
@@ -736,7 +583,7 @@
     "language": "en"
   },
   {
-    "id": "55",
+    "id": "44",
     "text": "This is only a makeshift translation of 交, which according to Tsʽao Kung stands for 交錯 “ground covered with a network of roads,” like a chessboard. Another interpretation, suggested by Ho Shih, is 交通 “ground on which intercommunication is easy.” In either case, it must evidently be 平原 “flat country,” and therefore 不可杜絕 “cannot be blocked.” Cf. 通形, chapter X. (“Ground which can be freely traversed⁠ ⁠…” ↩",
     "bookTitle": "The Art of War",
     "author": "Sun Tzu",
@@ -750,20 +597,7 @@
     "language": "en"
   },
   {
-    "id": "56",
-    "text": "By Niccolò Machiavelli. Translated by W. K. Marriot. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "The Prince",
-    "author": "Niccolò Machiavelli",
-    "tags": [
-      "political",
-      "dramatic",
-      "power",
-      "ambition"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "57",
+    "id": "45",
     "text": "Again, the prince who holds a country differing in the above respects ought to make himself the head and defender of his less powerful neighbours, and to weaken the more powerful amongst them, taking care that no foreigner as powerful as himself shall, by any accident, get a footing there; for it will always happen that such a one will be introduced by those who are discontented, either through excess of ambition or through fear, as one has seen already. The Romans were brought into Greece by the Aetolians; and in every other country where they obtained a footing they were brought in by the in",
     "bookTitle": "The Prince",
     "author": "Niccolò Machiavelli",
@@ -777,7 +611,7 @@
     "language": "en"
   },
   {
-    "id": "58",
+    "id": "46",
     "text": "A principality is created either by the people or by the nobles, accordingly as one or other of them has the opportunity; for the nobles, seeing they cannot withstand the people, begin to cry up the reputation of one of themselves, and they make him a prince, so that under his shadow they can give vent to their ambitions. The people, finding they cannot resist the nobles, also cry up the reputation of one of themselves, and make him a prince so as to be defended by his authority. He who obtains sovereignty by the assistance of the nobles maintains himself with more difficulty than he who comes",
     "bookTitle": "The Prince",
     "author": "Niccolò Machiavelli",
@@ -791,7 +625,7 @@
     "language": "en"
   },
   {
-    "id": "59",
+    "id": "47",
     "text": "Among the wonderful deeds of Hannibal this one is enumerated: that having led an enormous army, composed of many various races of men, to fight in foreign lands, no dissensions arose either among them or against the prince, whether in his bad or in his good fortune. This arose from nothing else than his inhuman cruelty, which, with his boundless valour, made him revered and terrible in the sight of his soldiers, but without that cruelty, his other virtues were not sufficient to produce this effect. And shortsighted writers admire his deeds from one point of view and from another condemn the pr",
     "bookTitle": "The Prince",
     "author": "Niccolò Machiavelli",
@@ -805,7 +639,7 @@
     "language": "en"
   },
   {
-    "id": "60",
+    "id": "48",
     "text": "On the other hand, to keep his servant honest the prince ought to study him, honouring him, enriching him, doing him kindnesses, sharing with him the honours and cares; and at the same time let him see that he cannot stand alone, so that many honours may not make him desire more, many riches make him wish for more, and that many cares may make him dread chances. When, therefore, servants, and princes towards servants, are thus disposed, they can trust each other, but when it is otherwise, the end will always be disastrous for either one or the other. How Flatterers Should Be Avoided",
     "bookTitle": "The Prince",
     "author": "Niccolò Machiavelli",
@@ -819,20 +653,7 @@
     "language": "en"
   },
   {
-    "id": "61",
-    "text": "By Voltaire. Translated by the Modern Library. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "Candide",
-    "author": "Voltaire",
-    "tags": [
-      "satire",
-      "humorous",
-      "society",
-      "fate"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "62",
+    "id": "49",
     "text": "“Agitated, lost, sometimes beside myself, and sometimes ready to die of weakness, my mind was filled with the massacre of my father, mother, and brother, with the insolence of the ugly Bulgarian soldier, with the stab that he gave me, with my servitude under the Bulgarian captain, with my hideous Don Issachar, with my abominable Inquisitor, with the execution of Doctor Pangloss, with the grand Miserere to which they whipped you, and especially with the kiss I gave you behind the screen the day that I had last seen you. I praised God for bringing you back to me after so many trials, and I charg",
     "bookTitle": "Candide",
     "author": "Voltaire",
@@ -846,7 +667,7 @@
     "language": "en"
   },
   {
-    "id": "63",
+    "id": "50",
     "text": "“You see,” said Cacambo to Candide, as soon as they had reached the frontiers of the Oreillons, “that this hemisphere is not better than the others, take my word for it; let us go back to Europe by the shortest way.” “How go back?” said Candide, “and where shall we go? to my own country? The Bulgarians and the Abares are slaying all; to Portugal? there I shall be burnt; and if we abide here we are every moment in danger of being spitted. But how can I resolve to quit a part of the world where my dear Cunégonde resides?”",
     "bookTitle": "Candide",
     "author": "Voltaire",
@@ -860,7 +681,7 @@
     "language": "en"
   },
   {
-    "id": "64",
+    "id": "51",
     "text": "Among those who did him the honours of the town was a little Abbé of Perigord, one of those busybodies who are ever alert, officious, forward, fawning, and complaisant; who watch for strangers in their passage through the capital, tell them the scandalous history of the town, and offer them pleasure at all prices. He first took Candide and Martin to La Comédie, where they played a new tragedy. Candide happened to be seated near some of the fashionable wits. This did not prevent his shedding tears at the well-acted scenes. One of these critics at his side said to him between the acts:",
     "bookTitle": "Candide",
     "author": "Voltaire",
@@ -874,7 +695,7 @@
     "language": "en"
   },
   {
-    "id": "65",
+    "id": "52",
     "text": "“But is there not a pleasure,” said Candide, “in criticising everything, in pointing out faults where others see nothing but beauties?” “That is to say,” replied Martin, “that there is some pleasure in having no pleasure.” “Well, well,” said Candide, “I find that I shall be the only happy man when I am blessed with the sight of my dear Cunégonde.” “It is always well to hope,” said Martin. However, the days and the weeks passed. Cacambo did not come, and Candide was so overwhelmed with grief that he did not even reflect that Paquette and Friar Giroflée did not return to thank him.",
     "bookTitle": "Candide",
     "author": "Voltaire",
@@ -888,21 +709,7 @@
     "language": "en"
   },
   {
-    "id": "66",
-    "text": "By Homer. Translated by William Cullen Bryant. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on digital scans from various sources.",
-    "bookTitle": "The Odyssey",
-    "author": "Homer",
-    "tags": [
-      "epic",
-      "adventurous",
-      "fate",
-      "identity",
-      "family"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "67",
+    "id": "53",
     "text": "As thus he spake, upon him, from on high, A huge and frightful billow broke; it whirled The raft around, and far from it he fell. His hands let go the rudder; a fierce rush Of all the winds together snapped in twain The mast; far off the yard and canvas flew Into the deep; the billow held him long Beneath the waters, and he strove in vain Quickly to rise to air from that huge swell Of ocean, for the garments weighed him down Which fair Calypso gave him. But at length Emerging, he rejected from his throat The bitter brine that down his forehead streamed. Even then, though hopeless with dismay, ",
     "bookTitle": "The Odyssey",
     "author": "Homer",
@@ -916,7 +723,7 @@
     "language": "en"
   },
   {
-    "id": "68",
+    "id": "54",
     "text": "“ ‘Illustrious chief Ulysses, thy desire Is for a happy passage to thy home, Yet will a god withstand thee. Not unmarked By Neptune shalt thou, as I deem, proceed Upon thy voyage. He hath laid up wrath Against thee in his heart, for that thy hand Deprived his son of sight. Yet may ye still Return, though after many hardships borne, If thou but hold thy appetite in check, And that of thy companions, when thou bring Thy gallant barque to the Trinacrian isle, Safe from the gloomy deep. There will ye find The beeves and fading wethers of the Sun⁠— The all-beholding and all-hearing Sun. If these ye",
     "bookTitle": "The Odyssey",
     "author": "Homer",
@@ -930,7 +737,7 @@
     "language": "en"
   },
   {
-    "id": "69",
+    "id": "55",
     "text": "Ulysses Discovering Himself to Telemachus Reception of Telemachus by Eumaeus, who is sent to inform Penelope of her son’s arrival⁠—interview of Ulysses and Telemachus, in which, at the command of Pallas, Ulysses discovers himself⁠—Return of the disappointed suitors from lying in wait for Telemachus.",
     "bookTitle": "The Odyssey",
     "author": "Homer",
@@ -944,7 +751,7 @@
     "language": "en"
   },
   {
-    "id": "70",
+    "id": "56",
     "text": "“Come, some of you, at once, and sweep the floor, And sprinkle it, and on the shapely thrones Spread coverings of purple tapestry; Let others wipe the tables with a sponge, And cleanse the beakers and the double cups, While others go for water to the fount, And bring it quickly, for not long today The suitors will be absent from these halls. They will come early to the general feast.”",
     "bookTitle": "The Odyssey",
     "author": "Homer",
@@ -958,21 +765,7 @@
     "language": "en"
   },
   {
-    "id": "71",
-    "text": "By Plato. Translated by Benjamin Jowett. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on transcriptions from various sources and on digital scans from the Internet Archive.",
-    "bookTitle": "Dialogues",
-    "author": "Plato",
-    "tags": [
-      "philosophy",
-      "reflective",
-      "knowledge",
-      "morality",
-      "justice"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "72",
+    "id": "57",
     "text": "“Then if this be the nature of love, can you tell me further,” she said, “what is the manner of the pursuit? what are they doing who show all this eagerness and heat which is called love? and what is the object which they have in view? Answer me.” “Nay, Diotima,” I replied, “if I had known, I should not have wondered at your wisdom, neither should I have come to learn from you about this very matter.” “Well,” she said, “I will teach you:⁠—The object which they have in view is birth in beauty, whether of body or soul.” “I do not understand you,” I said; “the oracle requires an explanation.” “I ",
     "bookTitle": "Dialogues",
     "author": "Plato",
@@ -986,7 +779,7 @@
     "language": "en"
   },
   {
-    "id": "73",
+    "id": "58",
     "text": "VII. Human life and conduct are affected by ideals in the same way that they are affected by the examples of eminent men. Neither the one nor the other are immediately applicable to practice, but there is a virtue flowing from them which tends to raise individuals above the common routine of society or trade, and to elevate States above the mere interests of commerce or the necessities of self-defence. Like the ideals of art they are partly framed by the omission of particulars; they require to be viewed at a certain distance, and are apt to fade away if we attempt to approach them. They gain ",
     "bookTitle": "Dialogues",
     "author": "Plato",
@@ -1000,7 +793,7 @@
     "language": "en"
   },
   {
-    "id": "74",
+    "id": "59",
     "text": "Then some of those who joined in setting him up, and who are in power, speak their minds to him and to one another, and the more courageous of them cast in his teeth what is being done. Yes, that may be expected. And the tyrant, if he means to rule, must get rid of them; he cannot stop while he has a friend or an enemy who is good for anything. He cannot.",
     "bookTitle": "Dialogues",
     "author": "Plato",
@@ -1014,7 +807,7 @@
     "language": "en"
   },
   {
-    "id": "75",
+    "id": "60",
     "text": "In all the later dialogues of Plato, the idea of mind or intelligence becomes more and more prominent. That idea which Anaxagoras employed inconsistently in the construction of the world, Plato, in the “Philebus,” the “Sophist,” and the Laws, extends to all things, attributing to Providence a care, infinitesimal as well as infinite, of all creation. The divine mind is the leading religious thought of the later works of Plato. The human mind is a sort of reflection of this, having ideas of Being, Sameness, and the like. At times they seem to be parted by a great gulf (“Parmenides”); at other ti",
     "bookTitle": "Dialogues",
     "author": "Plato",
@@ -1028,21 +821,7 @@
     "language": "en"
   },
   {
-    "id": "76",
-    "text": "By Charlotte Brontë. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from various sources.",
-    "bookTitle": "Jane Eyre",
-    "author": "Charlotte Brontë",
-    "tags": [
-      "gothic",
-      "romance",
-      "dramatic",
-      "love",
-      "identity"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "77",
+    "id": "61",
     "text": "A new chapter in a novel is something like a new scene in a play; and when I draw up the curtain this time, reader, you must fancy you see a room in the George Inn at Millcote, with such large figured papering on the walls as inn rooms have; such a carpet, such furniture, such ornaments on the mantelpiece, such prints, including a portrait of George the Third, and another of the Prince of Wales, and a representation of the death of Wolfe. All this is visible to you by the light of an oil lamp hanging from the ceiling, and by that of an excellent fire, near which I sit in my cloak and bonnet; m",
     "bookTitle": "Jane Eyre",
     "author": "Charlotte Brontë",
@@ -1056,7 +835,7 @@
     "language": "en"
   },
   {
-    "id": "78",
+    "id": "62",
     "text": "“Now, Dent,” continued Mr. Rochester, “it is your turn.” And as the other party withdrew, he and his band took the vacated seats. Miss Ingram placed herself at her leader’s right hand; the other diviners filled the chairs on each side of him and her. I did not now watch the actors; I no longer waited with interest for the curtain to rise; my attention was absorbed by the spectators; my eyes, erewhile fixed on the arch, were now irresistibly attracted to the semicircle of chairs. What charade Colonel Dent and his party played, what word they chose, how they acquitted themselves, I no longer rem",
     "bookTitle": "Jane Eyre",
     "author": "Charlotte Brontë",
@@ -1070,7 +849,7 @@
     "language": "en"
   },
   {
-    "id": "79",
+    "id": "63",
     "text": "He rose and came towards me, and I saw his face all kindled, and his full falcon-eye flashing, and tenderness and passion in every lineament. I quailed momentarily⁠—then I rallied. Soft scene, daring demonstration, I would not have; and I stood in peril of both: a weapon of defence must be prepared⁠—I whetted my tongue: as he reached me, I asked with asperity, “whom he was going to marry now?” “That was a strange question to be put by his darling Jane.”",
     "bookTitle": "Jane Eyre",
     "author": "Charlotte Brontë",
@@ -1084,7 +863,7 @@
     "language": "en"
   },
   {
-    "id": "80",
+    "id": "64",
     "text": "“With pleasure,” I replied; and I felt a thrill of artist-delight at the idea of copying from so perfect and radiant a model. She had then on a dark-blue silk dress; her arms and her neck were bare; her only ornament was her chestnut tresses, which waved over her shoulders with all the wild grace of natural curls. I took a sheet of fine cardboard, and drew a careful outline. I promised myself the pleasure of colouring it; and, as it was getting late then, I told her she must come and sit another day.",
     "bookTitle": "Jane Eyre",
     "author": "Charlotte Brontë",
@@ -1098,21 +877,7 @@
     "language": "en"
   },
   {
-    "id": "81",
-    "text": "By Edgar Allan Poe. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from the Internet Archive.",
-    "bookTitle": "Short Fiction",
-    "author": "Edgar Allan Poe",
-    "tags": [
-      "gothic",
-      "horror",
-      "dark",
-      "mystery",
-      "death"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "82",
+    "id": "65",
     "text": "“It is certainly a strange place! What is the meaning of yonder singular building? See! it towers above all others, and lies to the eastward of what I take to be the royal palace!”",
     "bookTitle": "Short Fiction",
     "author": "Edgar Allan Poe",
@@ -1126,7 +891,7 @@
     "language": "en"
   },
   {
-    "id": "83",
+    "id": "66",
     "text": "“Between Lofoden and Moskoe,” he says, “the depth of the water is between thirty-six and forty fathoms; but on the other side, toward Ver (Vurrgh) this depth decreases so as not to afford a convenient passage for a vessel, without the risk of splitting on the rocks, which happens even in the calmest weather. When it is flood, the stream runs up the country between Lofoden and Moskoe with a boisterous rapidity; but the roar of its impetuous ebb to the sea is scarce equalled by the loudest and most dreadful cataracts; the noise being heard several leagues off, and the vortices or pits are of suc",
     "bookTitle": "Short Fiction",
     "author": "Edgar Allan Poe",
@@ -1140,7 +905,7 @@
     "language": "en"
   },
   {
-    "id": "84",
+    "id": "67",
     "text": "For a purpose such as this the cellar was well adapted. Its walls were loosely constructed, and had lately been plastered throughout with a rough plaster, which the dampness of the atmosphere had prevented from hardening. Moreover, in one of the walls was a projection, caused by a false chimney, or fireplace, that had been filled up, and made to resemble the red of the cellar. I made no doubt that I could readily displace the bricks at this point, insert the corpse, and wall the whole up as before, so that no eye could detect anything suspicious. And in this calculation I was not deceived. By ",
     "bookTitle": "Short Fiction",
     "author": "Edgar Allan Poe",
@@ -1154,7 +919,7 @@
     "language": "en"
   },
   {
-    "id": "85",
+    "id": "68",
     "text": "“ ‘Continuing our progress, we perceived a district with vegetables that grew not upon any soil but in the air.60 There were others that sprang from the substance of other vegetables;61 others that derived their substance from the bodies of living animals;62 and then again, there were others that glowed all over with intense fire;63 others that moved from place to place at pleasure,64 and what was still more wonderful, we discovered flowers that lived and breathed and moved their limbs at will and had, moreover, the detestable passion of mankind for enslaving other creatures, and confining the",
     "bookTitle": "Short Fiction",
     "author": "Edgar Allan Poe",
@@ -1168,21 +933,7 @@
     "language": "en"
   },
   {
-    "id": "86",
-    "text": "By H. G. Wells. This ebook is the product of many hours of hard work by volunteers for Standard Ebooks, and builds on the hard work of other literature lovers made possible by the public domain. This particular ebook is based on a transcription from Project Gutenberg and on digital scans from Google Books.",
-    "bookTitle": "The Time Machine",
-    "author": "H. G. Wells",
-    "tags": [
-      "sci-fi",
-      "adventurous",
-      "time",
-      "society",
-      "knowledge"
-    ],
-    "language": "en"
-  },
-  {
-    "id": "87",
+    "id": "69",
     "text": "“You have told Blank, and Dash, and Chose about the machine?” he said to me, leaning back in his easy-chair and naming the three new guests. “But the thing’s a mere paradox,” said the Editor.",
     "bookTitle": "The Time Machine",
     "author": "H. G. Wells",
@@ -1196,7 +947,7 @@
     "language": "en"
   },
   {
-    "id": "88",
+    "id": "70",
     "text": "“I looked for the building I knew. Then my eye travelled along to the figure of the White Sphinx upon the pedestal of bronze, growing distinct as the light of the rising moon grew brighter. I could see the silver birch against it. There was the tangle of rhododendron bushes, black in the pale light, and there was the little lawn. I looked at the lawn again. A queer doubt chilled my complacency. ‘No,’ said I stoutly to myself, ‘that was not the lawn.’",
     "bookTitle": "The Time Machine",
     "author": "H. G. Wells",
@@ -1210,7 +961,7 @@
     "language": "en"
   },
   {
-    "id": "89",
+    "id": "71",
     "text": "“I have thought since how particularly ill-equipped I was for such an experience. When I had started with the Time Machine, I had started with the absurd assumption that the men of the Future would certainly be infinitely ahead of ourselves in all their appliances. I had come without arms, without medicine, without anything to smoke⁠—at times I missed tobacco frightfully⁠—even without enough matches. If only I had thought of a Kodak! I could have flashed that glimpse of the Under-world in a second, and examined it at leisure. But, as it was, I stood there with only the weapons and the powers t",
     "bookTitle": "The Time Machine",
     "author": "H. G. Wells",
@@ -1224,7 +975,7 @@
     "language": "en"
   },
   {
-    "id": "90",
+    "id": "72",
     "text": "“I searched again for traces of Weena, but there were none. It was plain that they had left her poor little body in the forest. I cannot describe how it relieved me to think that it had escaped the awful fate to which it seemed destined. As I thought of that, I was almost moved to begin a massacre of the helpless abominations about me, but I contained myself. The hillock, as I have said, was a kind of island in the forest. From its summit I could now make out through a haze of smoke the Palace of Green Porcelain, and from that I could get my bearings for the White Sphinx. And so, leaving the r",
     "bookTitle": "The Time Machine",
     "author": "H. G. Wells",
