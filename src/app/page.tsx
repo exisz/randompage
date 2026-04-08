@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles, LogOut } from "lucide-react";
+import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles, LogOut, Bell } from "lucide-react";
 import AuthGate from "@/components/AuthGate";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface Passage {
   id: string;
@@ -68,6 +69,7 @@ function App() {
   const [allPassages, setAllPassages] = useState<Passage[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("discover");
+  const push = usePushNotifications();
 
   const fetchRandom = useCallback(async () => {
     const res = await fetch("/api/passages/random");
@@ -183,10 +185,37 @@ function App() {
           </div>
         )}
         {tab === "settings" && (
-          <div className="text-center opacity-50">
-            <Settings size={48} className="mx-auto mb-4" />
-            <p>设置</p>
-            <p className="text-sm mt-2">Phase 2 功能</p>
+          <div className="w-full max-w-lg mx-auto space-y-6">
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <Settings size={20} />
+              设置
+            </h2>
+
+            {/* Push Notifications */}
+            <div className="card bg-base-200">
+              <div className="card-body p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Bell size={20} />
+                    <div>
+                      <p className="font-medium">每日推送</p>
+                      <p className="text-xs opacity-60">每天收到一段精选书籍片段</p>
+                    </div>
+                  </div>
+                  {push.supported ? (
+                    <input
+                      type="checkbox"
+                      className="toggle toggle-primary"
+                      checked={push.subscribed}
+                      disabled={push.loading}
+                      onChange={() => push.subscribed ? push.unsubscribe() : push.subscribe()}
+                    />
+                  ) : (
+                    <span className="badge badge-ghost text-xs">不支持</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </main>

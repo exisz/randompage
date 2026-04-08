@@ -1,4 +1,4 @@
-const CACHE_NAME = 'randompage-v1';
+const CACHE_NAME = 'randompage-v2';
 const PRECACHE = [
   '/',
   '/manifest.json',
@@ -20,6 +20,35 @@ self.addEventListener('activate', (e) => {
     )
   );
   self.clients.claim();
+});
+
+// Push notification handler
+self.addEventListener('push', (e) => {
+  const data = e.data ? e.data.json() : { title: '📖 RandomPage', body: '每日推荐已到！' };
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: data.tag || 'randompage',
+      data: { url: data.url || '/' },
+    })
+  );
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = e.notification.data?.url || '/';
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window' }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(url);
+    })
+  );
 });
 
 self.addEventListener('fetch', (e) => {
