@@ -31,6 +31,13 @@ export const pushSubscriptions = sqliteTable('push_subscriptions', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const bookmarks = sqliteTable('bookmarks', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  passageId: text('passage_id').notNull().references(() => passages.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const passages = sqliteTable('passages', {
   id: text('id').primaryKey(),
   text: text('text').notNull(),

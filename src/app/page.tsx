@@ -77,6 +77,23 @@ function App() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const push = usePushNotifications();
 
+  // Sync bookmarks from server on mount
+  useEffect(() => {
+    fetch('/api/bookmarks')
+      .then((r) => r.ok ? r.json() : [])
+      .then((ids) => {
+        if (Array.isArray(ids)) {
+          setFavorites(ids);
+          localStorage.setItem('rp-favorites', JSON.stringify(ids));
+        }
+      })
+      .catch(() => {
+        // Fallback to localStorage
+        const saved = localStorage.getItem('rp-favorites');
+        if (saved) setFavorites(JSON.parse(saved));
+      });
+  }, []);
+
   const addToHistory = useCallback((passageId: string) => {
     setHistory((prev) => {
       const filtered = prev.filter((h) => h.passageId !== passageId);
@@ -97,8 +114,6 @@ function App() {
 
   useEffect(() => {
     fetchRandom();
-    const saved = localStorage.getItem("rp-favorites");
-    if (saved) setFavorites(JSON.parse(saved));
     const savedHistory = localStorage.getItem("rp-history");
     if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, [fetchRandom]);
@@ -114,10 +129,17 @@ function App() {
   const toggleFavorite = useCallback(() => {
     if (!passage) return;
     setFavorites((prev) => {
-      const next = prev.includes(passage.id)
+      const isFav = prev.includes(passage.id);
+      const next = isFav
         ? prev.filter((id) => id !== passage.id)
         : [...prev, passage.id];
       localStorage.setItem("rp-favorites", JSON.stringify(next));
+      // Sync to server
+      if (isFav) {
+        fetch('/api/bookmarks', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passageId: passage.id }) });
+      } else {
+        fetch('/api/bookmarks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passageId: passage.id }) });
+      }
       return next;
     });
   }, [passage]);
@@ -175,6 +197,7 @@ function App() {
                               setFavorites((prev) => {
                                 const next = prev.filter((id) => id !== p.id);
                                 localStorage.setItem("rp-favorites", JSON.stringify(next));
+                                fetch('/api/bookmarks', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ passageId: p.id }) });
                                 return next;
                               });
                             }}
