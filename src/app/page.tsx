@@ -15,6 +15,11 @@ interface Passage {
   language: string;
 }
 
+interface HistoryEntry {
+  passageId: string;
+  viewedAt: number;
+}
+
 function PassageCard({ passage, onNext, onFavorite, isFavorited }: {
   passage: Passage;
   onNext: () => void;
@@ -69,21 +74,37 @@ function App() {
   const [allPassages, setAllPassages] = useState<Passage[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [tab, setTab] = useState<Tab>("discover");
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const push = usePushNotifications();
+
+  const addToHistory = useCallback((passageId: string) => {
+    setHistory((prev) => {
+      const filtered = prev.filter((h) => h.passageId !== passageId);
+      const next = [{ passageId, viewedAt: Date.now() }, ...filtered].slice(0, 100);
+      localStorage.setItem("rp-history", JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const fetchRandom = useCallback(async () => {
     const res = await fetch("/api/passages/random");
-    if (res.ok) setPassage(await res.json());
-  }, []);
+    if (res.ok) {
+      const p = await res.json();
+      setPassage(p);
+      addToHistory(p.id);
+    }
+  }, [addToHistory]);
 
   useEffect(() => {
     fetchRandom();
     const saved = localStorage.getItem("rp-favorites");
     if (saved) setFavorites(JSON.parse(saved));
+    const savedHistory = localStorage.getItem("rp-history");
+    if (savedHistory) setHistory(JSON.parse(savedHistory));
   }, [fetchRandom]);
 
   useEffect(() => {
-    if (tab === "bookshelf" && allPassages.length === 0) {
+    if ((tab === "bookshelf" || tab === "history") && allPassages.length === 0) {
       fetch("/api/passages")
         .then((r) => r.json())
         .then((data) => { if (Array.isArray(data)) setAllPassages(data); });
@@ -178,10 +199,58 @@ function App() {
           </div>
         )}
         {tab === "history" && (
-          <div className="text-center opacity-50">
-            <Clock size={48} className="mx-auto mb-4" />
-            <p>浏览历史</p>
-            <p className="text-sm mt-2">Phase 2 功能</p>
+          <div className="w-full max-w-lg mx-auto">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Clock size={20} />
+              浏览历史 · {history.length} 条记录
+            </h2>
+            {history.length === 0 ? (
+              <div className="text-center opacity-50 py-12">
+                <Clock size={48} className="mx-auto mb-4" />
+                <p>还没有浏览记录</p>
+                <p className="text-sm mt-2">在「发现」页浏览片段会自动记录</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {history.map((entry) => {
+                  const p = allPassages.find((ap) => ap.id === entry.passageId);
+                  if (!p) return null;
+                  return (
+                    <div key={entry.passageId + entry.viewedAt} className="card bg-base-200 shadow-sm">
+                      <div className="card-body p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-sm opacity-60">
+                            <BookOpen size={14} />
+                            <span>《{p.bookTitle}》</span>
+                          </div>
+                          <span className="text-xs opacity-40">
+                            {new Date(entry.viewedAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        </div>
+                        <p className="text-xs opacity-40">{p.author}</p>
+                        <blockquote className="text-sm leading-relaxed border-l-2 border-primary pl-3 my-2 italic line-clamp-3">
+                          &ldquo;{p.text}&rdquo;
+                        </blockquote>
+                        <div className="flex flex-wrap gap-1">
+                          {p.tags.slice(0, 3).map((tag) => (
+                            <span key={tag} className="badge badge-outline badge-xs">{tag}</span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <button
+                  className="btn btn-ghost btn-sm mt-2"
+                  onClick={() => {
+                    setHistory([]);
+                    localStorage.removeItem("rp-history");
+                  }}
+                >
+                  清空历史记录
+                </button>
+              </div>
+            )}
           </div>
         )}
         {tab === "settings" && (
