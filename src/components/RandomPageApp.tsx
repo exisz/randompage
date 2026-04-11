@@ -92,6 +92,7 @@ export default function RandomPageApp() {
   const [allPassages, setAllPassages] = useState<Passage[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
   const push = usePushNotifications();
 
   const setTab = useCallback((t: Tab) => {
@@ -327,6 +328,43 @@ export default function RandomPageApp() {
                 </div>
               </div>
             </div>
+
+            {/* Test Push */}
+            {push.subscribed && (
+              <div className="card bg-base-200">
+                <div className="card-body p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">发送测试推送</p>
+                      <p className="text-xs opacity-60">验证推送是否正常工作</p>
+                    </div>
+                    <button
+                      className="btn btn-sm btn-outline"
+                      onClick={async () => {
+                        setTestPushStatus("发送中...");
+                        try {
+                          const res = await fetch("/api/push/test", { method: "POST" });
+                          const data = await res.json();
+                          if (res.ok) {
+                            setTestPushStatus(`✅ 已发送 ${data.sent} 条`);
+                          } else {
+                            setTestPushStatus(`❌ ${data.error}`);
+                          }
+                        } catch {
+                          setTestPushStatus("❌ 网络错误");
+                        }
+                        setTimeout(() => setTestPushStatus(null), 5000);
+                      }}
+                    >
+                      测试
+                    </button>
+                  </div>
+                  {testPushStatus && (
+                    <p className="text-xs mt-2 opacity-70">{testPushStatus}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
