@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth';
 import { db } from '@/db';
 import { bookmarks } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { rebuildUserPreferences } from '@/lib/preferences';
 
 // GET /api/bookmarks — list user's bookmarks
 export async function GET() {
@@ -41,6 +42,9 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // Rebuild preferences after bookmark add
+  rebuildUserPreferences(session.userId).catch(() => {});
+
   return NextResponse.json({ ok: true });
 }
 
@@ -55,6 +59,9 @@ export async function DELETE(req: NextRequest) {
   await db
     .delete(bookmarks)
     .where(and(eq(bookmarks.userId, session.userId), eq(bookmarks.passageId, passageId)));
+
+  // Rebuild preferences after bookmark remove
+  rebuildUserPreferences(session.userId).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }

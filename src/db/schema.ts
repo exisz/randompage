@@ -46,6 +46,14 @@ export const pushHistory = sqliteTable('push_history', {
   readAt: integer('read_at', { mode: 'timestamp' }),
 });
 
+export const userPreferences = sqliteTable('user_preferences', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  tag: text('tag').notNull(),
+  weight: integer('weight').notNull().default(1),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const passages = sqliteTable('passages', {
   id: text('id').primaryKey(),
   text: text('text').notNull(),

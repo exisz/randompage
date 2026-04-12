@@ -15,6 +15,13 @@
       "when": 1775955923181,
       "tag": "0001_secret_karen_page",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1775966761675,
+      "tag": "0002_tiresome_cammi",
+      "breakpoints": true
     }
   ]
 }

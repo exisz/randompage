@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/db';
-import { passages } from '@/db/schema';
-import { sql } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { getWeightedPassage } from '@/lib/preferences';
 
 export async function GET() {
   const session = await getSession();
@@ -10,11 +8,7 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const [passage] = await db
-    .select()
-    .from(passages)
-    .orderBy(sql`RANDOM()`)
-    .limit(1);
+  const passage = await getWeightedPassage(session.userId);
 
   if (!passage) {
     return NextResponse.json({ error: 'No passages' }, { status: 404 });

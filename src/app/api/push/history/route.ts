@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { pushHistory, passages } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getSession } from '@/lib/auth';
+import { rebuildUserPreferences } from '@/lib/preferences';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,6 +57,9 @@ export async function PATCH(req: NextRequest) {
     .update(pushHistory)
     .set({ readAt: new Date() })
     .where(eq(pushHistory.id, pushHistoryId));
+
+  // Reading a push item updates preferences (implicit interest signal)
+  rebuildUserPreferences(session.userId).catch(() => {});
 
   return NextResponse.json({ ok: true });
 }
