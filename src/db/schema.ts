@@ -38,6 +38,14 @@ export const bookmarks = sqliteTable('bookmarks', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const pushHistory = sqliteTable('push_history', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  passageId: text('passage_id').notNull().references(() => passages.id),
+  sentAt: integer('sent_at', { mode: 'timestamp' }).notNull(),
+  readAt: integer('read_at', { mode: 'timestamp' }),
+});
+
 export const passages = sqliteTable('passages', {
   id: text('id').primaryKey(),
   text: text('text').notNull(),

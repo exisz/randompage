@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { pushSubscriptions, passages } from '@/db/schema';
+import { pushSubscriptions, passages, pushHistory } from '@/db/schema';
 import { sendPush } from '@/lib/push';
 import { sql } from 'drizzle-orm';
 
@@ -32,6 +32,13 @@ export async function POST(req: NextRequest) {
         body: snippet,
         url: `/?passageId=${passage.id}`,
         tag: 'daily-passage',
+      });
+      // Record push history for this user
+      await db.insert(pushHistory).values({
+        id: crypto.randomUUID(),
+        userId: sub.userId,
+        passageId: passage.id,
+        sentAt: new Date(),
       });
       sent++;
     } catch {

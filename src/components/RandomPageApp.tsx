@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles, LogOut, Bell } from "lucide-react";
+import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles, LogOut, Bell, Inbox } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface Passage {
@@ -20,10 +20,24 @@ interface HistoryEntry {
   viewedAt: number;
 }
 
-type Tab = "discover" | "bookshelf" | "history" | "settings";
+interface PushHistoryItem {
+  id: string;
+  passageId: string;
+  sentAt: string;
+  readAt: string | null;
+  text: string;
+  bookTitle: string;
+  author: string;
+  chapter?: string;
+  tags: string[];
+  language: string;
+}
+
+type Tab = "discover" | "inbox" | "bookshelf" | "history" | "settings";
 
 const TAB_ROUTES: Record<Tab, string> = {
   discover: "/",
+  inbox: "/inbox",
   bookshelf: "/bookmarks",
   history: "/history",
   settings: "/settings",
@@ -31,6 +45,7 @@ const TAB_ROUTES: Record<Tab, string> = {
 
 const ROUTE_TABS: Record<string, Tab> = {
   "/": "discover",
+  "/inbox": "inbox",
   "/bookmarks": "bookshelf",
   "/history": "history",
   "/settings": "settings",
@@ -93,6 +108,8 @@ export default function RandomPageApp() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [testPushStatus, setTestPushStatus] = useState<string | null>(null);
+  const [pushInbox, setPushInbox] = useState<PushHistoryItem[]>([]);
+  const [inboxLoaded, setInboxLoaded] = useState(false);
   const push = usePushNotifications();
 
   const setTab = useCallback((t: Tab) => {
@@ -122,6 +139,43 @@ export default function RandomPageApp() {
       localStorage.setItem("rp-history", JSON.stringify(next));
       return next;
     });
+  }, []);
+
+  // Fetch inbox on mount for badge count
+  useEffect(() => {
+    fetch('/api/push/history')
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => {
+        if (Array.isArray(data)) setPushInbox(data);
+        setInboxLoaded(true);
+      })
+      .catch(() => setInboxLoaded(true));
+  }, []);
+
+  // Fetch inbox
+  useEffect(() => {
+    if (tab === "inbox" && !inboxLoaded) {
+      fetch('/api/push/history')
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          if (Array.isArray(data)) setPushInbox(data);
+          setInboxLoaded(true);
+        })
+        .catch(() => setInboxLoaded(true));
+    }
+  }, [tab, inboxLoaded]);
+
+  const markAsRead = useCallback((pushHistoryId: string) => {
+    fetch('/api/push/history', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pushHistoryId }),
+    });
+    setPushInbox((prev) =>
+      prev.map((item) =>
+        item.id === pushHistoryId ? { ...item, readAt: new Date().toISOString() } : item
+      )
+    );
   }, []);
 
   const searchParams = useSearchParams();
@@ -316,6 +370,74 @@ export default function RandomPageApp() {
             )}
           </div>
         )}
+        {tab === "inbox" && (
+          <div className="w-full max-w-lg mx-auto">
+            <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Inbox size={20} />
+              推送收件箱 · {pushInbox.length} 条
+              {pushInbox.filter((p) => !p.readAt).length > 0 && (
+                <span className="badge badge-primary badge-sm">
+                  {pushInbox.filter((p) => !p.readAt).length} 未读
+                </span>
+              )}
+            </h2>
+            {!inboxLoaded ? (
+              <div className="text-center py-12">
+                <span className="loading loading-spinner loading-md"></span>
+              </div>
+            ) : pushInbox.length === 0 ? (
+              <div className="text-center opacity-50 py-12">
+                <Inbox size={48} className="mx-auto mb-4" />
+                <p>还没有收到推送</p>
+                <p className="text-sm mt-2">在「设置」中开启每日推送</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {pushInbox.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`card shadow-sm cursor-pointer ${item.readAt ? 'bg-base-200' : 'bg-base-200 border-l-4 border-primary'}`}
+                    onClick={() => {
+                      if (!item.readAt) markAsRead(item.id);
+                      setPassage({
+                        id: item.passageId,
+                        text: item.text,
+                        bookTitle: item.bookTitle,
+                        author: item.author,
+                        chapter: item.chapter,
+                        tags: item.tags,
+                        language: item.language,
+                      });
+                      setTab("discover");
+                    }}
+                  >
+                    <div className="card-body p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-sm opacity-60">
+                          <BookOpen size={14} />
+                          <span>《{item.bookTitle}》</span>
+                          {!item.readAt && <span className="badge badge-primary badge-xs">未读</span>}
+                        </div>
+                        <span className="text-xs opacity-40">
+                          {new Date(item.sentAt).toLocaleDateString("zh-CN", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-xs opacity-40">{item.author}</p>
+                      <blockquote className="text-sm leading-relaxed border-l-2 border-primary pl-3 my-2 italic line-clamp-3">
+                        &ldquo;{item.text}&rdquo;
+                      </blockquote>
+                      <div className="flex flex-wrap gap-1">
+                        {item.tags.slice(0, 3).map((tag) => (
+                          <span key={tag} className="badge badge-outline badge-xs">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {tab === "settings" && (
           <div className="w-full max-w-lg mx-auto space-y-6">
             <h2 className="text-lg font-bold flex items-center gap-2">
@@ -393,6 +515,17 @@ export default function RandomPageApp() {
         <button className={tab === "discover" ? "active" : ""} onClick={() => setTab("discover")}>
           <Sparkles size={20} />
           <span className="btm-nav-label text-xs">发现</span>
+        </button>
+        <button className={tab === "inbox" ? "active" : ""} onClick={() => setTab("inbox")}>
+          <div className="indicator">
+            {pushInbox.filter((p) => !p.readAt).length > 0 && (
+              <span className="indicator-item badge badge-primary badge-xs">
+                {pushInbox.filter((p) => !p.readAt).length}
+              </span>
+            )}
+            <Inbox size={20} />
+          </div>
+          <span className="btm-nav-label text-xs">收件箱</span>
         </button>
         <button className={tab === "bookshelf" ? "active" : ""} onClick={() => setTab("bookshelf")}>
           <Heart size={20} />

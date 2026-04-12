@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { pushSubscriptions, passages } from '@/db/schema';
+import { pushSubscriptions, passages, pushHistory } from '@/db/schema';
 import { sendPush } from '@/lib/push';
 import { sql } from 'drizzle-orm';
 
@@ -34,8 +34,15 @@ export async function GET(req: NextRequest) {
       await sendPush(sub, {
         title: `📖 ${passage.bookTitle}`,
         body: snippet,
-        url: '/',
+        url: `/?passageId=${passage.id}`,
         tag: 'daily-passage',
+      });
+      // Record push history
+      await db.insert(pushHistory).values({
+        id: crypto.randomUUID(),
+        userId: sub.userId,
+        passageId: passage.id,
+        sentAt: new Date(),
       });
       sent++;
     } catch {
