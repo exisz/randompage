@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       await sendPush(sub, {
         title: `📖 ${passage.bookTitle}`,
         body: snippet,
-        url: '/',
+        url: `/?passageId=${passage.id}`,
         tag: 'daily-passage',
       });
       sent++;

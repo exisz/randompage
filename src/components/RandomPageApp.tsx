@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Heart, RefreshCw, BookOpen, Clock, Settings, Sparkles, LogOut, Bell } from "lucide-react";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 
@@ -124,6 +124,8 @@ export default function RandomPageApp() {
     });
   }, []);
 
+  const searchParams = useSearchParams();
+
   const fetchRandom = useCallback(async () => {
     const res = await fetch("/api/passages/random");
     if (res.ok) {
@@ -134,10 +136,28 @@ export default function RandomPageApp() {
   }, [addToHistory]);
 
   useEffect(() => {
-    fetchRandom();
+    const passageId = searchParams.get("passageId");
+    if (passageId) {
+      fetch(`/api/passages/${passageId}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((p) => {
+          if (p) {
+            setPassage(p);
+            addToHistory(p.id);
+          } else {
+            fetchRandom();
+          }
+          // Clean up URL
+          window.history.replaceState(null, '', '/');
+        })
+        .catch(() => fetchRandom());
+    } else {
+      fetchRandom();
+    }
     const savedHistory = localStorage.getItem("rp-history");
     if (savedHistory) setHistory(JSON.parse(savedHistory));
-  }, [fetchRandom]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if ((tab === "bookshelf" || tab === "history") && allPassages.length === 0) {
@@ -369,7 +389,7 @@ export default function RandomPageApp() {
         )}
       </main>
 
-      <nav className="btm-nav btm-nav-sm bg-base-200">
+      <nav className="btm-nav btm-nav-sm bg-base-200 pb-[env(safe-area-inset-bottom)]">
         <button className={tab === "discover" ? "active" : ""} onClick={() => setTab("discover")}>
           <Sparkles size={20} />
           <span className="btm-nav-label text-xs">发现</span>
