@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { startRegistration, startAuthentication } from "@simplewebauthn/browser";
-import { KeyRound, UserPlus, LogIn } from "lucide-react";
+import { KeyRound, UserPlus, LogIn, Globe } from "lucide-react";
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -168,6 +168,16 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
               >
                 没有账号？注册
               </button>
+
+              <div className="divider text-xs opacity-50">或</div>
+
+              <a
+                href="/api/logto/sign-in"
+                className="btn btn-outline btn-secondary w-full"
+              >
+                <Globe size={16} />
+                使用 Logto 登录
+              </a>
             </>
           )}
         </div>
