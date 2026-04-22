@@ -180,12 +180,23 @@ export default function RandomPageApp() {
 
   const searchParams = useSearchParams();
 
-  const fetchRandom = useCallback(async () => {
-    const res = await fetch("/api/passages/random");
+  const fetchRandom = useCallback(async (preferUnread = false) => {
+    const url = preferUnread ? "/api/passages/random?preferUnread=1" : "/api/passages/random";
+    const res = await fetch(url);
     if (res.ok) {
       const p = await res.json();
       setPassage(p);
       addToHistory(p.id);
+      // If a push was served, update local inbox state to reflect read
+      if (p.source === 'push' && p.pushHistoryId) {
+        setPushInbox((prev) =>
+          prev.map((item) =>
+            item.id === p.pushHistoryId && !item.readAt
+              ? { ...item, readAt: new Date().toISOString() }
+              : item
+          )
+        );
+      }
     }
   }, [addToHistory]);
 
@@ -199,14 +210,14 @@ export default function RandomPageApp() {
             setPassage(p);
             addToHistory(p.id);
           } else {
-            fetchRandom();
+            fetchRandom(true);
           }
           // Clean up URL
           window.history.replaceState(null, '', '/');
         })
-        .catch(() => fetchRandom());
+        .catch(() => fetchRandom(true));
     } else {
-      fetchRandom();
+      fetchRandom(true);
     }
     const savedHistory = localStorage.getItem("rp-history");
     if (savedHistory) setHistory(JSON.parse(savedHistory));
