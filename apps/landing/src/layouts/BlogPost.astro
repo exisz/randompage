@@ -1,0 +1,32 @@
+---
+import BaseLayout from './BaseLayout.astro';
+export interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  tags?: string[];
+}
+const { title, description, pubDate, updatedDate, tags = [] } = Astro.props;
+---
+<BaseLayout title={title} description={description}>
+  <article class="prose prose-invert mx-auto max-w-3xl">
+    <header class="mb-8 not-prose">
+      <h1 class="text-4xl font-bold">{title}</h1>
+      <p class="opacity-70 mt-2">{description}</p>
+      <div class="flex gap-2 items-center text-sm opacity-60 mt-3">
+        <time datetime={pubDate.toISOString()}>{pubDate.toLocaleDateString('zh-CN')}</time>
+        {updatedDate && <span>· 更新于 {updatedDate.toLocaleDateString('zh-CN')}</span>}
+        {tags.length > 0 && (
+          <div class="flex gap-1 ml-2">
+            {tags.map(t => <span class="badge badge-outline badge-sm">{t}</span>)}
+          </div>
+        )}
+      </div>
+    </header>
+    <slot />
+    <div class="mt-10 not-prose">
+      <a href="/blog" class="btn btn-ghost btn-sm">← 返回 Blog 列表</a>
+    </div>
+  </article>
+</BaseLayout>

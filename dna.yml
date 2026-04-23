@@ -1,7 +1,0 @@
-id: dna://repo/gotexis-randompage
-type: repo
-title: randompage — Random page Next.js app
-description: Next.js web application (randompage). Not a CLI tool.
-homepage: https://github.com/gotexis/randompage
-status: active
-managed_by: dna://agent/nebula

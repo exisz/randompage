@@ -1,0 +1,49 @@
+---
+import '../styles/global.css';
+import BaseLayout from '../layouts/BaseLayout.astro';
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.randompage.rollersoft.com.au';
+---
+<BaseLayout title="RandomPage — Discover Literature Daily" description="Curated passages from classic literature, delivered daily. Bookmark what moves you.">
+  <section class="hero bg-base-200 rounded-box p-12 mb-12">
+    <div class="hero-content text-center">
+      <div class="max-w-2xl">
+        <h1 class="text-5xl font-bold font-serif">📖 RandomPage</h1>
+        <p class="py-6 opacity-80 text-lg">
+          Discover curated passages from classic literature.<br/>
+          Delivered daily. Bookmarked forever.
+        </p>
+        <div class="flex gap-3 justify-center flex-wrap">
+          <a href={appUrl} class="btn btn-primary btn-lg">Open App →</a>
+          <a href={`${appUrl}/discover`} class="btn btn-outline">Browse Passages</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid md:grid-cols-3 gap-6 mb-16">
+    <div class="card bg-base-200">
+      <div class="card-body">
+        <h2 class="card-title">📚 600+ Passages</h2>
+        <p class="opacity-80 text-sm">Carefully curated excerpts from English and Chinese literature classics.</p>
+      </div>
+    </div>
+    <div class="card bg-base-200">
+      <div class="card-body">
+        <h2 class="card-title">🔔 Daily Push</h2>
+        <p class="opacity-80 text-sm">Subscribe to receive a fresh passage each morning. Your inbox, not your feed.</p>
+      </div>
+    </div>
+    <div class="card bg-base-200">
+      <div class="card-body">
+        <h2 class="card-title">🧠 Personalized</h2>
+        <p class="opacity-80 text-sm">The more you read and bookmark, the better the recommendations become.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="text-center py-12 bg-base-200 rounded-box">
+    <h2 class="text-3xl font-serif mb-4">Start Reading Today</h2>
+    <p class="opacity-70 mb-6">Free forever. No tracking. Just literature.</p>
+    <a href={appUrl} class="btn btn-primary btn-lg">Get Started →</a>
+  </section>
+</BaseLayout>

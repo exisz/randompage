@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/server/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("LOCAL_DATABASE_URL")
+}
+
+model User {
+  id          String   @id
+  displayName String   @map("display_name")
+  createdAt   DateTime @map("created_at")
+
+  credentials     Credential[]
+  sessions        Session[]
+  pushSubscriptions PushSubscription[]
+  bookmarks       Bookmark[]
+  pushHistory     PushHistory[]
+  userPreferences UserPreference[]
+}
+
+model Credential {
+  id           String   @id
+  userId       String   @map("user_id")
+  credentialId String   @unique @map("credential_id")
+  publicKey    String   @map("public_key")
+  counter      Int      @default(0)
+  createdAt    DateTime @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("credentials")
+}
+
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model Passage {
+  id        String  @id
+  text      String
+  bookTitle String  @map("book_title")
+  author    String
+  chapter   String?
+  tags      String
+  language  String  @default("en")
+
+  bookmarks   Bookmark[]
+  pushHistory PushHistory[]
+
+  @@map("passages")
+}
+
+model Bookmark {
+  id        String   @id
+  userId    String   @map("user_id")
+  passageId String   @map("passage_id")
+  createdAt DateTime @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  passage Passage @relation(fields: [passageId], references: [id])
+
+  @@map("bookmarks")
+}
+
+model PushSubscription {
+  id        String   @id
+  userId    String   @map("user_id")
+  endpoint  String
+  p256dh    String
+  auth      String
+  createdAt DateTime @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("push_subscriptions")
+}
+
+model PushHistory {
+  id        String    @id
+  userId    String    @map("user_id")
+  passageId String    @map("passage_id")
+  sentAt    DateTime  @map("sent_at")
+  readAt    DateTime? @map("read_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  passage Passage @relation(fields: [passageId], references: [id])
+
+  @@map("push_history")
+}
+
+model UserPreference {
+  id        String   @id
+  userId    String   @map("user_id")
+  tag       String
+  weight    Int      @default(1)
+  updatedAt DateTime @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("user_preferences")
+}

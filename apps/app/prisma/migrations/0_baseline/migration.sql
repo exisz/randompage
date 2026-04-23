@@ -1,0 +1,4 @@
+-- Baseline migration: schema already exists in production Turso DB
+-- Tables: users, credentials, sessions, passages, bookmarks,
+--         push_subscriptions, push_history, user_preferences
+-- No DDL changes required; this baseline marks existing schema as applied.

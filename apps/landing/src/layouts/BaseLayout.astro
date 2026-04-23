@@ -1,0 +1,37 @@
+---
+export interface Props {
+  title: string;
+  description?: string;
+}
+const { title, description = 'GenStack 2-Deploys Template Demo' } = Astro.props;
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app-demo.genstack.rollersoft.com.au';
+---
+<!doctype html>
+<html lang="zh-CN" data-theme="luxury">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body class="min-h-screen bg-base-100">
+    <div class="navbar bg-base-200 shadow">
+      <div class="flex-1 px-4">
+        <a href="/" class="text-xl font-bold">GenStack 2-Deploys</a>
+      </div>
+      <div class="flex-none gap-2 px-4">
+        <a href="/blog" class="btn btn-ghost btn-sm">Blog</a>
+        <a href={appUrl} class="btn btn-primary btn-sm">Launch App →</a>
+      </div>
+    </div>
+    <main class="container mx-auto px-4 py-10 max-w-4xl">
+      <slot />
+    </main>
+    <footer class="footer footer-center p-10 bg-base-200 text-base-content mt-20">
+      <aside>
+        <p class="opacity-70 text-sm">GenStack · Astro landing + SPA/API 独立部署 · Starmap 帝国</p>
+      </aside>
+    </footer>
+  </body>
+</html>

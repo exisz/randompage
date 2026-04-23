@@ -1,6 +1,0 @@
-@import "tailwindcss";
-@plugin "daisyui";
-
-@theme {
-  --font-serif: "Noto Serif SC", "Georgia", serif;
-}
