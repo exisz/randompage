@@ -194,8 +194,19 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
           sent += userSent;
           personalized.push({ userId, passageId: chosen.id });
         }
-      } catch {
+      } catch (outerErr: unknown) {
         failed++;
+        const e = outerErr as { message?: string; name?: string; stack?: string };
+        failures.push({
+          subId: `user:${userId}`,
+          endpoint: '(outer)',
+          statusCode: null,
+          name: e?.name ?? 'OuterError',
+          message: (e?.message ?? String(outerErr)).slice(0, 300),
+          code: null,
+          deleted: false,
+        });
+        console.log(`[push/send] outer error user=${userId}: ${e?.name} ${e?.message}\n${e?.stack}`);
       }
     }
 
