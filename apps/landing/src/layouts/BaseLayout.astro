@@ -3,8 +3,8 @@ export interface Props {
   title: string;
   description?: string;
 }
-const { title, description = 'GenStack 2-Deploys Template Demo' } = Astro.props;
-const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app-demo.genstack.rollersoft.com.au';
+const { title, description = 'RandomPage — 个性化书籍发现引擎' } = Astro.props;
+const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app.randompage.rollersoft.com.au';
 ---
 <!doctype html>
 <html lang="zh-CN" data-theme="luxury">
@@ -18,7 +18,7 @@ const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app-demo.genstack.roll
   <body class="min-h-screen bg-base-100">
     <div class="navbar bg-base-200 shadow">
       <div class="flex-1 px-4">
-        <a href="/" class="text-xl font-bold">GenStack 2-Deploys</a>
+        <a href="/" class="text-xl font-bold">RandomPage</a>
       </div>
       <div class="flex-none gap-2 px-4">
         <a href="/blog" class="btn btn-ghost btn-sm">Blog</a>
@@ -30,7 +30,7 @@ const appUrl = import.meta.env.PUBLIC_APP_URL || 'https://app-demo.genstack.roll
     </main>
     <footer class="footer footer-center p-10 bg-base-200 text-base-content mt-20">
       <aside>
-        <p class="opacity-70 text-sm">GenStack · Astro landing + SPA/API 独立部署 · Starmap 帝国</p>
+        <p class="opacity-70 text-sm">RandomPage · 个性化书籍发现引擎</p>
       </aside>
     </footer>
   </body>
