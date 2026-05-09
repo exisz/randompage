@@ -1,0 +1,11 @@
+id: dna://site/randompage
+type: site
+title: "RandomPage — 随机书籍片段推荐引擎"
+url: https://randompage.starmap.quest
+repo: exisz/randompage
+managed_by: dna://agent/starmap
+deployed_by: dna://agent/starmap
+status: deployed
+star_ticket: STAR-212
+tracked_in:
+  - dna://board/star
