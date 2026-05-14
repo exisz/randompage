@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "check:push-policy": "node scripts/check-push-selection-policy.mjs"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",
