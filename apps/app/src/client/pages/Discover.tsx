@@ -13,6 +13,29 @@ interface Passage {
   language: string;
 }
 
+const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
+
+function parsePassageTags(raw: string | string[] | null | undefined): string[] {
+  if (!raw) return [];
+  const values = Array.isArray(raw) ? raw : (() => {
+    const text = raw.trim();
+    if (!text) return [];
+    try {
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) return parsed;
+    } catch {
+      // Fall back to legacy comma-delimited tags below.
+    }
+    return text.split(',');
+  })();
+
+  return values
+    .map((tag) => String(tag).trim().replace(/^[\s\[\]"']+|[\s\[\]"']+$/g, ''))
+    .filter(Boolean)
+    .filter((tag) => !HIDDEN_TAGS.has(tag.toLowerCase()))
+    .filter((tag, index, all) => all.findIndex((candidate) => candidate.toLowerCase() === tag.toLowerCase()) === index);
+}
+
 export default function Discover() {
   const [passage, setPassage] = useState<Passage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +113,7 @@ export default function Discover() {
                 <div>{passage.author}{passage.chapter ? ` · ${passage.chapter}` : ''}</div>
               </div>
               <div className="flex flex-wrap gap-1">
-                {passage.tags.split(',').map(t => t.trim()).filter(Boolean).map(tag => (
+                {parsePassageTags(passage.tags).map(tag => (
                   <span key={tag} className="badge badge-ghost badge-sm">{tag}</span>
                 ))}
               </div>

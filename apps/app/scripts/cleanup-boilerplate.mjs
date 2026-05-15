@@ -9,6 +9,7 @@
  *   - 'Standard Ebooks is'
  *   - 'This ebook is the product of many hours'
  *   - 'public domain' (when paired with 'ebook' / 'transcription')
+ *   - Standard Ebooks uncopyright/source text notices
  *   - text starting with 'By <Author>.' followed by 'Translated by' / ebook metadata
  *   - lines that are essentially 'Translated by ...' on their own
  *
@@ -46,6 +47,9 @@ const CANDIDATE_SQL = `
      OR text LIKE '%transcription from Project Gutenberg%'
      OR text LIKE '%digital scans from the Internet Archive%'
      OR text LIKE '%volunteer-driven project%'
+     OR text LIKE '%source text and artwork in this ebook are believed%'
+     OR text LIKE '%Copyright pages exist to tell you%'
+     OR text LIKE '%uncopyright%'
      OR (text LIKE 'By %' AND text LIKE '%Translated by%' AND length(text) < 800)
 `;
 
@@ -62,6 +66,10 @@ function classify(text) {
     return 'Standard Ebooks volunteer credit';
   if (lower.includes('standard ebooks makes no representations'))
     return 'Standard Ebooks copyright disclaimer';
+  if (lower.includes('the source text and artwork in this ebook are believed'))
+    return 'Standard Ebooks source text / artwork notice';
+  if (lower.includes('copyright pages exist to tell you') && lower.includes('uncopyright'))
+    return 'Standard Ebooks uncopyright notice';
   if (lower.includes('first edition of this ebook was released'))
     return 'Standard Ebooks revision/release notice';
   if (lower.includes('check for updates to this ebook'))
