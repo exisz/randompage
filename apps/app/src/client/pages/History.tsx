@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
+import AppShell from '../components/AppShell';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string;
@@ -35,61 +36,51 @@ export default function History() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-base-100 p-4">
-      <nav className="navbar bg-base-200 rounded-box mb-6 shadow">
-        <div className="flex-1"><Link to="/discover" className="font-serif text-xl">📖 RandomPage</Link></div>
-        <div className="flex-none gap-2">
-          <Link to="/discover" className="btn btn-ghost btn-sm">Discover</Link>
-          <Link to="/bookmarks" className="btn btn-ghost btn-sm">Bookmarks</Link>
-          <Link to="/settings" className="btn btn-ghost btn-sm">Settings</Link>
+    <AppShell
+      eyebrow="Signal log"
+      title="Your trail shapes the engine."
+      subtitle="Views, skips, and push reads are kept as personal context for the next recommendation."
+    >
+      <div className="rp-glass-card p-3">
+        <div className="grid grid-cols-2 gap-2">
+          <button className={`btn rounded-2xl ${activeTab === 'browsing' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('browsing')}>Browsing</button>
+          <button className={`btn rounded-2xl ${activeTab === 'push' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('push')}>Push inbox</button>
         </div>
-      </nav>
-      <div className="max-w-2xl mx-auto">
-        <h2 className="text-2xl font-serif mb-4">📚 Reading History</h2>
-        <div className="tabs tabs-boxed mb-4">
-          <button className={`tab ${activeTab === 'browsing' ? 'tab-active' : ''}`} onClick={() => setActiveTab('browsing')}>Browsing</button>
-          <button className={`tab ${activeTab === 'push' ? 'tab-active' : ''}`} onClick={() => setActiveTab('push')}>Push inbox</button>
-        </div>
+      </div>
+
+      <div className="mt-4">
         {loading ? (
-          <div className="flex justify-center"><span className="loading loading-spinner loading-lg" /></div>
+          <div className="rp-glass-card p-8 text-center"><span className="loading loading-spinner loading-lg text-warning" /></div>
         ) : activeTab === 'browsing' ? (
           browsingHistory.length === 0 ? (
-            <div className="text-center opacity-60 py-10">
-              <p>No browsing history yet. Read a few passages on Discover.</p>
-            </div>
+            <div className="rp-glass-card p-8 text-center opacity-70">No browsing history yet. Read a few passages on Discover.</div>
           ) : (
             <div className="flex flex-col gap-3">
               {browsingHistory.map(h => (
-                <div key={h.id} className={`card shadow ${h.action === 'skip' ? 'bg-base-200 opacity-70' : 'bg-base-300'}`}>
-                  <div className="card-body py-3 gap-1">
-                    <span className={`badge badge-xs mb-1 ${h.action === 'skip' ? 'badge-ghost' : 'badge-primary'}`}>{h.action === 'skip' ? 'Skipped' : h.source === 'push_inbox' ? 'Read from push' : 'Viewed'}</span>
-                    <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 150)}…</p>
-                    <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
-                    <div className="text-xs opacity-40">{new Date(h.createdAt).toLocaleString()}</div>
-                  </div>
-                </div>
+                <article key={h.id} className={`rp-glass-card rp-list-card p-4 ${h.action === 'skip' ? 'opacity-70' : ''}`}>
+                  <span className={`badge badge-xs mb-3 ${h.action === 'skip' ? 'badge-ghost' : 'badge-primary'}`}>{h.action === 'skip' ? 'Skipped' : h.source === 'push_inbox' ? 'Read from push' : 'Viewed'}</span>
+                  <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 160)}…</p>
+                  <div className="rp-meta mt-3 text-right text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
+                  <div className="mt-2 text-xs opacity-40">{new Date(h.createdAt).toLocaleString()}</div>
+                </article>
               ))}
             </div>
           )
         ) : pushHistory.length === 0 ? (
-          <div className="text-center opacity-60 py-10">
-            <p>No push inbox history yet. Enable notifications in Settings.</p>
-          </div>
+          <div className="rp-glass-card p-8 text-center opacity-70">No push inbox history yet. Enable notifications in Settings.</div>
         ) : (
           <div className="flex flex-col gap-3">
             {pushHistory.map(h => (
-              <div key={h.id} className={`card shadow ${h.readAt ? 'bg-base-200 opacity-70' : 'bg-base-300 border border-primary'}`}>
-                <div className="card-body py-3 gap-1">
-                  {!h.readAt && <span className="badge badge-primary badge-xs mb-1">Unread</span>}
-                  <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 150)}…</p>
-                  <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
-                  <div className="text-xs opacity-40">{new Date(h.sentAt).toLocaleDateString()}</div>
-                </div>
-              </div>
+              <article key={h.id} className={`rp-glass-card rp-list-card p-4 ${h.readAt ? 'opacity-70' : 'ring-1 ring-warning/35'}`}>
+                {!h.readAt && <span className="badge badge-primary badge-xs mb-3">Unread</span>}
+                <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 160)}…</p>
+                <div className="rp-meta mt-3 text-right text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
+                <div className="mt-2 text-xs opacity-40">{new Date(h.sentAt).toLocaleDateString()}</div>
+              </article>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

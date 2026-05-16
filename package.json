@@ -9,6 +9,8 @@
     "build:landing": "pnpm --filter landing build",
     "build:app": "pnpm --filter @randompage/app build",
     "db:generate": "pnpm --filter @randompage/app exec prisma generate",
-    "db:push-remote": "pnpm --filter @randompage/app exec node ../../scripts/db-push-remote.mjs"
+    "db:push-remote": "pnpm --filter @randompage/app exec node ../../scripts/db-push-remote.mjs",
+    "android:sync": "pnpm --filter @randompage/app android:sync",
+    "android:apk:debug": "pnpm --filter @randompage/app android:apk:debug"
   }
 }
