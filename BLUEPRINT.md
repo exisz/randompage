@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-04-23 — PLANET-1159 架构迁移 (Next.js → genstack-astro-spa-api-2deploys)
+> 最后更新: 2026-05-16 — PLANET-1734 browsing_events 行为回流
 
 ## 系统拓扑 (当前架构)
 
@@ -30,13 +30,14 @@
 │  │    /              → Landing (→ /discover if authed)       │ │
 │  │    /discover      → 发现页 (随机片段)                      │ │
 │  │    /bookmarks     → 书架                                   │ │
-│  │    /history       → 推送历史 (收件箱)                      │ │
+│  │    /history       → 浏览历史 + 推送收件箱                  │ │
 │  │    /settings      → 设置/推送开关                          │ │
 │  │    /callback      → Logto SSO 回调                        │ │
 │  │    /api/health    → API health check                      │ │
 │  │    /api/me        → 用户信息 (upsert)                     │ │
-│  │    /api/passages/random → 随机片段 (支持 ?preferUnread=1) │ │
-│  │    /api/bookmarks → 书签 CRUD                             │ │
+│  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
+│  │    /api/bookmarks → 书签 CRUD                             │
+│    /api/browsing/history → 浏览/跳过事件历史               │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  └────────────────────────────────────────────────────────────┘ │
@@ -46,7 +47,8 @@
 │  Turso (生产 SQLite via libSQL)                                   │
 │  DB: turso-randompage-vercel-icfg-...                            │
 │  Tables: users, passages(543), bookmarks, push_subscriptions,    │
-│          push_history, user_preferences, credentials, sessions   │
+│          push_history, browsing_events, user_preferences,        │
+│          credentials, sessions                                   │
 │  ORM: Prisma v6 + @prisma/adapter-libsql                        │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -78,7 +80,8 @@ exisz/randompage (GitHub)
 | bookmarks | 用户收藏 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记) |
-| user_preferences | 用户偏好标签权重 |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)，用于行为历史和偏好回流 |
+| user_preferences | 用户偏好标签权重（收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 
 ## Vercel Projects
 

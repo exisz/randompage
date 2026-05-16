@@ -42,18 +42,21 @@ export default function Discover() {
   const [bookmarked, setBookmarked] = useState(false);
   const [authed, setAuthed] = useState(false);
 
-  const fetchPassage = useCallback(async (preferUnread = false) => {
+  const fetchPassage = useCallback(async (preferUnread = false, skippedPassageId?: string) => {
     setLoading(true);
     setBookmarked(false);
     try {
       const isAuth = await logtoClient.isAuthenticated();
       setAuthed(isAuth);
-      const url = `/api/passages/random${preferUnread && isAuth ? '?preferUnread=1' : ''}`;
+      const params = new URLSearchParams();
+      if (preferUnread && isAuth) params.set('preferUnread', '1');
+      if (skippedPassageId && isAuth) params.set('skipPassageId', skippedPassageId);
+      const query = params.toString() ? `?${params.toString()}` : '';
       let res: Response;
       if (isAuth) {
-        res = await apiFetch(`/passages/random${preferUnread ? '?preferUnread=1' : ''}`);
+        res = await apiFetch(`/passages/random${query}`);
       } else {
-        res = await fetch(url);
+        res = await fetch(`/api/passages/random${query}`);
       }
       const data = await res.json();
       setPassage(data.passage);
@@ -120,7 +123,7 @@ export default function Discover() {
               <div className="card-actions justify-between">
                 <button
                   className="btn btn-outline btn-sm"
-                  onClick={() => fetchPassage(false)}
+                  onClick={() => fetchPassage(false, passage.id)}
                 >
                   Next passage →
                 </button>

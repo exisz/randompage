@@ -18,6 +18,7 @@ model User {
   pushSubscriptions PushSubscription[]
   bookmarks       Bookmark[]
   pushHistory     PushHistory[]
+  browsingEvents  BrowsingEvent[]
   userPreferences UserPreference[]
 }
 
@@ -54,8 +55,9 @@ model Passage {
   tags      String
   language  String  @default("en")
 
-  bookmarks   Bookmark[]
-  pushHistory PushHistory[]
+  bookmarks      Bookmark[]
+  pushHistory    PushHistory[]
+  browsingEvents BrowsingEvent[]
 
   @@map("passages")
 }
@@ -96,6 +98,22 @@ model PushHistory {
   passage Passage @relation(fields: [passageId], references: [id])
 
   @@map("push_history")
+}
+
+model BrowsingEvent {
+  id        String   @id
+  userId    String   @map("user_id")
+  passageId String   @map("passage_id")
+  action    String
+  source    String   @default("discover")
+  createdAt DateTime @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  passage Passage @relation(fields: [passageId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId, passageId])
+  @@map("browsing_events")
 }
 
 model UserPreference {
