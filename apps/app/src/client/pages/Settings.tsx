@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logtoClient, redirectUri, postSignOutRedirectUri } from '../lib/logto';
 import { apiFetch } from '../lib/api';
-import AppShell from '../components/AppShell';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -15,9 +14,11 @@ export default function Settings() {
     logtoClient.isAuthenticated().then(auth => {
       setAuthed(auth);
       if (!auth) return;
+      // Get VAPID public key
       fetch('/api/push/config')
         .then(r => r.json())
         .then(d => setVapidKey(d.publicKey || ''));
+      // Check existing subscription
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         navigator.serviceWorker.ready.then(reg =>
           reg.pushManager.getSubscription().then(sub => setPushEnabled(!!sub))
@@ -67,54 +68,53 @@ export default function Settings() {
   };
 
   return (
-    <AppShell
-      eyebrow="Device controls"
-      title="Tune the daily ritual."
-      subtitle="Account, push delivery, and app install metadata for the RandomPage phone surface."
-      maxWidth="max-w-md"
-    >
-      <div className="flex flex-col gap-4">
-        <section className="rp-glass-card p-5">
-          <h2 className="text-lg font-bold">Account</h2>
-          <p className="mt-1 text-sm opacity-60">Sign in to sync your shelf, history, and recommendation weights.</p>
-          {authed ? (
-            <button className="btn btn-error mt-4 w-full" onClick={signOut}>Sign out</button>
-          ) : (
-            <button className="btn btn-primary mt-4 w-full" onClick={signIn}>Sign in</button>
-          )}
-        </section>
-
+    <div className="min-h-screen bg-base-100 p-4">
+      <nav className="navbar bg-base-200 rounded-box mb-6 shadow">
+        <div className="flex-1"><Link to="/discover" className="font-serif text-xl">📖 RandomPage</Link></div>
+        <div className="flex-none gap-2">
+          <Link to="/discover" className="btn btn-ghost btn-sm">Discover</Link>
+          <Link to="/bookmarks" className="btn btn-ghost btn-sm">Bookmarks</Link>
+          <Link to="/history" className="btn btn-ghost btn-sm">History</Link>
+        </div>
+      </nav>
+      <div className="max-w-md mx-auto">
+        <h2 className="text-2xl font-serif mb-6">⚙️ Settings</h2>
+        <div className="card bg-base-200 shadow mb-4">
+          <div className="card-body gap-3">
+            <h3 className="card-title text-base">Account</h3>
+            {authed ? (
+              <button className="btn btn-error btn-sm" onClick={signOut}>Sign out</button>
+            ) : (
+              <button className="btn btn-primary btn-sm" onClick={signIn}>Sign in</button>
+            )}
+          </div>
+        </div>
         {authed && (
-          <section className="rp-glass-card p-5">
-            <h2 className="text-lg font-bold">Push Notifications</h2>
-            <p className="mt-1 text-sm opacity-60">Get one personalized passage delivered daily.</p>
-            <button
-              className={`btn mt-4 w-full ${pushEnabled ? 'btn-warning' : 'btn-primary'}`}
-              onClick={togglePush}
-              disabled={pushLoading || !vapidKey}
-            >
-              {pushLoading ? <span className="loading loading-spinner loading-xs" /> : null}
-              {pushEnabled ? 'Disable notifications' : 'Enable daily push'}
-            </button>
-          </section>
+          <div className="card bg-base-200 shadow mb-4">
+            <div className="card-body gap-3">
+              <h3 className="card-title text-base">Push Notifications</h3>
+              <p className="text-sm opacity-70">Get a random passage delivered daily.</p>
+              <button
+                className={`btn btn-sm ${pushEnabled ? 'btn-warning' : 'btn-primary'}`}
+                onClick={togglePush}
+                disabled={pushLoading || !vapidKey}
+              >
+                {pushLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                {pushEnabled ? 'Disable notifications' : 'Enable daily push'}
+              </button>
+            </div>
+          </div>
         )}
-
-        <section className="rp-glass-card p-5">
-          <h2 className="text-lg font-bold">Android shell</h2>
-          <p className="mt-1 text-sm opacity-60">
-            RandomPage is prepared as a native-feeling Android wrapper around the production PWA.
-          </p>
-          <Link to="/discover" className="btn btn-ghost mt-4 w-full">Return to reading</Link>
-        </section>
-
-        <section className="rp-glass-card p-5">
-          <h2 className="text-lg font-bold">About</h2>
-          <p className="mt-1 text-sm opacity-60">
-            RandomPage — a personal literary discovery engine.<br />
-            <a href="https://randompage.rollersoft.com.au" className="link link-warning" target="_blank" rel="noopener">randompage.rollersoft.com.au</a>
-          </p>
-        </section>
+        <div className="card bg-base-200 shadow">
+          <div className="card-body gap-2">
+            <h3 className="card-title text-base">About</h3>
+            <p className="text-sm opacity-60">
+              RandomPage — a daily literary discovery app.<br />
+              <a href="https://randompage.rollersoft.com.au" className="link" target="_blank" rel="noopener">randompage.rollersoft.com.au</a>
+            </p>
+          </div>
+        </div>
       </div>
-    </AppShell>
+    </div>
   );
 }

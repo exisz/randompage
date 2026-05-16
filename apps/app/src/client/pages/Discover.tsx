@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
-import AppShell from '../components/AppShell';
 
 interface Passage {
   id: string;
@@ -84,57 +83,71 @@ export default function Discover() {
   };
 
   return (
-    <AppShell
-      eyebrow="LifeOS reading surface"
-      title="Today’s page is personal."
-      subtitle="A quiet phone-native cockpit for passages chosen by your preference graph — not a global dice roll."
-    >
-      {loading ? (
-        <div className="rp-glass-card p-9 text-center">
-          <span className="loading loading-spinner loading-lg text-warning" />
-          <p className="mt-4 opacity-60">Tuning the next passage to your reading trail…</p>
+    <div className="min-h-screen bg-base-100 p-4">
+      {/* Nav */}
+      <nav className="navbar bg-base-200 rounded-box mb-6 shadow">
+        <div className="flex-1">
+          <span className="font-serif text-xl">📖 RandomPage</span>
         </div>
-      ) : passage ? (
-        <article className="rp-glass-card rp-passage-card p-6 sm:p-8">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <span className="badge rp-chip rounded-full">Personal recommendation</span>
-            <span className="text-xs uppercase tracking-[0.24em] opacity-45">{passage.language}</span>
+        <div className="flex-none gap-2">
+          <Link to="/bookmarks" className="btn btn-ghost btn-sm">Bookmarks</Link>
+          <Link to="/history" className="btn btn-ghost btn-sm">History</Link>
+          <Link to="/settings" className="btn btn-ghost btn-sm">Settings</Link>
+        </div>
+      </nav>
+
+      {/* Passage Card */}
+      <div className="max-w-2xl mx-auto">
+        {loading ? (
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body items-center">
+              <span className="loading loading-spinner loading-lg" />
+              <p className="opacity-60">Finding a passage for you…</p>
+            </div>
           </div>
-          <blockquote className="rp-quote">“{passage.text}”</blockquote>
-          <div className="rp-meta mt-7 text-right">
-            <div className="text-base font-bold text-base-content/90">{passage.bookTitle}</div>
-            <div>{passage.author}{passage.chapter ? ` · ${passage.chapter}` : ''}</div>
+        ) : passage ? (
+          <div className="card bg-base-200 shadow-xl">
+            <div className="card-body gap-4">
+              <blockquote className="font-serif text-lg leading-relaxed border-l-4 border-primary pl-4">
+                {passage.text}
+              </blockquote>
+              <div className="text-right opacity-70 text-sm">
+                <div className="font-semibold">{passage.bookTitle}</div>
+                <div>{passage.author}{passage.chapter ? ` · ${passage.chapter}` : ''}</div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {parsePassageTags(passage.tags).map(tag => (
+                  <span key={tag} className="badge badge-ghost badge-sm">{tag}</span>
+                ))}
+              </div>
+              <div className="card-actions justify-between">
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={() => fetchPassage(false, passage.id)}
+                >
+                  Next passage →
+                </button>
+                {authed && (
+                  <button
+                    className={`btn btn-sm ${bookmarked ? 'btn-success' : 'btn-primary'}`}
+                    onClick={handleBookmark}
+                    disabled={bookmarked}
+                  >
+                    {bookmarked ? '✓ Saved' : '🔖 Bookmark'}
+                  </button>
+                )}
+                {!authed && (
+                  <Link to="/signin" className="btn btn-sm btn-ghost opacity-60">
+                    Sign in to bookmark
+                  </Link>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="mt-6 flex flex-wrap gap-2">
-            {parsePassageTags(passage.tags).map(tag => (
-              <span key={tag} className="badge rp-chip badge-sm rounded-full">{tag}</span>
-            ))}
-          </div>
-          <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
-            <button
-              className="btn btn-outline border-warning/40 text-warning hover:border-warning hover:bg-warning hover:text-black"
-              onClick={() => fetchPassage(false, passage.id)}
-            >
-              Next tuned page →
-            </button>
-            {authed ? (
-              <button
-                className={`btn ${bookmarked ? 'btn-success' : 'btn-primary'}`}
-                onClick={handleBookmark}
-                disabled={bookmarked}
-              >
-                {bookmarked ? '✓ Saved to shelf' : '🔖 Save to shelf'}
-              </button>
-            ) : (
-              <Link to="/signin" className="btn btn-ghost opacity-70">
-                Sign in to bookmark
-              </Link>
-            )}
-          </div>
-        </article>
-      ) : (
-        <div className="alert alert-warning">No passages found.</div>
-      )}
-    </AppShell>
+        ) : (
+          <div className="alert alert-warning">No passages found.</div>
+        )}
+      </div>
+    </div>
   );
 }

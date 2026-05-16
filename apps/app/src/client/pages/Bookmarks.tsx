@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
-import AppShell from '../components/AppShell';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -32,31 +31,40 @@ export default function Bookmarks() {
   };
 
   return (
-    <AppShell
-      eyebrow="Shelf memory"
-      title="Saved pages stay close."
-      subtitle="Your shelf is the explicit signal that teaches RandomPage what to bring back next."
-    >
-      {loading ? (
-        <div className="rp-glass-card p-8 text-center"><span className="loading loading-spinner loading-lg text-warning" /></div>
-      ) : bookmarks.length === 0 ? (
-        <div className="rp-glass-card p-8 text-center">
-          <p className="opacity-65">No bookmarks yet.</p>
-          <Link to="/discover" className="btn btn-primary mt-5">Discover passages</Link>
+    <div className="min-h-screen bg-base-100 p-4">
+      <nav className="navbar bg-base-200 rounded-box mb-6 shadow">
+        <div className="flex-1"><Link to="/discover" className="font-serif text-xl">📖 RandomPage</Link></div>
+        <div className="flex-none gap-2">
+          <Link to="/discover" className="btn btn-ghost btn-sm">Discover</Link>
+          <Link to="/history" className="btn btn-ghost btn-sm">History</Link>
+          <Link to="/settings" className="btn btn-ghost btn-sm">Settings</Link>
         </div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {bookmarks.map(bm => (
-            <article key={bm.id} className="rp-glass-card rp-list-card p-5">
-              <p className="font-serif text-base leading-relaxed text-base-content/90">{bm.passage.text.slice(0, 220)}{bm.passage.text.length > 220 ? '…' : ''}</p>
-              <div className="rp-meta mt-4 text-right">{bm.passage.bookTitle} — {bm.passage.author}</div>
-              <div className="mt-4 flex justify-end">
-                <button className="btn btn-ghost btn-xs text-error" onClick={() => removeBookmark(bm.id)}>Remove</button>
+      </nav>
+      <div className="max-w-2xl mx-auto">
+        <h2 className="text-2xl font-serif mb-4">🔖 Bookmarks</h2>
+        {loading ? (
+          <div className="flex justify-center"><span className="loading loading-spinner loading-lg" /></div>
+        ) : bookmarks.length === 0 ? (
+          <div className="text-center opacity-60 py-10">
+            <p>No bookmarks yet.</p>
+            <Link to="/discover" className="btn btn-primary btn-sm mt-4">Discover passages</Link>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {bookmarks.map(bm => (
+              <div key={bm.id} className="card bg-base-200 shadow">
+                <div className="card-body gap-2 py-4">
+                  <p className="font-serif leading-relaxed">{bm.passage.text.slice(0, 200)}{bm.passage.text.length > 200 ? '…' : ''}</p>
+                  <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
+                  <div className="card-actions justify-end">
+                    <button className="btn btn-ghost btn-xs text-error" onClick={() => removeBookmark(bm.id)}>Remove</button>
+                  </div>
+                </div>
               </div>
-            </article>
-          ))}
-        </div>
-      )}
-    </AppShell>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

@@ -2,37 +2,57 @@
 
 RandomPage is packaged as a Capacitor Android wrapper around the production PWA at `https://app.randompage.rollersoft.com.au`.
 
-## Build debug APK
+This document is intentionally Android/store-only. The web app UI must not be changed for this release path.
+
+## Local debug APK
 
 ```bash
 pnpm install
-# macOS Homebrew JDK example, if /usr/bin/java cannot find a runtime:
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
-export PATH="$JAVA_HOME/bin:$PATH"
 # Requires a valid Android SDK (`ANDROID_HOME` or apps/app/android/local.properties sdk.dir).
 pnpm --filter @randompage/app android:apk:debug
 ```
 
-Expected unsigned/debug artifact after Android SDK is available:
+Expected debug artifact:
 
 ```text
 apps/app/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Current local validation reached Capacitor sync and Gradle configuration, then stopped because this Mac has no Android SDK configured:
+## Signed release APK via GitHub Actions
+
+Workflow: `.github/workflows/android-release.yml`
+
+Required repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_PASSWORD`
+
+The workflow builds the web bundle, syncs Capacitor, assembles a signed Android release APK, uploads the APK artifact, and attaches it to GitHub releases created from `v*.*.*` tags.
+
+Release artifact name:
 
 ```text
-SDK location not found. Define a valid SDK location with an ANDROID_HOME environment variable or sdk.dir in apps/app/android/local.properties.
+randompage-release.apk
 ```
 
-## Production signing / store publish blocker
+## Rollersoft Store
 
-This repo/workspace currently has no discoverable Rollersoft Store CLI, API contract, signing keystore, or release credentials. Do **not** invent an upload endpoint.
+Rollersoft Store is the `exisz/apps-repo` repository published at:
 
-To publish a signed release, provide:
+- Web: `https://repo.rollersoft.com.au`
+- Index: `https://exisz.github.io/apps-repo/index.json`
 
-1. Android signing keystore + alias/passwords (or CI secret names).
-2. Rollersoft Store submission mechanism (CLI command, API docs, or repo path for release entries).
-3. Store metadata requirements (icon/screenshot sizes, category, privacy URL, changelog format).
+Store app directory for RandomPage:
 
-Until then, the reproducible output is the debug APK above, ready for device smoke testing.
+```text
+apps/randompage/
+```
+
+Store app id:
+
+```text
+au.com.rollersoft.randompage
+```
+
+Publishing means adding/copying the signed APK into `apps-repo/apps/randompage/`, updating `metadata.json`, rebuilding `index.json` with `scripts/rebuild-index.py`, then committing and pushing `exisz/apps-repo` main.

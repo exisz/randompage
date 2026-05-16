@@ -1,0 +1,161 @@
+name: Android APK Build
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  bubblewrap-android:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10.30.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        id: setup-java
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build RandomPage app
+        run: pnpm --filter @randompage/app build
+
+      - name: Decode TWA keystore
+        run: |
+          mkdir -p tools/twa/randompage
+          echo "${{ secrets.TWA_KEYSTORE_BASE64 }}" | base64 -d > tools/twa/randompage/android.keystore
+          test -s tools/twa/randompage/android.keystore
+
+      - name: Pre-seed Bubblewrap config
+        env:
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
+        run: |
+          mkdir -p "$HOME/.bubblewrap"
+          cat > "$HOME/.bubblewrap/config.json" <<EOF_CONFIG
+          {
+            "jdkPath": "${JAVA_HOME}",
+            "androidSdkPath": "${ANDROID_HOME}"
+          }
+          EOF_CONFIG
+          cat "$HOME/.bubblewrap/config.json"
+
+      - name: Compute version metadata
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VNAME="${GITHUB_REF_NAME#v}"
+          else
+            VNAME="1.0.0-ci"
+          fi
+          echo "version_name=$VNAME" >> "$GITHUB_OUTPUT"
+          echo "version_code=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Stamp TWA manifest version
+        run: |
+          python3 - <<'PY_STAMP'
+          import json
+          from pathlib import Path
+          path = Path('tools/twa/randompage/twa-manifest.json')
+          data = json.loads(path.read_text())
+          data['appVersionName'] = '${{ steps.version.outputs.version_name }}'
+          data['appVersion'] = '${{ steps.version.outputs.version_name }}'
+          data['appVersionCode'] = int('${{ steps.version.outputs.version_code }}')
+          path.write_text(json.dumps(data, indent=2) + '\n')
+          PY_STAMP
+          cat tools/twa/randompage/twa-manifest.json
+
+      - name: Bubblewrap build
+        working-directory: tools/twa/randompage
+        env:
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.TWA_KEYSTORE_PASSWORD }}
+        run: yes "" | pnpm dlx @bubblewrap/cli build --skipPwaValidation
+
+      - name: Stage APK
+        run: |
+          mkdir -p dist-apk
+          cp tools/twa/randompage/app-release-signed.apk dist-apk/randompage-bubblewrap-release.apk
+          ls -la dist-apk/
+
+      - name: Verify signing fingerprint
+        run: |
+          BUILD_TOOLS_DIR=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          "$APKSIGNER" verify --print-certs dist-apk/randompage-bubblewrap-release.apk | tee dist-apk/randompage-bubblewrap-release.fingerprint.txt
+          grep -i "SHA-256" dist-apk/randompage-bubblewrap-release.fingerprint.txt || true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: randompage-bubblewrap-release.apk
+          path: dist-apk/randompage-bubblewrap-release.apk
+
+      - name: Upload fingerprint artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: randompage-bubblewrap-release-fingerprint
+          path: dist-apk/randompage-bubblewrap-release.fingerprint.txt
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-apk/randompage-bubblewrap-release.apk
+          fail_on_unmatched_files: true
+
+      - name: Resolve release APK URL
+        if: startsWith(github.ref, 'refs/tags/')
+        id: release-apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK_URL=""
+          for attempt in {1..6}; do
+            APK_URL=$(gh release view "$GITHUB_REF_NAME" \
+              --repo "${{ github.repository }}" \
+              --json assets \
+              --jq '.assets[] | select(.name == "randompage-bubblewrap-release.apk") | .url' \
+              | head -1)
+            if [[ -n "$APK_URL" ]]; then
+              break
+            fi
+            echo "Release APK not visible yet (attempt $attempt/6); waiting..."
+            sleep 5
+          done
+          if [[ -z "$APK_URL" ]]; then
+            echo "Could not resolve randompage-bubblewrap-release.apk on release $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+          echo "apk_url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "APK URL: $APK_URL"
+
+      - name: Publish to Rollersoft Store
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run publish-to-store.yml \
+            --repo "${{ github.repository }}" \
+            --ref "${{ github.ref_name }}" \
+            -f version_code='${{ steps.version.outputs.version_code }}' \
+            -f version_name='${{ steps.version.outputs.version_name }}' \
+            -f apk_url='${{ steps.release-apk.outputs.apk_url }}' \
+            -f changelog="RandomPage Android TWA release ${{ github.ref_name }}"
