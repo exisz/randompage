@@ -93,7 +93,10 @@ jobs:
         env:
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.TWA_KEYSTORE_PASSWORD }}
-        run: yes "" | pnpm dlx @bubblewrap/cli build --skipPwaValidation
+        run: |
+          # Bubblewrap prompts for a versionName when appVersionName is not the raw versionCode.
+          # Feed: default yes to project update, then the actual release version name.
+          printf '\n%s\n' '${{ steps.version.outputs.version_name }}' | pnpm dlx @bubblewrap/cli build --skipPwaValidation
 
       - name: Stage APK
         run: |
