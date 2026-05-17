@@ -9,6 +9,7 @@ on:
 jobs:
   bubblewrap-android:
     runs-on: [self-hosted, linux, x64, randompage]
+    timeout-minutes: 30
     permissions:
       contents: write
       actions: write
@@ -21,22 +22,19 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: pnpm
 
       - uses: actions/setup-java@v4
-        id: setup-java-17
+        id: setup-java
         with:
           distribution: temurin
           java-version: 17
 
       - uses: android-actions/setup-android@v3
 
-      - uses: actions/setup-java@v4
-        id: setup-java-bubblewrap
-        with:
-          distribution: temurin
-          java-version: 8
+      - name: Preinstall Bubblewrap Android build tools
+        run: sdkmanager --install "build-tools;34.0.0"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,7 +50,7 @@ jobs:
 
       - name: Pre-seed Bubblewrap config
         env:
-          JAVA_HOME: ${{ steps.setup-java-bubblewrap.outputs.path }}
+          JAVA_HOME: ${{ steps.setup-java.outputs.path }}
         run: |
           mkdir -p "$HOME/.bubblewrap"
           cat > "$HOME/.bubblewrap/config.json" <<EOF_CONFIG
@@ -88,15 +86,16 @@ jobs:
           PY_STAMP
           cat tools/twa/randompage/twa-manifest.json
 
+      - name: Generate Bubblewrap project
+        working-directory: tools/twa/randompage
+        run: pnpm dlx @bubblewrap/cli update --skipVersionUpgrade
+
       - name: Bubblewrap build
         working-directory: tools/twa/randompage
         env:
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.TWA_KEY_PASSWORD }}
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.TWA_KEYSTORE_PASSWORD }}
-        run: |
-          # Bubblewrap prompts for a versionName when appVersionName is not the raw versionCode.
-          # Feed: default yes to project update, then the actual release version name.
-          printf '\n%s\n' '${{ steps.version.outputs.version_name }}' | pnpm dlx @bubblewrap/cli build --skipPwaValidation
+        run: pnpm dlx @bubblewrap/cli build --skipPwaValidation
 
       - name: Stage APK
         run: |
@@ -112,12 +111,14 @@ jobs:
           grep -i "SHA-256" dist-apk/randompage-bubblewrap-release.fingerprint.txt || true
 
       - name: Upload APK artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: randompage-bubblewrap-release.apk
           path: dist-apk/randompage-bubblewrap-release.apk
 
       - name: Upload fingerprint artifact
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: randompage-bubblewrap-release-fingerprint

@@ -12,7 +12,7 @@ on:
         description: "versionName (e.g. 1.0.0)"
         required: true
       apk_url:
-        description: "APK URL. Required for manual dispatch; release events poll release assets."
+        description: "APK URL. Required for manual dispatch; release events poll the release assets."
         required: true
       changelog:
         description: "Changelog"
@@ -80,10 +80,33 @@ jobs:
           ref: main
 
       - name: Download APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APK_URL: ${{ needs.get-build-info.outputs.apk_url }}
         run: |
           APK_FILENAME="randompage_${{ needs.get-build-info.outputs.version_code }}.apk"
           mkdir -p apps/randompage
-          curl -L "${{ needs.get-build-info.outputs.apk_url }}" -o "apps/randompage/${APK_FILENAME}"
+
+          # RandomPage is a private repo, so unauthenticated curl can save a tiny
+          # GitHub error body instead of the APK. Use authenticated gh for GitHub
+          # release assets and verify size so the store never gets placeholders.
+          if [[ "$APK_URL" == https://github.com/${{ github.repository }}/releases/download/* ]]; then
+            TAG=$(python3 - <<'PY_TAG'
+          import os
+          parts = os.environ['APK_URL'].split('/releases/download/', 1)[1].split('/', 1)
+          print(parts[0])
+          PY_TAG
+          )
+            ASSET_NAME=$(basename "$APK_URL")
+            gh release download "$TAG" \
+              --repo "${{ github.repository }}" \
+              --pattern "$ASSET_NAME" \
+              --output "apps/randompage/${APK_FILENAME}"
+          else
+            curl -fL "$APK_URL" -o "apps/randompage/${APK_FILENAME}"
+          fi
+
+          test "$(stat -c%s "apps/randompage/${APK_FILENAME}")" -gt 100000
           echo "APK_FILENAME=${APK_FILENAME}" >> "$GITHUB_ENV"
 
       - name: Compute SHA256
