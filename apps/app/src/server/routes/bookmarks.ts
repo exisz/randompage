@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { nanoid } from 'nanoid';
+import { parsePassageTags } from '../lib/passageTags.js';
 
 export const bookmarksRouter = Router();
 
@@ -41,7 +42,7 @@ bookmarksRouter.post('/bookmarks', async (req: Request, res: Response) => {
     // Update preferences for passage tags
     const passage = await prisma.passage.findUnique({ where: { id: passageId } });
     if (passage) {
-      const tags = passage.tags.split(',').map(t => t.trim()).filter(Boolean);
+      const tags = parsePassageTags(passage.tags);
       for (const tag of tags) {
         const existing = await prisma.userPreference.findFirst({ where: { userId, tag } });
         if (existing) {

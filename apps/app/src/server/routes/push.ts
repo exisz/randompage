@@ -4,6 +4,7 @@ import { getPrisma } from '../lib/prisma.js';
 import type { Passage, PrismaClient, PushSubscription } from '../generated/prisma/index.js';
 import { nanoid } from 'nanoid';
 import webpush from 'web-push';
+import { scorePassageTags } from '../lib/passageTags.js';
 
 export const pushRouter = Router();
 
@@ -67,11 +68,10 @@ async function selectPersonalizedPassageForUser(
   const candidates = passages.filter(p => !excludeIds.has(p.id));
   const pool = candidates.length > 0 ? candidates : passages;
 
-  const weights = pool.map(p => {
-    const tags = p.tags.split(',').map(t => t.trim()).filter(Boolean);
-    const w = tags.reduce((sum, tag) => sum + (prefMap[tag] || 1), 0);
-    return { passage: p, weight: w > 0 ? w : 1 };
-  });
+  const weights = pool.map(p => ({
+    passage: p,
+    weight: scorePassageTags(p.tags, prefMap),
+  }));
   const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
   let rand = Math.random() * totalWeight;
   let chosen = weights[0].passage;

@@ -2,25 +2,12 @@ import { Router, type Request, type Response } from 'express';
 import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
+import { parsePassageTags, scorePassageTags } from '../lib/passageTags.js';
 
 export const passagesRouter = Router();
 
 const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip']);
 const VALID_INTERACTION_SOURCES = new Set(['discover', 'push_inbox']);
-
-function parsePassageTags(raw: string): string[] {
-  const text = raw.trim();
-  if (!text) return [];
-  try {
-    const parsed = JSON.parse(text);
-    if (Array.isArray(parsed)) {
-      return parsed.map(tag => String(tag).trim()).filter(Boolean);
-    }
-  } catch {
-    // Fall back to legacy comma-delimited tags below.
-  }
-  return text.split(',').map(tag => tag.trim()).filter(Boolean);
-}
 
 async function ensureBrowsingEventsTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe(`
@@ -146,11 +133,10 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
 
       // Get all passages and do weighted sampling
       const passages = await prisma.passage.findMany();
-      const weights = passages.map(p => {
-        const tags = parsePassageTags(p.tags);
-        const weight = tags.reduce((sum, tag) => sum + (prefMap[tag] || 1), 0);
-        return { passage: p, weight };
-      });
+      const weights = passages.map(p => ({
+        passage: p,
+        weight: scorePassageTags(p.tags, prefMap),
+      }));
 
       const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
       let rand = Math.random() * totalWeight;
