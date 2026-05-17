@@ -28,7 +28,7 @@ jobs:
         id: setup-java
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 8
 
       - uses: android-actions/setup-android@v3
 
@@ -81,14 +81,6 @@ jobs:
           path.write_text(json.dumps(data, indent=2) + '\n')
           PY_STAMP
           cat tools/twa/randompage/twa-manifest.json
-
-      - name: Normalize Android SDK tools
-        run: |
-          # Self-hosted runner image may carry legacy $ANDROID_HOME/tools sdkmanager,
-          # which crashes on JDK 17 with missing javax.xml.bind. Force modern cmdline-tools.
-          rm -rf "$ANDROID_HOME/tools"
-          yes | sdkmanager --licenses >/dev/null
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
       - name: Bubblewrap build
         working-directory: tools/twa/randompage
