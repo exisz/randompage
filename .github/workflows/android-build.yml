@@ -103,12 +103,22 @@ jobs:
           cp tools/twa/randompage/app-release-signed.apk dist-apk/randompage-bubblewrap-release.apk
           ls -la dist-apk/
 
-      - name: Verify signing fingerprint
+      - name: Verify signing fingerprint and TWA assetlinks
+        env:
+          ALLOW_HOSTED_ASSETLINKS_LAG: "1"
         run: |
           BUILD_TOOLS_DIR=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
           "$APKSIGNER" verify --print-certs dist-apk/randompage-bubblewrap-release.apk | tee dist-apk/randompage-bubblewrap-release.fingerprint.txt
-          grep -i "SHA-256" dist-apk/randompage-bubblewrap-release.fingerprint.txt || true
+          grep -i "SHA-256" dist-apk/randompage-bubblewrap-release.fingerprint.txt
+          node scripts/verify-twa-assetlinks.mjs \
+            --fingerprint-file dist-apk/randompage-bubblewrap-release.fingerprint.txt \
+            --assetlinks apps/app/src/client/public/.well-known/assetlinks.json \
+            --manifest apps/app/src/client/public/manifest.json \
+            --twa-manifest tools/twa/randompage/twa-manifest.json \
+            --package au.com.rollersoft.randompage \
+            --host app.randompage.rollersoft.com.au \
+            --hosted-url https://app.randompage.rollersoft.com.au/.well-known/assetlinks.json
 
       - name: Upload APK artifact
         continue-on-error: true

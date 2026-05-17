@@ -36,7 +36,9 @@
   "fullScopeUrl": "https://app.randompage.rollersoft.com.au/",
   "minSdkVersion": 21,
   "orientation": "portrait",
-  "fingerprints": [],
+  "fingerprints": [
+    "5A:F7:07:36:59:FE:8F:19:CE:77:1B:FD:2A:FC:07:00:1F:A9:D0:BE:7C:AB:6D:1F:D4:4D:EC:E0:0B:00:11:7F"
+  ],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "protocolHandlers": [],

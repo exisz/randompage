@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "au.com.rollersoft.randompage",
-    "sha256_cert_fingerprints": ["4F:E0:70:02:55:E2:5B:2D:E5:7B:D7:9E:AC:5F:B8:8F:8A:39:5C:EA:A9:74:22:9E:CA:CF:EA:12:4C:1B:C1:0C"]
+    "sha256_cert_fingerprints": ["5A:F7:07:36:59:FE:8F:19:CE:77:1B:FD:2A:FC:07:00:1F:A9:D0:BE:7C:AB:6D:1F:D4:4D:EC:E0:0B:00:11:7F"]
   }
 }]
