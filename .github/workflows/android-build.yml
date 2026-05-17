@@ -8,7 +8,7 @@ on:
 
 jobs:
   bubblewrap-android:
-    runs-on: [self-hosted, linux, x64, crossroads]
+    runs-on: [self-hosted, linux, x64, randompage]
     permissions:
       contents: write
       actions: write

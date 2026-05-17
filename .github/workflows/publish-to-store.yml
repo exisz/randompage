@@ -21,7 +21,7 @@ on:
 
 jobs:
   get-build-info:
-    runs-on: [self-hosted, linux, x64, crossroads]
+    runs-on: [self-hosted, linux, x64, randompage]
     permissions:
       contents: read
     outputs:
@@ -68,7 +68,7 @@ jobs:
 
   publish:
     needs: get-build-info
-    runs-on: [self-hosted, linux, x64, crossroads]
+    runs-on: [self-hosted, linux, x64, randompage]
     permissions:
       contents: read
     steps:
