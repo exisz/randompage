@@ -21,7 +21,7 @@ on:
 
 jobs:
   get-build-info:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, crossroads]
     permissions:
       contents: read
     outputs:
@@ -68,13 +68,85 @@ jobs:
 
   publish:
     needs: get-build-info
-    uses: exisz/apps-repo/.github/workflows/publish.yml@main
-    with:
-      app_id: au.com.rollersoft.randompage
-      app_dir: randompage
-      apk_url: ${{ needs.get-build-info.outputs.apk_url }}
-      version_code: ${{ needs.get-build-info.outputs.version_code }}
-      version_name: ${{ needs.get-build-info.outputs.version_name }}
-      changelog: ${{ needs.get-build-info.outputs.changelog }}
-    secrets:
-      APPS_REPO_PAT: ${{ secrets.APPS_REPO_PAT }}
+    runs-on: [self-hosted, linux, x64, crossroads]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout apps-repo
+        uses: actions/checkout@v4
+        with:
+          repository: exisz/apps-repo
+          token: ${{ secrets.APPS_REPO_PAT }}
+          ref: main
+
+      - name: Download APK
+        run: |
+          APK_FILENAME="randompage_${{ needs.get-build-info.outputs.version_code }}.apk"
+          mkdir -p apps/randompage
+          curl -L "${{ needs.get-build-info.outputs.apk_url }}" -o "apps/randompage/${APK_FILENAME}"
+          echo "APK_FILENAME=${APK_FILENAME}" >> "$GITHUB_ENV"
+
+      - name: Compute SHA256
+        run: |
+          SHA=$(sha256sum "apps/randompage/${{ env.APK_FILENAME }}" | cut -d' ' -f1)
+          SIZE=$(stat -c%s "apps/randompage/${{ env.APK_FILENAME }}")
+          echo "APK_SHA256=${SHA}" >> "$GITHUB_ENV"
+          echo "APK_SIZE=${SIZE}" >> "$GITHUB_ENV"
+
+      - name: Update metadata.json
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          from datetime import datetime, timezone
+
+          meta_path = "apps/randompage/metadata.json"
+          with open(meta_path) as f:
+              meta = json.load(f)
+
+          new_version = {
+              "versionCode": int("${{ needs.get-build-info.outputs.version_code }}"),
+              "versionName": "${{ needs.get-build-info.outputs.version_name }}",
+              "apk": f"apps/randompage/${{ env.APK_FILENAME }}",
+              "size": int(os.environ["APK_SIZE"]),
+              "released_at": datetime.now(timezone.utc).isoformat(),
+              "sha256": os.environ["APK_SHA256"],
+              "changelog": "${{ needs.get-build-info.outputs.changelog }}"
+          }
+
+          meta["versions"] = [
+              v for v in meta.get("versions", [])
+              if v["versionCode"] != new_version["versionCode"]
+          ]
+          meta["versions"].insert(0, new_version)
+          meta["versions"].sort(key=lambda v: v["versionCode"], reverse=True)
+
+          with open(meta_path, "w") as f:
+              json.dump(meta, f, indent=2, ensure_ascii=False)
+          print(f"Updated metadata for au.com.rollersoft.randompage v${{ needs.get-build-info.outputs.version_name }}")
+          EOF
+        env:
+          APK_SIZE: ${{ env.APK_SIZE }}
+          APK_SHA256: ${{ env.APK_SHA256 }}
+
+      - name: Rebuild index.json
+        run: python3 scripts/rebuild-index.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "apps-bot"
+          git config user.email "apps-bot@rollersoft.com.au"
+          git add apps/ index.json
+          if git diff --cached --quiet; then
+            echo "No apps-repo changes to publish."
+            exit 0
+          fi
+          git commit -m "publish(randompage): v${{ needs.get-build-info.outputs.version_name }} (versionCode ${{ needs.get-build-info.outputs.version_code }})"
+          git push origin main
+
+      - name: Trigger apps-store rebuild
+        run: |
+          curl -sS -X POST \
+            -H "Authorization: Bearer ${{ secrets.STORE_REBUILD_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/exisz/apps-store/actions/workflows/deploy.yml/dispatches \
+            -d '{"ref":"main"}'
