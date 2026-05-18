@@ -118,8 +118,8 @@ exisz/randompage (GitHub)
 - 所有 cron route 使用 `CRON_SECRET` 鉴权：`Authorization: Bearer $CRON_SECRET`（也兼容 `x-cron-secret`）。
 - 可观测性：`RANDOMPAGE_DISCORD_WEBHOOK_URL`（fallback `DISCORD_WEBHOOK_URL`）存在时，`fetch-new-books` / `tag-untagged` 会发送 cron 名、处理条数、净增/打标数、失败数、耗时与截断错误。
 - `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。
-- `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；新 passages 以 `tags='[]'` 入库，等待每日补打标。
-- `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors，优先 GitHub raw GITenberg（生产 serverless 更稳定），fallback Project Gutenberg cache；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误。
+- `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；内置 30 本 public-domain seed queue（Gutenberg cache + 关键书目的 GITenberg mirror）按 title+author 去重，新 passages 以 `tags='[]'` 入库，等待每日补打标。
+- `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
 ## 数据维护脚本 (`apps/app/scripts/`)
@@ -137,6 +137,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-19 | PLANET-1835: `fetch-new-books` 书源从 3 本扩展为 30 本 public-domain seed queue，并在队列耗尽时返回 409 + Discord observability，避免 weekly cron 静默空转。 | Engineer Pod |
 | 2026-05-18 | PLANET-1827: `fetch-new-books` 书源改为 ordered plaintext mirrors（GitHub raw GITenberg primary + Gutenberg fallback）并加入 user-agent/短文本校验，避免生产环境 Gutenberg URL 不稳定导致 processed=1 inserted=0 failed=1。 | Engineer Pod |
 | 2026-05-18 | PLANET-1114/1113/1112: 新增 `routes/cron.ts` 数据管线 cron：weekly `fetch-new-books` 拉 public-domain plaintext 书单并切片入库、daily `tag-untagged` 调 Gemini 给空 tags 批量打标并用 `passage_tag_failures.retry_count` 重试/跳过；两个 cron 均支持 Discord webhook 摘要通知；`vercel.json` 注册对应 schedules。 | Engineer Pod |
 | 2026-04-23 | PLANET-1172/1173: 提交 `apps/app/scripts/{tag-passages,cleanup-boilerplate}.mjs` + README；扩展 boilerplate 分类器（new patterns: "first edition of this ebook", "makes no representations", "volunteer-driven Standard Ebooks", "check for updates"）；apply 后清掉 2 行残留 boilerplate（id=342,344），passages 545→543，empty-tag rate=0%，boilerplate rate=0% | Engineer Pod |

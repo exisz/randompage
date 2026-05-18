@@ -30,39 +30,63 @@ type BookQueueItem = {
   language?: string;
 };
 
+function pgCacheUrls(id: number) {
+  return [
+    `https://www.gutenberg.org/cache/epub/${id}/pg${id}.txt`,
+    `https://www.gutenberg.org/files/${id}/${id}-0.txt`,
+    `https://www.gutenberg.org/files/${id}/${id}.txt`,
+  ];
+}
+
+function book(slug: string, title: string, author: string, gutenbergId: number, gitUrls: string[] = [], language = 'en'): BookQueueItem {
+  return {
+    slug,
+    title,
+    author,
+    urls: [...gitUrls, ...pgCacheUrls(gutenbergId)],
+    language,
+  };
+}
+
 const BOOK_QUEUE: BookQueueItem[] = [
-  {
-    slug: 'jane-austen-pride-and-prejudice',
-    title: 'Pride and Prejudice',
-    author: 'Jane Austen',
-    urls: [
-      'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt',
-      'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342.txt',
-      'https://www.gutenberg.org/cache/epub/1342/pg1342.txt',
-    ],
-    language: 'en',
-  },
-  {
-    slug: 'mary-shelley-frankenstein',
-    title: 'Frankenstein',
-    author: 'Mary Shelley',
-    urls: [
-      'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84-0.txt',
-      'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84.txt',
-      'https://www.gutenberg.org/cache/epub/84/pg84.txt',
-    ],
-    language: 'en',
-  },
-  {
-    slug: 'frederick-douglass-narrative',
-    title: 'Narrative of the Life of Frederick Douglass',
-    author: 'Frederick Douglass',
-    urls: [
-      'https://raw.githubusercontent.com/GITenberg/Narrative-of-the-Life-of-Frederick-Douglass-an-American-Slave_23/master/23.txt',
-      'https://www.gutenberg.org/cache/epub/23/pg23.txt',
-    ],
-    language: 'en',
-  },
+  book('jane-austen-pride-and-prejudice', 'Pride and Prejudice', 'Jane Austen', 1342, [
+    'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt',
+    'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342.txt',
+  ]),
+  book('mary-shelley-frankenstein', 'Frankenstein', 'Mary Shelley', 84, [
+    'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84-0.txt',
+    'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84.txt',
+  ]),
+  book('frederick-douglass-narrative', 'Narrative of the Life of Frederick Douglass', 'Frederick Douglass', 23, [
+    'https://raw.githubusercontent.com/GITenberg/Narrative-of-the-Life-of-Frederick-Douglass-an-American-Slave_23/master/23.txt',
+  ]),
+  book('lewis-carroll-alice', "Alice's Adventures in Wonderland", 'Lewis Carroll', 11),
+  book('arthur-conan-doyle-sherlock-holmes', 'The Adventures of Sherlock Holmes', 'Arthur Conan Doyle', 1661),
+  book('herman-melville-moby-dick', 'Moby-Dick; or, The Whale', 'Herman Melville', 2701),
+  book('charles-dickens-tale-of-two-cities', 'A Tale of Two Cities', 'Charles Dickens', 98),
+  book('bram-stoker-dracula', 'Dracula', 'Bram Stoker', 345),
+  book('franz-kafka-metamorphosis', 'Metamorphosis', 'Franz Kafka', 5200),
+  book('jacob-grimm-grimms-fairy-tales', "Grimms' Fairy Tales", 'Jacob Grimm and Wilhelm Grimm', 2591),
+  book('mark-twain-tom-sawyer', 'The Adventures of Tom Sawyer', 'Mark Twain', 74),
+  book('mark-twain-huckleberry-finn', 'Adventures of Huckleberry Finn', 'Mark Twain', 76),
+  book('charlotte-bronte-jane-eyre', 'Jane Eyre', 'Charlotte Brontë', 1260),
+  book('charles-dickens-great-expectations', 'Great Expectations', 'Charles Dickens', 1400),
+  book('emily-bronte-wuthering-heights', 'Wuthering Heights', 'Emily Brontë', 768),
+  book('joseph-conrad-heart-of-darkness', 'Heart of Darkness', 'Joseph Conrad', 219),
+  book('lucy-maud-montgomery-anne', 'Anne of Green Gables', 'L. M. Montgomery', 45),
+  book('fyodor-dostoyevsky-crime-and-punishment', 'Crime and Punishment', 'Fyodor Dostoyevsky', 2554),
+  book('charles-dickens-christmas-carol', 'A Christmas Carol', 'Charles Dickens', 46),
+  book('louisa-may-alcott-little-women', 'Little Women', 'Louisa May Alcott', 514),
+  book('robert-louis-stevenson-treasure-island', 'Treasure Island', 'Robert Louis Stevenson', 120),
+  book('james-joyce-ulysses', 'Ulysses', 'James Joyce', 4300),
+  book('leo-tolstoy-war-and-peace', 'War and Peace', 'Leo Tolstoy', 2600),
+  book('homer-iliad', 'The Iliad', 'Homer', 6130),
+  book('homer-odyssey', 'The Odyssey', 'Homer', 1727),
+  book('william-shakespeare-complete-works', 'The Complete Works of William Shakespeare', 'William Shakespeare', 100),
+  book('j-m-barrie-peter-pan', 'Peter Pan', 'J. M. Barrie', 16),
+  book('friedrich-nietzsche-zarathustra', 'Thus Spake Zarathustra', 'Friedrich Nietzsche', 1998),
+  book('jonathan-swift-modest-proposal', 'A Modest Proposal', 'Jonathan Swift', 1080),
+  book('sun-tzu-art-of-war', 'The Art of War', 'Sun Tzu', 132),
 ];
 
 function isCronAuthorized(req: Request) {
@@ -219,6 +243,22 @@ async function fetchNewBooks(req: Request, res: Response) {
 
   try {
     const books = await chooseNextBooks(prisma, maxBooks);
+    if (books.length === 0) {
+      const summary: CronSummary = {
+        cron: 'fetch-new-books',
+        ok: false,
+        processed: 0,
+        inserted: 0,
+        failed: 0,
+        skipped: BOOK_QUEUE.length,
+        durationMs: Date.now() - started,
+        error: `book queue exhausted: all ${BOOK_QUEUE.length} configured public-domain books already have passages`,
+      };
+      await notifyPipeline(summary);
+      res.status(409).json(summary);
+      return;
+    }
+
     for (const book of books) {
       processed++;
       try {
@@ -250,7 +290,7 @@ async function fetchNewBooks(req: Request, res: Response) {
       }
     }
 
-    const summary: CronSummary = { cron: 'fetch-new-books', ok: failed === 0, processed, inserted, failed, skipped: 0, durationMs: Date.now() - started };
+    const summary: CronSummary = { cron: 'fetch-new-books', ok: failed === 0, processed, inserted, failed, skipped: Math.max(0, maxBooks - processed), durationMs: Date.now() - started };
     await notifyPipeline(summary);
     res.status(summary.ok ? 200 : 207).json(summary);
   } catch (err) {
