@@ -21,7 +21,12 @@ type BookQueueItem = {
   slug: string;
   title: string;
   author: string;
-  url: string;
+  /**
+   * Ordered plaintext mirrors. GitHub raw GITenberg URLs are primary because
+   * production serverless fetches to gutenberg.org can be intermittently denied
+   * or redirected differently from local curl.
+   */
+  urls: string[];
   language?: string;
 };
 
@@ -30,21 +35,32 @@ const BOOK_QUEUE: BookQueueItem[] = [
     slug: 'jane-austen-pride-and-prejudice',
     title: 'Pride and Prejudice',
     author: 'Jane Austen',
-    url: 'https://www.gutenberg.org/cache/epub/1342/pg1342.txt',
+    urls: [
+      'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342-0.txt',
+      'https://raw.githubusercontent.com/GITenberg/Pride-and-Prejudice_1342/master/1342.txt',
+      'https://www.gutenberg.org/cache/epub/1342/pg1342.txt',
+    ],
     language: 'en',
   },
   {
     slug: 'mary-shelley-frankenstein',
     title: 'Frankenstein',
     author: 'Mary Shelley',
-    url: 'https://www.gutenberg.org/cache/epub/84/pg84.txt',
+    urls: [
+      'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84-0.txt',
+      'https://raw.githubusercontent.com/GITenberg/Frankenstein_84/master/84.txt',
+      'https://www.gutenberg.org/cache/epub/84/pg84.txt',
+    ],
     language: 'en',
   },
   {
     slug: 'frederick-douglass-narrative',
     title: 'Narrative of the Life of Frederick Douglass',
     author: 'Frederick Douglass',
-    url: 'https://www.gutenberg.org/cache/epub/23/pg23.txt',
+    urls: [
+      'https://raw.githubusercontent.com/GITenberg/Narrative-of-the-Life-of-Frederick-Douglass-an-American-Slave_23/master/23.txt',
+      'https://www.gutenberg.org/cache/epub/23/pg23.txt',
+    ],
     language: 'en',
   },
 ];
@@ -165,6 +181,27 @@ async function chooseNextBooks(prisma: PrismaClient, maxBooks: number) {
   return selected;
 }
 
+async function fetchBookText(book: BookQueueItem) {
+  const errors: string[] = [];
+  for (const url of book.urls) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'user-agent': 'RandomPage/1.0 (+https://randompage.rollersoft.com.au)',
+          'accept': 'text/plain,text/*;q=0.9,*/*;q=0.1',
+        },
+      });
+      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+      const text = await response.text();
+      if (text.length < 10_000) throw new Error(`too short (${text.length} bytes)`);
+      return { text, sourceUrl: url };
+    } catch (err) {
+      errors.push(`${url}: ${truncate(err, 300)}`);
+    }
+  }
+  throw new Error(`all plaintext sources failed for ${book.slug}: ${errors.join(' | ')}`);
+}
+
 async function fetchNewBooks(req: Request, res: Response) {
   const started = Date.now();
   if (!isCronAuthorized(req)) {
@@ -185,10 +222,9 @@ async function fetchNewBooks(req: Request, res: Response) {
     for (const book of books) {
       processed++;
       try {
-        const response = await fetch(book.url);
-        if (!response.ok) throw new Error(`fetch ${response.status} ${response.statusText}`);
-        const text = await response.text();
+        const { text, sourceUrl } = await fetchBookText(book);
         const passages = slicePassages(text, maxPassages - inserted);
+        if (passages.length === 0) throw new Error(`no eligible passages sliced from ${sourceUrl}`);
         for (const passageText of passages) {
           await prisma.passage.create({
             data: {
@@ -206,7 +242,7 @@ async function fetchNewBooks(req: Request, res: Response) {
         }
         await prisma.$executeRawUnsafe(
           'INSERT INTO ingest_runs (id, slug, title, author, source_url, inserted_count, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-          nanoid(), book.slug, book.title, book.author, book.url, passages.length, new Date().toISOString(),
+          nanoid(), book.slug, book.title, book.author, sourceUrl, passages.length, new Date().toISOString(),
         );
       } catch (err) {
         failed++;
