@@ -111,7 +111,7 @@ exisz/randompage (GitHub)
 |------|----------|-------|------|
 | daily-push | `0 21 * * *` (21:00 UTC / ~7am AEST) | GET/POST /api/cron/daily-push | 每日推送个性化片段给所有 Web Push 订阅者 |
 | tag-untagged | `0 3 * * *` | GET/POST /api/cron/tag-untagged | 每日扫描 `tags` 为空的 passages，调用 Gemini 批量打标，失败写 `passage_tag_failures.retry_count`，超过 3 次跳过 |
-| fetch-new-books | `0 0 * * 0` | GET/POST /api/cron/fetch-new-books | 每周从内置 Standard Ebooks 队列拉取未入库书籍，清洗/切片后写入 `passages(tags='[]')`，由 tag cron 后续补标 |
+| fetch-new-books | `0 0 * * 0` | GET/POST /api/cron/fetch-new-books | 每周从内置 public-domain 书单拉取未入库书籍（Project Gutenberg plaintext），清洗/切片后写入 `passages(tags='[]')`，由 tag cron 后续补标 |
 
 ## 数据管线运维
 
@@ -136,7 +136,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
-| 2026-05-18 | PLANET-1114/1113/1112: 新增 `routes/cron.ts` 数据管线 cron：weekly `fetch-new-books` 拉 Standard Ebooks 队列并切片入库、daily `tag-untagged` 调 Gemini 给空 tags 批量打标并用 `passage_tag_failures.retry_count` 重试/跳过；两个 cron 均支持 Discord webhook 摘要通知；`vercel.json` 注册对应 schedules。 | Engineer Pod |
+| 2026-05-18 | PLANET-1114/1113/1112: 新增 `routes/cron.ts` 数据管线 cron：weekly `fetch-new-books` 拉 public-domain plaintext 书单并切片入库、daily `tag-untagged` 调 Gemini 给空 tags 批量打标并用 `passage_tag_failures.retry_count` 重试/跳过；两个 cron 均支持 Discord webhook 摘要通知；`vercel.json` 注册对应 schedules。 | Engineer Pod |
 | 2026-04-23 | PLANET-1172/1173: 提交 `apps/app/scripts/{tag-passages,cleanup-boilerplate}.mjs` + README；扩展 boilerplate 分类器（new patterns: "first edition of this ebook", "makes no representations", "volunteer-driven Standard Ebooks", "check for updates"）；apply 后清掉 2 行残留 boilerplate（id=342,344），passages 545→543，empty-tag rate=0%，boilerplate rate=0% | Engineer Pod |
 | 2026-04-23 | PLANET-1159: 架构迁移 Next.js → genstack-astro-spa-api-2deploys (Astro landing + Vite/React SPA + Express/Prisma API) | Engineer Pod |
 | 2026-04-22 | PLANET-1094: /api/passages/random 支持 ?preferUnread=1 | Engineer Pod |
