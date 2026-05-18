@@ -11,6 +11,14 @@
     {
       "path": "/api/cron/daily-push",
       "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/cron/tag-untagged",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/fetch-new-books",
+      "schedule": "0 0 * * 0"
     }
   ]
 }

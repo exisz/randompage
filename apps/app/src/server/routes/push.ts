@@ -259,14 +259,15 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/cron/daily-push
+// GET/POST /api/cron/daily-push
 // Uses the same L1 personalized selection policy as /api/push/send so cron cannot drift
-// back to global random sampling.
-pushRouter.post('/cron/daily-push', async (req: Request, res: Response) => {
+// back to global random sampling. Vercel Cron invokes GET; POST remains for manual tooling.
+async function dailyPushHandler(req: Request, res: Response) {
   try {
     const secret = process.env.CRON_SECRET;
     const auth = req.header('authorization');
-    if (!secret || auth !== `Bearer ${secret}`) {
+    const headerSecret = req.header('x-cron-secret');
+    if (!secret || (auth !== `Bearer ${secret}` && headerSecret !== secret)) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
@@ -283,4 +284,7 @@ pushRouter.post('/cron/daily-push', async (req: Request, res: Response) => {
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
-});
+}
+
+pushRouter.get('/cron/daily-push', dailyPushHandler);
+pushRouter.post('/cron/daily-push', dailyPushHandler);

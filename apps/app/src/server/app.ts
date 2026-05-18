@@ -5,6 +5,7 @@ import { passagesRouter } from './routes/passages.js';
 import { bookmarksRouter } from './routes/bookmarks.js';
 import { pushRouter } from './routes/push.js';
 import { preferencesRouter } from './routes/preferences.js';
+import { cronRouter } from './routes/cron.js';
 
 export function createApp(): Express {
   const app = express();
@@ -15,6 +16,7 @@ export function createApp(): Express {
   app.use('/api', bookmarksRouter);
   app.use('/api', pushRouter);
   app.use('/api', preferencesRouter);
+  app.use('/api', cronRouter);
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });
