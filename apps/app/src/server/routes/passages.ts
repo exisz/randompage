@@ -60,6 +60,24 @@ async function updatePreferencesForPassage(
   }
 }
 
+
+async function markPushHistoryRead(
+  prisma: ReturnType<typeof getPrisma>,
+  userId: string,
+  passageId: string,
+  now: Date,
+) {
+  const push = await prisma.pushHistory.findFirst({
+    where: { userId, passageId, readAt: null },
+    orderBy: { sentAt: 'desc' },
+  });
+  if (!push) return;
+  await prisma.pushHistory.update({
+    where: { id: push.id },
+    data: { readAt: now },
+  });
+}
+
 async function recordInteraction(
   prisma: ReturnType<typeof getPrisma>,
   userId: string,
@@ -116,9 +134,10 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       });
       if (recentPush) {
         // Mark it as read
+        const now = new Date();
         await prisma.pushHistory.update({
           where: { id: recentPush.id },
-          data: { readAt: new Date() },
+          data: { readAt: now },
         });
         await recordInteraction(prisma, userId, recentPush.passageId, 'view', 'push_inbox');
         res.json({ passage: recentPush.passage, fromInbox: true });
@@ -184,7 +203,7 @@ passagesRouter.get('/browsing/history', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/passages/:id
+// GET /api/passages/:id?source=push
 passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
@@ -193,6 +212,22 @@ passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
       res.status(404).json({ error: 'Not found' });
       return;
     }
+
+    // Optional auth: a clicked push carries the exact passageId from the service worker.
+    // If the reader is signed in, mark that matching delivery read and feed the view
+    // into the same personalization loop used by the push inbox.
+    try {
+      const claims = await verifyBearer(req.header('authorization'));
+      const userId = claims.sub as string;
+      const source = typeof req.query.source === 'string' ? req.query.source : 'discover';
+      if (source === 'push' || source === 'push_inbox') {
+        await markPushHistoryRead(prisma, userId, passage.id, new Date());
+        await recordInteraction(prisma, userId, passage.id, 'view', 'push_inbox');
+      }
+    } catch {
+      // Anonymous direct passage reads are supported, but personalization is scoped to auth users.
+    }
+
     res.json({ passage });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);

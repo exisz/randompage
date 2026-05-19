@@ -19,5 +19,9 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
-  e.waitUntil(clients.openWindow('/discover'));
+  const passageId = e.notification?.data?.passageId;
+  const targetUrl = passageId
+    ? `/discover?passageId=${encodeURIComponent(passageId)}&source=push`
+    : '/discover';
+  e.waitUntil(clients.openWindow(targetUrl));
 });

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-18 — PLANET-1114/1113/1112 数据管线 Cron
+> 最后更新: 2026-05-20 — PLANET-1878 push click attribution
 
 ## 系统拓扑 (当前架构)
 
@@ -36,6 +36,7 @@
 │  │    /api/health    → API health check                      │ │
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
+│  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    /api/bookmarks → 书签 CRUD                             │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史               │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
@@ -81,8 +82,8 @@ exisz/randompage (GitHub)
 | passages | 片段库 (543 条, EN+CN, 100% tagged, boilerplate-free) |
 | bookmarks | 用户收藏 |
 | push_subscriptions | Web Push 订阅 |
-| push_history | 推送记录 (含 read_at 标记) |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source)，用于行为历史和偏好回流 |
+| push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好 |
 | user_preferences | 用户偏好标签权重（收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -137,6 +138,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-20 | PLANET-1878: Service Worker notification click 保留 passageId，Discover 加载 /api/passages/:id?source=push；认证用户点击推送会精确标记 matching push_history.read_at 并写 browsing_events(source=push_inbox)，防止多条未读推送时归因漂移。 | Engineer Pod |
 | 2026-05-19 | PLANET-1835: `fetch-new-books` 书源从 3 本扩展为 30 本 public-domain seed queue，并在队列耗尽时返回 409 + Discord observability，避免 weekly cron 静默空转。 | Engineer Pod |
 | 2026-05-18 | PLANET-1827: `fetch-new-books` 书源改为 ordered plaintext mirrors（GitHub raw GITenberg primary + Gutenberg fallback）并加入 user-agent/短文本校验，避免生产环境 Gutenberg URL 不稳定导致 processed=1 inserted=0 failed=1。 | Engineer Pod |
 | 2026-05-18 | PLANET-1114/1113/1112: 新增 `routes/cron.ts` 数据管线 cron：weekly `fetch-new-books` 拉 public-domain plaintext 书单并切片入库、daily `tag-untagged` 调 Gemini 给空 tags 批量打标并用 `passage_tag_failures.retry_count` 重试/跳过；两个 cron 均支持 Discord webhook 摘要通知；`vercel.json` 注册对应 schedules。 | Engineer Pod |

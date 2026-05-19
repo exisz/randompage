@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 
@@ -41,6 +41,9 @@ export default function Discover() {
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
   const [authed, setAuthed] = useState(false);
+  const [searchParams] = useSearchParams();
+  const pushPassageId = searchParams.get('passageId');
+  const pushSource = searchParams.get('source');
 
   const fetchPassage = useCallback(async (preferUnread = false, skippedPassageId?: string) => {
     setLoading(true);
@@ -67,7 +70,36 @@ export default function Discover() {
     }
   }, []);
 
-  useEffect(() => { fetchPassage(true); }, [fetchPassage]);
+  const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
+    setLoading(true);
+    setBookmarked(false);
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      setAuthed(isAuth);
+      const params = new URLSearchParams();
+      if (source) params.set('source', source);
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = isAuth
+        ? await apiFetch(`/passages/${encodeURIComponent(passageId)}${query}`)
+        : await fetch(`/api/passages/${encodeURIComponent(passageId)}${query}`);
+      if (!res.ok) throw new Error(`Passage ${passageId} returned ${res.status}`);
+      const data = await res.json();
+      setPassage(data.passage);
+    } catch (e) {
+      console.error(e);
+      await fetchPassage(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchPassage]);
+
+  useEffect(() => {
+    if (pushPassageId) {
+      void fetchPassageById(pushPassageId, pushSource);
+      return;
+    }
+    void fetchPassage(true);
+  }, [fetchPassage, fetchPassageById, pushPassageId, pushSource]);
 
   const handleBookmark = async () => {
     if (!passage || !authed) return;
