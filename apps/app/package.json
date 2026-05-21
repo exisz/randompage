@@ -11,11 +11,12 @@
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
     "check:push-policy": "node scripts/check-push-selection-policy.mjs",
+    "check:push-click-policy": "node scripts/check-push-click-attribution-policy.mjs",
+    "check:schema-mapping": "node scripts/check-schema-table-mapping.mjs",
     "check:tag-policy": "tsx scripts/check-tag-parsing-policy.ts",
     "android:sync": "capacitor sync android",
     "android:open": "capacitor open android",
-    "android:apk:debug": "pnpm build && capacitor sync android && cd android && ./gradlew assembleDebug",
-    "check:push-click-policy": "node scripts/check-push-click-attribution-policy.mjs"
+    "android:apk:debug": "pnpm build && capacitor sync android && cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
     "@libsql/client": "^0.14.0",

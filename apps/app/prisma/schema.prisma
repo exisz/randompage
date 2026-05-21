@@ -13,13 +13,15 @@ model User {
   displayName String   @map("display_name")
   createdAt   DateTime @map("created_at")
 
-  credentials     Credential[]
-  sessions        Session[]
+  credentials       Credential[]
+  sessions          Session[]
   pushSubscriptions PushSubscription[]
-  bookmarks       Bookmark[]
-  pushHistory     PushHistory[]
-  browsingEvents  BrowsingEvent[]
-  userPreferences UserPreference[]
+  bookmarks         Bookmark[]
+  pushHistory       PushHistory[]
+  browsingEvents    BrowsingEvent[]
+  userPreferences   UserPreference[]
+
+  @@map("users")
 }
 
 model Credential {

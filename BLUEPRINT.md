@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-20 — PLANET-1878 push click attribution
+> 最后更新: 2026-05-21 — PLANET-1914 Prisma users table mapping smoke
 
 ## 系统拓扑 (当前架构)
 
@@ -52,7 +52,7 @@
 │  Tables: users, passages(543), bookmarks, push_subscriptions,    │
 │          push_history, browsing_events, user_preferences,        │
 │          credentials, sessions, ingest_runs, passage_tag_failures│
-│  ORM: Prisma v6 + @prisma/adapter-libsql                        │
+│  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -129,6 +129,7 @@ exisz/randompage (GitHub)
 |------|--------|------|
 | `tag-passages.mjs` | PLANET-1173 | 用 Gemini Flash 给 `tags` 为空的 passage 批量打标 (genre/mood/topic/language) |
 | `cleanup-boilerplate.mjs` | PLANET-1172 | 删除 Standard Ebooks / Project Gutenberg 版权/前言 boilerplate 行（DRY-RUN by default，`--apply` 才真删） |
+| `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
 
@@ -138,6 +139,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-21 | PLANET-1914: Prisma `User` model 显式 `@@map("users")` 对齐生产 Turso `users` 表，并新增 `check:schema-mapping` smoke 覆盖 authenticated user upsert、push subscription、browsing event、user preference 等 snake_case 表写入路径。 | Engineer Pod |
 | 2026-05-20 | PLANET-1878: Service Worker notification click 保留 passageId，Discover 加载 /api/passages/:id?source=push；认证用户点击推送会精确标记 matching push_history.read_at 并写 browsing_events(source=push_inbox)，防止多条未读推送时归因漂移。 | Engineer Pod |
 | 2026-05-19 | PLANET-1835: `fetch-new-books` 书源从 3 本扩展为 30 本 public-domain seed queue，并在队列耗尽时返回 409 + Discord observability，避免 weekly cron 静默空转。 | Engineer Pod |
 | 2026-05-18 | PLANET-1827: `fetch-new-books` 书源改为 ordered plaintext mirrors（GitHub raw GITenberg primary + Gutenberg fallback）并加入 user-agent/短文本校验，避免生产环境 Gutenberg URL 不稳定导致 processed=1 inserted=0 failed=1。 | Engineer Pod |
