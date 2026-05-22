@@ -43,6 +43,7 @@
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
 │  │    /api/cron/fetch-new-books → 每周拉书切片入库 (Sun UTC) │ │
+│  │    /api/import/telegram-epub-handoff → Telegram EPUB 元数据交接 POC │ │
 │  └────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 
@@ -121,6 +122,8 @@ exisz/randompage (GitHub)
 - `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。
 - `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；内置 30 本 public-domain seed queue（Gutenberg cache + 关键书目的 GITenberg mirror）按 title+author 去重，新 passages 以 `tags='[]'` 入库，等待每日补打标。
 - `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
+- 10M-book source policy (PLANET-1964): `docs/source-policy-10m-book-adapter.md` is the ADR for metadata-first Open Library + Google Books + OAIster/WorldCat discovery. Allowed cache fields are metadata/linkout/access flags; full-text passage generation requires verified public-domain/licensed content.
+- Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
 ## 数据维护脚本 (`apps/app/scripts/`)
@@ -130,6 +133,8 @@ exisz/randompage (GitHub)
 | `tag-passages.mjs` | PLANET-1173 | 用 Gemini Flash 给 `tags` 为空的 passage 批量打标 (genre/mood/topic/language) |
 | `cleanup-boilerplate.mjs` | PLANET-1172 | 删除 Standard Ebooks / Project Gutenberg 版权/前言 boilerplate 行（DRY-RUN by default，`--apply` 才真删） |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
+| `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
+| `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
 
@@ -139,6 +144,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-22 | PLANET-1964/1965/1966: 新增 10M-book metadata-first source policy ADR、Open Library/Google Books candidate search POC、EPUB-first local import script，以及 secret-protected Telegram EPUB handoff API (`/api/import/telegram-epub-handoff`)；所有路径默认禁止缓存 protected full text。 | Engineer Pod |
 | 2026-05-21 | PLANET-1914: Prisma `User` model 显式 `@@map("users")` 对齐生产 Turso `users` 表，并新增 `check:schema-mapping` smoke 覆盖 authenticated user upsert、push subscription、browsing event、user preference 等 snake_case 表写入路径。 | Engineer Pod |
 | 2026-05-20 | PLANET-1878: Service Worker notification click 保留 passageId，Discover 加载 /api/passages/:id?source=push；认证用户点击推送会精确标记 matching push_history.read_at 并写 browsing_events(source=push_inbox)，防止多条未读推送时归因漂移。 | Engineer Pod |
 | 2026-05-19 | PLANET-1835: `fetch-new-books` 书源从 3 本扩展为 30 本 public-domain seed queue，并在队列耗尽时返回 409 + Discord observability，避免 weekly cron 静默空转。 | Engineer Pod |

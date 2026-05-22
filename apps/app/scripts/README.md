@@ -45,3 +45,30 @@ Update `classify()` in `cleanup-boilerplate.mjs`. The SQL pre-filter
 the final gate, so adding a new pattern usually means editing both: extend the
 `LIKE` list to include candidates, then add a matching `if (lower.includes…)`
 clause that returns a human-readable reason string.
+
+## search-source-candidates.mjs — PLANET-1964
+
+Metadata-first source adapter POC for Open Library + Google Books. It returns
+book candidates and access-depth labels without caching protected text.
+
+```bash
+pnpm node scripts/search-source-candidates.mjs --query "philosophy history" --limit 20
+pnpm search:sources -- --query "psychology classics" --source openlibrary --limit 20
+```
+
+Output fields include `title`, `author`, `source_url`, `access_depth`, and
+`allowed_full_text_fetch`. Only `public-domain-full-text` records should be sent
+to a later passage-generation worker.
+
+## import-epub.mjs — PLANET-1965
+
+EPUB-first local import pipeline. Dry-run is default. `--apply` writes passages
+only after an operator supplies an allowed license assertion.
+
+```bash
+pnpm import:epub -- ~/Books/example.epub --license public-domain --max-passages 25
+pnpm import:epub -- ~/Books/example.epub --license cc-by --apply
+```
+
+Allowed licenses: `public-domain`, `cc0`, `cc-by`, `permission`. Protected books
+without a reuse license must stay metadata-only.
