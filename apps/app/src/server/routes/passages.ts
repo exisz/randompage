@@ -215,17 +215,21 @@ passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
 
     // Optional auth: a clicked push carries the exact passageId from the service worker.
     // If the reader is signed in, mark that matching delivery read and feed the view
-    // into the same personalization loop used by the push inbox.
+    // into the same personalization loop used by the push inbox. Authentication failures
+    // still allow anonymous reads; telemetry write failures must surface instead of being
+    // silently swallowed, because push_history.read_at without browsing_events breaks audits.
+    let userId: string | null = null;
     try {
       const claims = await verifyBearer(req.header('authorization'));
-      const userId = claims.sub as string;
-      const source = typeof req.query.source === 'string' ? req.query.source : 'discover';
-      if (source === 'push' || source === 'push_inbox') {
-        await markPushHistoryRead(prisma, userId, passage.id, new Date());
-        await recordInteraction(prisma, userId, passage.id, 'view', 'push_inbox');
-      }
+      userId = claims.sub as string;
     } catch {
       // Anonymous direct passage reads are supported, but personalization is scoped to auth users.
+    }
+    const source = typeof req.query.source === 'string' ? req.query.source : 'discover';
+    if (userId && (source === 'push' || source === 'push_inbox')) {
+      const now = new Date();
+      await markPushHistoryRead(prisma, userId, passage.id, now);
+      await recordInteraction(prisma, userId, passage.id, 'view', 'push_inbox');
     }
 
     res.json({ passage });
