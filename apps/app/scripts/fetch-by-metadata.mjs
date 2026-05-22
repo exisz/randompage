@@ -84,11 +84,11 @@ function normalizeIsbn(value) {
 
 function buildQuery(book) {
   const isbn = normalizeIsbn(firstArrayValue(book?.isbn));
-  if (isbn?.query) return { query: isbn.query, isbnVariants: isbn.variants };
-
   const title = String(book?.title || '').trim();
   const author = firstArrayValue(book?.authors).trim();
-  return { query: [title, author].filter(Boolean).join(' ').trim(), isbnVariants: [] };
+  if (!title) return { query: '', isbnVariants: isbn?.variants || [] };
+  const query = `${title} ${author || ''}`.trim();
+  return { query, isbnVariants: isbn?.variants || [] };
 }
 
 function normalizeTitle(value) {
