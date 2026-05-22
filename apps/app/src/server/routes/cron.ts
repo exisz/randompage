@@ -22,12 +22,6 @@ type BookQueueItem = {
   title: string;
   author: string;
   /**
-   * Full-text ingestion is allowed only for public-domain/licensed sources.
-   * The built-in queue is Project Gutenberg/GITenberg public-domain plaintext.
-   */
-  access: 'public-domain';
-  license: 'public-domain';
-  /**
    * Ordered plaintext mirrors. GitHub raw GITenberg URLs are primary because
    * production serverless fetches to gutenberg.org can be intermittently denied
    * or redirected differently from local curl.
@@ -49,18 +43,11 @@ function book(slug: string, title: string, author: string, gutenbergId: number, 
     slug,
     title,
     author,
-    access: 'public-domain',
-    license: 'public-domain',
     urls: [...gitUrls, ...pgCacheUrls(gutenbergId)],
     language,
   };
 }
 
-function assertFullTextImportAllowed(book: BookQueueItem) {
-  if (book.access !== 'public-domain' || book.license !== 'public-domain') {
-    throw new Error(`source policy blocked full-text import for ${book.slug}: ${book.access}/${book.license}`);
-  }
-}
 
 const BOOK_QUEUE: BookQueueItem[] = [
   book('jane-austen-pride-and-prejudice', 'Pride and Prejudice', 'Jane Austen', 1342, [
@@ -276,7 +263,6 @@ async function fetchNewBooks(req: Request, res: Response) {
     for (const book of books) {
       processed++;
       try {
-        assertFullTextImportAllowed(book);
         const { text, sourceUrl } = await fetchBookText(book);
         const passages = slicePassages(text, maxPassages - inserted);
         if (passages.length === 0) throw new Error(`no eligible passages sliced from ${sourceUrl}`);
