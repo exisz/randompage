@@ -1,44 +1,40 @@
-# ADR: RandomPage 10M-book source adapter policy
+# ADR: RandomPage 10M-book source adapter (content acquisition)
 
-Status: accepted for POC  
+Status: superseded by 2026-05-23 owner direction change (kept for historical context)  
 Tickets: PLANET-1964, PLANET-1965, PLANET-1966  
-Date: 2026-05-22
+Date: 2026-05-22 (updated 2026-05-23)
 
-## Context
+## 2026-05-23 Direction update (read first)
 
-RandomPage wants a much larger book discovery universe without becoming a copyrighted-text cache. The product should discover candidate books at metadata scale, then only turn legally fetchable full text into ~300-word passages.
+Owner changed direction: RandomPage should stop framing source work around source-safety / license tiers / protected-full-text avoidance. The product question is now:
 
-This ADR covers a metadata-first adapter across Open Library, Google Books, and OAIster/WorldCat discovery.
+> Can we fetch book content from a source, slice it into ~300-word passages, tag it, and show it in Discover / push?
 
-## Sources and allowed use
+This ADR’s historical tables below describe the metadata-first POC built for PLANET-1964 and the access-depth labels that the import script + Telegram handoff currently emit. They are accurate as runtime behavior, but **Pods should no longer treat license tier as the primary acceptance axis** for new source/content-acquisition tickets. Acceptance for new work is end-to-end: a configured source produces N usable passages in production and they appear in Discover or push.
 
-| Source | Intended use | Allowed to cache | Forbidden to cache |
-| --- | --- | --- | --- |
-| Open Library | Bulk metadata discovery from dumps; low-volume lookup/search for UI or scripts | work/edition IDs, title, author names, subjects, language, first publish year, cover IDs, public scan/access flags, canonical Open Library URLs | copyrighted full text, borrowed scan content, API responses used as a high-volume production backend |
-| Google Books API | Enrich candidate metadata and link users to previews/readers | volume ID, title, authors, publisher/date, categories, language, `accessInfo`/viewability flags, preview/info/web reader links, boolean snippet availability | cached protected page text; ACSM/download payloads; more than short API-provided snippets; private library data |
-| OAIster/WorldCat | Open-access discovery and linkout | title/creator/provider metadata, WorldCat/OA landing URLs, access/license notes when available | harvested repository full text unless the landing page/license explicitly permits reuse |
+## Context (historical)
 
-## Full-text rule
+RandomPage wants a much larger book discovery universe. The original POC scoped a metadata-first adapter across Open Library, Google Books, and OAIster/WorldCat discovery, with full-text acquisition limited to verified-permissible items.
 
-RandomPage may create or cache 300-word passages only when one of these is true:
+## Sources and intended use (historical reference)
 
-1. The item is public domain / full-view and the source terms allow download/reuse.
-2. The item is CC0, CC-BY, or another license that permits the planned cache/reuse.
-3. The user explicitly uploads an EPUB and asserts a permitted license or personal permission for this RandomPage instance.
+| Source | Intended use | Cached fields the POC keeps |
+| --- | --- | --- |
+| Open Library | Bulk metadata discovery from dumps; low-volume lookup/search for UI or scripts | work/edition IDs, title, author names, subjects, language, first publish year, cover IDs, public scan/access flags, canonical Open Library URLs |
+| Google Books API | Enrich candidate metadata and link users to previews/readers | volume ID, title, authors, publisher/date, categories, language, `accessInfo`/viewability flags, preview/info/web reader links, boolean snippet availability |
+| OAIster/WorldCat | Open-access discovery and linkout | title/creator/provider metadata, WorldCat/OA landing URLs, access notes when available |
 
-Otherwise the pipeline must stay metadata-only and link out to the source.
+## Access depth labels (still emitted by current scripts)
 
-## Access depth labels
-
-Adapters and handoff APIs must classify every candidate:
+The POC scripts and handoff APIs still emit these labels in their output for observability. They are not new acceptance gates:
 
 - `metadata-only` — title/author/linkout only; no snippets or text cached.
-- `snippet-only` — the upstream API exposes a short snippet/preview; RandomPage may display availability but should avoid durable text caching unless source terms explicitly allow it.
-- `preview-link` — user can be linked to source preview/reader; RandomPage does not cache text.
-- `public-domain-full-text` — full text can be fetched and sliced after source verification.
-- `user-supplied-licensed-epub` — full text comes from a user-provided EPUB with an allowed license assertion.
+- `snippet-only` — upstream API exposed a short snippet/preview.
+- `preview-link` — user is linked to an external reader; no text cached.
+- `public-domain-full-text` — full text fetched and sliced.
+- `user-supplied-licensed-epub` — full text from a user-provided EPUB.
 
-## Rate-limit and backend strategy
+## Rate-limit and backend strategy (still applies)
 
 - Prefer Open Library monthly dumps for bulk metadata. Use Open Library APIs only for low-volume lookup, enrichment, and POC scripts.
 - Use Google Books API with small `maxResults`, bounded pagination, exponential backoff on 429/5xx, and optional API key via `GOOGLE_BOOKS_API_KEY`.
@@ -46,26 +42,24 @@ Adapters and handoff APIs must classify every candidate:
 - Every network adapter must send a clear user-agent where the upstream accepts one.
 - Production jobs must persist cursor/checkpoint state before each irreversible ingest step.
 
-## Attribution and linkout
+## Attribution and linkout (still applies)
 
-Each candidate book record must retain:
+Each candidate book record retains:
 
 - `source` and stable source ID/key.
 - `source_url` for human verification/linkout.
-- access/license flags that led to the access-depth decision.
-- optional `rights_note` explaining why the item is, or is not, eligible for passage generation.
+- access flags that led to the access-depth decision.
+- optional `rights_note` field for operator annotations.
 
-## Telegram EPUB handoff guardrail
+## Telegram EPUB handoff guardrail (still applies as an intake envelope)
 
-Telegram handoff is only an intake envelope. It must not accept raw book text/base64 through JSON and must not auto-import protected text. The API can accept metadata and a Telegram file reference, then return whether a later worker may process the file.
-
-Allowed handoff body fields: file id, file name, MIME type, title, author, source URL, asserted license/public-domain flag, and operator note. Forbidden fields include raw text, HTML, base64 EPUB payloads, and extracted chapter content.
+The Telegram handoff endpoint is an intake envelope. It accepts metadata and a Telegram file reference (no raw text or base64 payload through JSON) and returns whether a later worker may process the file.
 
 ## POC artifacts
 
-- `apps/app/scripts/search-source-candidates.mjs` searches Open Library and Google Books and emits at least 20 metadata-only candidate records.
-- `apps/app/scripts/import-epub.mjs` parses a local EPUB into dry-run passage candidates and requires an allowed license before `--apply` can write passages.
-- `POST /api/import/telegram-epub-handoff` accepts a secret-protected metadata envelope and returns a policy decision without storing protected text.
+- `apps/app/scripts/search-source-candidates.mjs` searches Open Library and Google Books and emits at least 20 candidate records.
+- `apps/app/scripts/import-epub.mjs` parses a local EPUB into dry-run passage candidates.
+- `POST /api/import/telegram-epub-handoff` accepts a secret-protected metadata envelope and returns a routing decision.
 
 ## References
 
