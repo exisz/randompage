@@ -19,7 +19,8 @@
     "android:open": "capacitor open android",
     "android:apk:debug": "pnpm build && capacitor sync android && cd android && ./gradlew assembleDebug",
     "search:sources": "node scripts/search-source-candidates.mjs",
-    "import:epub": "node scripts/import-epub.mjs"
+    "import:epub": "node scripts/import-epub.mjs",
+    "check:passage-lengths": "node scripts/check-passage-length-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

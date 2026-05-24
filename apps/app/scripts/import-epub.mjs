@@ -6,6 +6,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const ALLOWED_LICENSES = new Set(['public-domain', 'cc0', 'cc-by', 'permission']);
+const MIN_PASSAGE_CHARS = 180;
+const TARGET_PASSAGE_CHARS = 300;
+const MAX_PASSAGE_CHARS = 800;
 const args = parseArgs(process.argv.slice(2));
 
 function parseArgs(argv) {
@@ -125,19 +128,26 @@ function slicePassages(text, maxPassages) {
   const paragraphs = text
     .split(/\n+/g)
     .map((p) => p.replace(/\s+/g, ' ').trim())
-    .filter((p) => p.length >= 160 && p.length <= 2400);
+    .filter((p) => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS);
   const passages = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
     const next = buffer ? `${buffer}\n\n${paragraph}` : paragraph;
-    const words = next.split(/\s+/).filter(Boolean).length;
-    if (words < 180) {
+    if (next.length < TARGET_PASSAGE_CHARS) {
       buffer = next;
       continue;
     }
-    passages.push(next);
-    buffer = '';
+    if (next.length <= MAX_PASSAGE_CHARS) {
+      passages.push(next);
+      buffer = '';
+    } else if (buffer) {
+      passages.push(buffer);
+      buffer = paragraph;
+    }
     if (passages.length >= maxPassages) break;
+  }
+  if (passages.length < maxPassages && buffer.length >= MIN_PASSAGE_CHARS && buffer.length <= MAX_PASSAGE_CHARS) {
+    passages.push(buffer);
   }
   return passages;
 }
@@ -198,6 +208,7 @@ async function main() {
     language,
     license,
     source_policy: 'full-text import allowed only because operator asserted an approved license',
+    passage_length_policy: { target_chars: TARGET_PASSAGE_CHARS, min_chars: MIN_PASSAGE_CHARS, max_chars: MAX_PASSAGE_CHARS },
     passages: passages.length,
     sample: passages.slice(0, 2),
   }, null, 2));

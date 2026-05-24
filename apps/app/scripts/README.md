@@ -63,7 +63,8 @@ to a later passage-generation worker.
 ## import-epub.mjs — PLANET-1965
 
 EPUB-first local import pipeline. Dry-run is default. `--apply` writes passages
-only after an operator supplies an allowed license assertion.
+only after an operator supplies an allowed license assertion. The slicer enforces
+RandomPage's quick flip-reading bounds: target ≈300 chars, accepted 180–800 chars.
 
 ```bash
 pnpm import:epub -- ~/Books/example.epub --license public-domain --max-passages 25
@@ -72,3 +73,19 @@ pnpm import:epub -- ~/Books/example.epub --license cc-by --apply
 
 Allowed licenses: `public-domain`, `cc0`, `cc-by`, `permission`. Protected books
 without a reuse license must stay metadata-only.
+
+## check-passage-length-policy.mjs — PLANET-2037 / PLANET-2054
+
+Corpus quality smoke for overlong/quote-sized fragments. Reads production Turso
+env from `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or `apps/app/.env.local` and
+reports p50/p90/p95/max plus too-short and too-long examples.
+
+```bash
+pnpm check:passage-lengths
+pnpm check:passage-lengths -- --json --sample 5
+pnpm check:passage-lengths -- --repair-plan
+```
+
+Policy: target ≈300 chars, valid 180–800 chars. `--repair-plan` groups affected
+books and counts user-referenced rows so a later repair can reslice sources,
+insert replacement fragments, and only delete unreferenced out-of-policy rows.

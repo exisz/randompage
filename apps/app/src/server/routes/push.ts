@@ -5,6 +5,7 @@ import type { Passage, PrismaClient, PushSubscription } from '../generated/prism
 import { nanoid } from 'nanoid';
 import webpush from 'web-push';
 import { scorePassageTags } from '../lib/passageTags.js';
+import { filterReadablePassages } from '../lib/passageLengthPolicy.js';
 
 export const pushRouter = Router();
 
@@ -65,8 +66,10 @@ async function selectPersonalizedPassageForUser(
   const prefs = await prisma.userPreference.findMany({ where: { userId } });
   const prefMap = Object.fromEntries(prefs.map(p => [p.tag, p.weight]));
 
-  const candidates = passages.filter(p => !excludeIds.has(p.id));
-  const pool = candidates.length > 0 ? candidates : passages;
+  const readablePassages = filterReadablePassages(passages);
+  const sourcePool = readablePassages.length > 0 ? readablePassages : passages;
+  const candidates = sourcePool.filter(p => !excludeIds.has(p.id));
+  const pool = candidates.length > 0 ? candidates : sourcePool;
 
   const weights = pool.map(p => ({
     passage: p,
@@ -245,7 +248,7 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
     const prisma = getPrisma();
     const subscriptions = await prisma.pushSubscription.findMany();
 
-    // Pre-load all passages once (small dataset, ~609 rows)
+    // Pre-load all passages once (small dataset, ~636 rows); selection filters to readable fragments.
     const passages = await prisma.passage.findMany();
     if (passages.length === 0) {
       res.json({ ok: true, sent: 0, failed: 0, removed: 0, personalized: [], failures: [] });

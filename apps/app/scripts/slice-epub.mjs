@@ -44,6 +44,8 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const MAX_DEFAULT = 10;
 const MAX_CAP = 20;
+const MIN_PASSAGE_CHARS = 180;
+const MAX_PASSAGE_CHARS = 800;
 let maxPerBook = Number(args['max-per-book'] || MAX_DEFAULT);
 if (!Number.isFinite(maxPerBook) || maxPerBook < 1) maxPerBook = MAX_DEFAULT;
 if (maxPerBook > MAX_CAP) maxPerBook = MAX_CAP;
@@ -209,7 +211,7 @@ async function sliceEpub(epubPath, meta = {}) {
     for (const p of paragraphs) {
       const text = collapseWs($(p).text() || '');
       if (!text) continue;
-      if (text.length < 150 || text.length > 800) continue;
+      if (text.length < MIN_PASSAGE_CHARS || text.length > MAX_PASSAGE_CHARS) continue;
       if (uppercaseRatio(text) > 0.8) continue;
       if (text.includes('http://') || text.includes('https://') || text.includes('@')) continue;
       const head = text.slice(0, 60);

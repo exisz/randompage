@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { parsePassageTags, scorePassageTags } from '../lib/passageTags.js';
+import { filterReadablePassages, isReadablePassageLength } from '../lib/passageLengthPolicy.js';
 
 export const passagesRouter = Router();
 
@@ -116,10 +117,13 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       await recordInteraction(prisma, userId, skipPassageId, 'skip', 'discover');
     }
 
-    // Get passages - use weighted sampling based on user preferences if authed
-    const count = await prisma.passage.count();
-    if (count === 0) {
-      res.status(404).json({ error: 'No passages found' });
+    // Get passages - use weighted sampling based on user preferences if authed.
+    // Runtime filtering keeps legacy quote-sized / overlong rows out of Discover
+    // and push entry points while repair work can handle the historical corpus.
+    const allPassages = await prisma.passage.findMany();
+    const readablePassages = filterReadablePassages(allPassages);
+    if (readablePassages.length === 0) {
+      res.status(404).json({ error: 'No readable passages found' });
       return;
     }
 
@@ -132,7 +136,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
         orderBy: { sentAt: 'desc' },
         include: { passage: true },
       });
-      if (recentPush) {
+      if (recentPush && isReadablePassageLength(recentPush.passage)) {
         // Mark it as read
         const now = new Date();
         await prisma.pushHistory.update({
@@ -150,9 +154,8 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       const prefs = await prisma.userPreference.findMany({ where: { userId } });
       const prefMap = Object.fromEntries(prefs.map(p => [p.tag, p.weight]));
 
-      // Get all passages and do weighted sampling
-      const passages = await prisma.passage.findMany();
-      const weights = passages.map(p => ({
+      // Get all readable passages and do weighted sampling
+      const weights = readablePassages.map(p => ({
         passage: p,
         weight: scorePassageTags(p.tags, prefMap),
       }));
@@ -166,12 +169,10 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
           break;
         }
       }
-      if (!passage) passage = passages[Math.floor(Math.random() * passages.length)];
+      if (!passage) passage = readablePassages[Math.floor(Math.random() * readablePassages.length)];
     } else {
-      // Pure random for anonymous
-      const skip = Math.floor(Math.random() * count);
-      const results = await prisma.passage.findMany({ skip, take: 1 });
-      passage = results[0];
+      // Pure random for anonymous, still bounded to readable fragments.
+      passage = readablePassages[Math.floor(Math.random() * readablePassages.length)];
     }
 
     if (userId && passage) {

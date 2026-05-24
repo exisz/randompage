@@ -150,25 +150,36 @@ function isLikelyBoilerplate(text: string) {
     lower.includes('check for updates to this ebook');
 }
 
+const MIN_PASSAGE_CHARS = 180;
+const TARGET_PASSAGE_CHARS = 300;
+const MAX_PASSAGE_CHARS = 800;
+
 function slicePassages(raw: string, maxPassages: number) {
   const clean = stripBoilerplate(raw);
   const paragraphs = clean
     .split(/\n\s*\n/g)
     .map(p => p.replace(/\s+/g, ' ').trim())
-    .filter(p => p.length >= 220 && p.length <= 2200 && !isLikelyBoilerplate(p));
+    .filter(p => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyBoilerplate(p));
 
   const slices: string[] = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
     const next = buffer ? `${buffer}\n\n${paragraph}` : paragraph;
-    const words = next.split(/\s+/).length;
-    if (words < 220) {
+    if (next.length < TARGET_PASSAGE_CHARS) {
       buffer = next;
       continue;
     }
-    slices.push(next);
-    buffer = '';
+    if (next.length <= MAX_PASSAGE_CHARS) {
+      slices.push(next);
+      buffer = '';
+    } else if (buffer) {
+      slices.push(buffer);
+      buffer = paragraph;
+    }
     if (slices.length >= maxPassages) break;
+  }
+  if (slices.length < maxPassages && buffer.length >= MIN_PASSAGE_CHARS && buffer.length <= MAX_PASSAGE_CHARS) {
+    slices.push(buffer);
   }
   return slices;
 }
