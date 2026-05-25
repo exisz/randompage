@@ -46,6 +46,23 @@ the final gate, so adding a new pattern usually means editing both: extend the
 `LIKE` list to include candidates, then add a matching `if (lower.includes…)`
 clause that returns a human-readable reason string.
 
+## check-source-policy.mjs — PLANET-2101 / PLANET-2000
+
+Narrow regression smoke for known protected/modern-book full-text sources that
+must not reappear in the passage cache. This is a deny-list safety guard, not the
+primary source strategy.
+
+```bash
+pnpm check:source-policy
+pnpm check:source-policy -- --json
+pnpm check:source-policy -- --apply   # reviewed cleanup only; refuses user refs
+```
+
+Reads production Turso env from `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or
+`apps/app/.env.local` and currently checks the known PLANET-2000 Colleen Hoover /
+*It Ends With Us* source. `--apply` only deletes unreferenced violations after
+manual review.
+
 ## search-source-candidates.mjs — PLANET-1964
 
 Metadata-first source adapter POC for Open Library + Google Books. It returns

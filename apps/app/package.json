@@ -13,6 +13,7 @@
     "check:push-policy": "node scripts/check-push-selection-policy.mjs",
     "check:push-click-policy": "node scripts/check-push-click-attribution-policy.mjs",
     "check:browsing-events-policy": "node scripts/check-browsing-events-policy.mjs",
+    "check:source-policy": "node scripts/check-source-policy.mjs",
     "check:schema-mapping": "node scripts/check-schema-table-mapping.mjs",
     "check:tag-policy": "tsx scripts/check-tag-parsing-policy.ts",
     "android:sync": "capacitor sync android",

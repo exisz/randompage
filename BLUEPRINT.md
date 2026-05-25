@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-23 — PLANET-1985/1958 telemetry smoke, PWA manifest alias
+> 最后更新: 2026-05-26 — PLANET-2101 source-policy regression guard restored
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -128,6 +128,7 @@ exisz/randompage (GitHub)
 - `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
 - 10M-book source policy (PLANET-1964): `docs/source-policy-10m-book-adapter.md` is the ADR for metadata-first Open Library + Google Books + OAIster/WorldCat discovery. Allowed cache fields are metadata/linkout/access flags; full-text passage generation requires verified public-domain/licensed content.
 - Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
+- Protected-source regression guard (PLANET-2101/2000): `pnpm check:source-policy` checks production Turso for known blocked modern-book full-text sources (currently Colleen Hoover / *It Ends With Us*) and fails if they reappear; `--apply` is reviewed cleanup only and refuses user-referenced rows.
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
@@ -137,6 +138,7 @@ exisz/randompage (GitHub)
 |------|--------|------|
 | `tag-passages.mjs` | PLANET-1173 | 用 Gemini Flash 给 `tags` 为空的 passage 批量打标 (genre/mood/topic/language) |
 | `cleanup-boilerplate.mjs` | PLANET-1172 | 删除 Standard Ebooks / Project Gutenberg 版权/前言 boilerplate 行（DRY-RUN by default，`--apply` 才真删） |
+| `check-source-policy.mjs` | PLANET-2101/2000 | 生产库 known protected-source 回归检查；review 后可 `--apply` 删除无用户引用违规行 |
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
@@ -151,6 +153,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-26 | PLANET-2101: 恢复 `pnpm check:source-policy` + `apps/app/scripts/check-source-policy.mjs`，用于 known protected modern-book full-text 回归检查；脚本从 env 或 `.env.local` 读取 Turso 凭证，`--apply` 仅删除无用户引用违规行。 | Engineer Pod |
 | 2026-05-24 | PLANET-2037/2054: 新增 passage length policy（目标约 300 chars，允许 180–800 chars），收紧 `fetch-new-books`/EPUB slicer/importer 下限与上限，并新增 `pnpm check:passage-lengths` corpus QA + repair-plan 报告。 | Engineer Pod |
 | 2026-05-23 | PLANET-1985/1958: push click telemetry 不再吞掉 `recordInteraction` 错误；新增 browsing-events policy check；`/manifest.webmanifest` 作为 `/manifest.json` 别名随静态资源发布。 | Engineer Pod |
 | 2026-05-22 | PLANET-1964/1965/1966: 新增 10M-book metadata-first source policy ADR、Open Library/Google Books candidate search POC、EPUB-first local import script，以及 secret-protected Telegram EPUB handoff API (`/api/import/telegram-epub-handoff`)；所有路径默认禁止缓存 protected full text。 | Engineer Pod |
