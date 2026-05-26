@@ -175,6 +175,15 @@ function uppercaseRatio(text) {
   return upper / alpha;
 }
 
+function isLikelyReferenceNoteFragment(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
+  if (normalized.startsWith('↩')) return true;
+  if (/^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i.test(normalized)) return true;
+  if (/^(?:\[[^\]]{1,80}\]|\([^)]{1,80}\))\s*(?:note|footnote|editor|translator|transcriber)/i.test(normalized)) return true;
+  return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
+}
+
 async function sliceEpub(epubPath, meta = {}) {
   const buf = await readFile(epubPath);
   const zip = await JSZip.loadAsync(buf);
@@ -213,6 +222,7 @@ async function sliceEpub(epubPath, meta = {}) {
       if (!text) continue;
       if (text.length < MIN_PASSAGE_CHARS || text.length > MAX_PASSAGE_CHARS) continue;
       if (uppercaseRatio(text) > 0.8) continue;
+      if (isLikelyReferenceNoteFragment(text)) continue;
       if (text.includes('http://') || text.includes('https://') || text.includes('@')) continue;
       const head = text.slice(0, 60);
       if (seenHeads.has(head)) continue;

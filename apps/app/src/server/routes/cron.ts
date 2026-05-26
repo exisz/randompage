@@ -150,6 +150,15 @@ function isLikelyBoilerplate(text: string) {
     lower.includes('check for updates to this ebook');
 }
 
+function isLikelyReferenceNoteFragment(text: string) {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
+  if (normalized.startsWith('↩')) return true;
+  if (/^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i.test(normalized)) return true;
+  if (/^(?:\[[^\]]{1,80}\]|\([^)]{1,80}\))\s*(?:note|footnote|editor|translator|transcriber)/i.test(normalized)) return true;
+  return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
+}
+
 const MIN_PASSAGE_CHARS = 180;
 const TARGET_PASSAGE_CHARS = 300;
 const MAX_PASSAGE_CHARS = 800;
@@ -159,7 +168,7 @@ function slicePassages(raw: string, maxPassages: number) {
   const paragraphs = clean
     .split(/\n\s*\n/g)
     .map(p => p.replace(/\s+/g, ' ').trim())
-    .filter(p => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyBoilerplate(p));
+    .filter(p => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyBoilerplate(p) && !isLikelyReferenceNoteFragment(p));
 
   const slices: string[] = [];
   let buffer = '';

@@ -106,3 +106,19 @@ pnpm check:passage-lengths -- --repair-plan
 Policy: target ≈300 chars, valid 180–800 chars. `--repair-plan` groups affected
 books and counts user-referenced rows so a later repair can reslice sources,
 insert replacement fragments, and only delete unreferenced out-of-policy rows.
+
+## check-passage-content-policy.mjs — PLANET-2139
+
+Corpus quality smoke for standalone reference-note / footnote fragments. Reads
+production Turso env from `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or
+`apps/app/.env.local` and reports count + samples for leading `↩`, note headings,
+editorial-note starts, and dense reference-marker clusters.
+
+```bash
+pnpm check:passage-content
+pnpm check:passage-content -- --json --sample 5
+```
+
+These rows are excluded by runtime Discover/push filtering and by future import
+slicing; destructive cleanup still needs a separate reviewed repair run if rows
+have user references.

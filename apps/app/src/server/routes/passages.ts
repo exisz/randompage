@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { parsePassageTags, scorePassageTags } from '../lib/passageTags.js';
-import { filterReadablePassages, isReadablePassageLength } from '../lib/passageLengthPolicy.js';
+import { filterReadablePassages, isReadablePassage } from '../lib/passageLengthPolicy.js';
 
 export const passagesRouter = Router();
 
@@ -118,8 +118,8 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     }
 
     // Get passages - use weighted sampling based on user preferences if authed.
-    // Runtime filtering keeps legacy quote-sized / overlong rows out of Discover
-    // and push entry points while repair work can handle the historical corpus.
+    // Runtime filtering keeps legacy quote-sized / overlong / reference-note rows out of
+    // Discover and push entry points while repair work can handle the historical corpus.
     const allPassages = await prisma.passage.findMany();
     const readablePassages = filterReadablePassages(allPassages);
     if (readablePassages.length === 0) {
@@ -136,7 +136,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
         orderBy: { sentAt: 'desc' },
         include: { passage: true },
       });
-      if (recentPush && isReadablePassageLength(recentPush.passage)) {
+      if (recentPush && isReadablePassage(recentPush.passage)) {
         // Mark it as read
         const now = new Date();
         await prisma.pushHistory.update({

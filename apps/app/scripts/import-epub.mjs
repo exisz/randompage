@@ -124,11 +124,20 @@ function htmlToText(html) {
     .join('\n');
 }
 
+function isLikelyReferenceNoteFragment(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
+  if (normalized.startsWith('↩')) return true;
+  if (/^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i.test(normalized)) return true;
+  if (/^(?:\[[^\]]{1,80}\]|\([^)]{1,80}\))\s*(?:note|footnote|editor|translator|transcriber)/i.test(normalized)) return true;
+  return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
+}
+
 function slicePassages(text, maxPassages) {
   const paragraphs = text
     .split(/\n+/g)
     .map((p) => p.replace(/\s+/g, ' ').trim())
-    .filter((p) => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS);
+    .filter((p) => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(p));
   const passages = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
