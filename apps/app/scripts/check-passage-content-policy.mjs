@@ -77,6 +77,7 @@ function detectReferenceNoteFragment(text) {
   if (normalized.startsWith('↩')) return 'leading-return-marker';
   if (/^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i.test(normalized)) return 'standalone-note-heading';
   if (/^(?:\[[^\]]{1,80}\]|\([^)]{1,80}\))\s*(?:note|footnote|editor|translator|transcriber)/i.test(normalized)) return 'editorial-note-start';
+  if (/^(?:for\s+.{1,80},\s*)?(?:see|cf\.)\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b|^for\s+.{1,80},\s*see\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b/i.test(normalized)) return 'note-cross-reference-start';
   const markers = normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? [];
   if (markers.length >= 3) return 'reference-marker-cluster';
   return null;
@@ -117,7 +118,7 @@ const byReason = matches.reduce((acc, row) => {
 }, {});
 const report = {
   policy: {
-    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'dense reference-marker clusters in the opening text'],
+    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'note cross-reference starts such as “For …, see note …”', 'dense reference-marker clusters in the opening text'],
   },
   total: rows.length,
   reference_note_candidates: matches.length,

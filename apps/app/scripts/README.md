@@ -112,7 +112,8 @@ insert replacement fragments, and only delete unreferenced out-of-policy rows.
 Corpus quality smoke for standalone reference-note / footnote fragments. Reads
 production Turso env from `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or
 `apps/app/.env.local` and reports count + samples for leading `↩`, note headings,
-editorial-note starts, and dense reference-marker clusters.
+editorial-note starts, note cross-reference starts such as `For …, see note …`,
+and dense reference-marker clusters.
 
 ```bash
 pnpm check:passage-content
