@@ -185,6 +185,55 @@ function isLikelyReferenceNoteFragment(text) {
   return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
 }
 
+function hasTerminalSentencePunctuation(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
+}
+
+function splitOnSentenceBoundaries(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  const matches = normalized.match(/[^.!?…。！？]+[.!?…。！？][\"'”’）)\]》」』]*/g) || [];
+  return matches.map((part) => part.trim()).filter(Boolean);
+}
+
+function isReadableTextCandidate(text) {
+  const len = text.length;
+  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text);
+}
+
+function sentenceBoundaryChunks(text) {
+  const units = splitOnSentenceBoundaries(text).filter((unit) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit));
+  const chunks = [];
+  let buffer = '';
+  for (const unit of units) {
+    const next = buffer ? `${buffer} ${unit}` : unit;
+    if (next.length <= MAX_PASSAGE_CHARS) {
+      buffer = next;
+      if (buffer.length >= TARGET_PASSAGE_CHARS) {
+        if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+        buffer = '';
+      }
+      continue;
+    }
+    if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+    buffer = unit;
+    if (buffer.length >= TARGET_PASSAGE_CHARS) {
+      if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+      buffer = '';
+    }
+  }
+  if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+  return chunks;
+}
+
+function firstReadablePassageFromParagraph(text) {
+  const normalized = collapseWs(text || '');
+  if (!normalized || uppercaseRatio(normalized) > 0.8 || isLikelyReferenceNoteFragment(normalized)) return null;
+  if (normalized.includes('http://') || normalized.includes('https://') || normalized.includes('@')) return null;
+  if (isReadableTextCandidate(normalized)) return normalized;
+  return sentenceBoundaryChunks(normalized)[0] || null;
+}
+
 async function sliceEpub(epubPath, meta = {}) {
   const buf = await readFile(epubPath);
   const zip = await JSZip.loadAsync(buf);
@@ -219,12 +268,8 @@ async function sliceEpub(epubPath, meta = {}) {
 
     const paragraphs = $('p').toArray();
     for (const p of paragraphs) {
-      const text = collapseWs($(p).text() || '');
+      const text = firstReadablePassageFromParagraph($(p).text() || '');
       if (!text) continue;
-      if (text.length < MIN_PASSAGE_CHARS || text.length > MAX_PASSAGE_CHARS) continue;
-      if (uppercaseRatio(text) > 0.8) continue;
-      if (isLikelyReferenceNoteFragment(text)) continue;
-      if (text.includes('http://') || text.includes('https://') || text.includes('@')) continue;
       const head = text.slice(0, 60);
       if (seenHeads.has(head)) continue;
       seenHeads.add(head);

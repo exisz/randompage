@@ -134,32 +134,79 @@ function isLikelyReferenceNoteFragment(text) {
   return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
 }
 
+
+function hasTerminalSentencePunctuation(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
+}
+
+function splitOnSentenceBoundaries(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  const matches = normalized.match(/[^.!?…。！？]+[.!?…。！？][\"'”’）)\]》」』]*/g) || [];
+  return matches.map((part) => part.trim()).filter(Boolean);
+}
+
+function isReadableTextCandidate(text) {
+  const len = text.length;
+  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text);
+}
+
+function sentenceBoundaryChunks(text) {
+  const units = splitOnSentenceBoundaries(text).filter((unit) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit));
+  const chunks = [];
+  let buffer = '';
+  for (const unit of units) {
+    const next = buffer ? `${buffer} ${unit}` : unit;
+    if (next.length <= MAX_PASSAGE_CHARS) {
+      buffer = next;
+      if (buffer.length >= TARGET_PASSAGE_CHARS) {
+        if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+        buffer = '';
+      }
+      continue;
+    }
+    if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+    buffer = unit;
+    if (buffer.length >= TARGET_PASSAGE_CHARS) {
+      if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+      buffer = '';
+    }
+  }
+  if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+  return chunks;
+}
+
 function slicePassages(text, maxPassages) {
   const paragraphs = text
     .split(/\n+/g)
     .map((p) => p.replace(/\s+/g, ' ').trim())
-    .filter((p) => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(p));
+    .filter((p) => p.length > 0 && !isLikelyReferenceNoteFragment(p));
   const passages = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
-    const next = buffer ? `${buffer}\n\n${paragraph}` : paragraph;
-    if (next.length < TARGET_PASSAGE_CHARS) {
-      buffer = next;
-      continue;
-    }
-    if (next.length <= MAX_PASSAGE_CHARS) {
-      passages.push(next);
-      buffer = '';
-    } else if (buffer) {
-      passages.push(buffer);
-      buffer = paragraph;
+    const candidates = paragraph.length <= MAX_PASSAGE_CHARS ? [paragraph] : sentenceBoundaryChunks(paragraph);
+    for (const candidate of candidates) {
+      if (!hasTerminalSentencePunctuation(candidate) || isLikelyReferenceNoteFragment(candidate)) continue;
+      const next = buffer ? `${buffer}\n\n${candidate}` : candidate;
+      if (next.length < TARGET_PASSAGE_CHARS) {
+        buffer = next;
+        continue;
+      }
+      if (isReadableTextCandidate(next)) {
+        passages.push(next);
+        buffer = '';
+      } else if (isReadableTextCandidate(buffer)) {
+        passages.push(buffer);
+        buffer = candidate;
+      } else {
+        buffer = candidate;
+      }
+      if (passages.length >= maxPassages) break;
     }
     if (passages.length >= maxPassages) break;
   }
-  if (passages.length < maxPassages && buffer.length >= MIN_PASSAGE_CHARS && buffer.length <= MAX_PASSAGE_CHARS) {
-    passages.push(buffer);
-  }
-  return passages;
+  if (passages.length < maxPassages && isReadableTextCandidate(buffer)) passages.push(buffer);
+  return passages.slice(0, maxPassages);
 }
 
 async function applyPassages({ passages, title, author, language }) {

@@ -1,7 +1,7 @@
 export type PassageTextLike = { text: string };
 
-export type ReferenceNoteMatch = {
-  reason: 'leading-return-marker' | 'standalone-note-heading' | 'reference-marker-cluster' | 'editorial-note-start' | 'note-cross-reference-start';
+export type PassageContentMatch = {
+  reason: 'leading-return-marker' | 'standalone-note-heading' | 'reference-marker-cluster' | 'editorial-note-start' | 'note-cross-reference-start' | 'non-terminal-ending';
 };
 
 const NOTE_HEADING_RE = /^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i;
@@ -13,7 +13,7 @@ export function normalizePassageText(text: string) {
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
 
-export function detectReferenceNoteFragment(text: string): ReferenceNoteMatch | null {
+export function detectReferenceNoteFragment(text: string): PassageContentMatch | null {
   const normalized = normalizePassageText(text);
   if (!normalized) return null;
 
@@ -29,6 +29,23 @@ export function detectReferenceNoteFragment(text: string): ReferenceNoteMatch | 
   return null;
 }
 
+export function hasTerminalSentencePunctuation(text: string) {
+  const normalized = normalizePassageText(text);
+  if (!normalized) return false;
+  return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
+}
+
+export function detectTruncatedEnding(text: string): PassageContentMatch | null {
+  const normalized = normalizePassageText(text);
+  if (!normalized) return null;
+  if (hasTerminalSentencePunctuation(normalized)) return null;
+  return { reason: 'non-terminal-ending' };
+}
+
+export function detectUnreadablePassageContent(text: string): PassageContentMatch | null {
+  return detectReferenceNoteFragment(text) ?? detectTruncatedEnding(text);
+}
+
 export function isReadablePassageContent(passage: PassageTextLike | null | undefined) {
-  return !detectReferenceNoteFragment(passage?.text ?? '');
+  return !detectUnreadablePassageContent(passage?.text ?? '');
 }

@@ -3,7 +3,7 @@
  * check-passage-content-policy.mjs — PLANET-2139
  *
  * Reports RandomPage corpus rows that look like standalone reference notes,
- * footnotes, or editorial note fragments rather than readable prose.
+ * footnotes, editorial note fragments, or sentence-boundary truncations rather than readable prose.
  *
  * Usage:
  *   pnpm check:passage-content
@@ -71,7 +71,12 @@ function preview(text, n = 160) {
   return normalize(text).slice(0, n);
 }
 
-function detectReferenceNoteFragment(text) {
+function hasTerminalSentencePunctuation(text) {
+  const normalized = normalize(text);
+  return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
+}
+
+function detectUnreadablePassageContent(text) {
   const normalized = normalize(text);
   if (!normalized) return null;
   if (normalized.startsWith('↩')) return 'leading-return-marker';
@@ -80,6 +85,7 @@ function detectReferenceNoteFragment(text) {
   if (/^(?:for\s+.{1,80},\s*)?(?:see|cf\.)\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b|^for\s+.{1,80},\s*see\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b/i.test(normalized)) return 'note-cross-reference-start';
   const markers = normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? [];
   if (markers.length >= 3) return 'reference-marker-cluster';
+  if (!hasTerminalSentencePunctuation(normalized)) return 'non-terminal-ending';
   return null;
 }
 
@@ -109,7 +115,7 @@ const rows = rowsRes.rows.map((row) => ({
   len: Number(row.len),
 }));
 const matches = rows
-  .map((row) => ({ ...row, reason: detectReferenceNoteFragment(row.text) }))
+  .map((row) => ({ ...row, reason: detectUnreadablePassageContent(row.text) }))
   .filter((row) => row.reason);
 
 const byReason = matches.reduce((acc, row) => {
@@ -118,10 +124,12 @@ const byReason = matches.reduce((acc, row) => {
 }, {});
 const report = {
   policy: {
-    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'note cross-reference starts such as “For …, see note …”', 'dense reference-marker clusters in the opening text'],
+    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'note cross-reference starts such as “For …, see note …”', 'dense reference-marker clusters in the opening text', 'passages ending without sentence-terminal punctuation'],
   },
   total: rows.length,
-  reference_note_candidates: matches.length,
+  unreadable_content_candidates: matches.length,
+  reference_note_candidates: matches.filter((row) => row.reason !== 'non-terminal-ending').length,
+  non_terminal_ending_candidates: matches.filter((row) => row.reason === 'non-terminal-ending').length,
   by_reason: byReason,
   samples: matches.slice(0, sampleLimit).map((row) => ({
     id: row.id,
@@ -136,8 +144,8 @@ const report = {
 if (args.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log('passage content policy: reject standalone reference-note / footnote fragments');
-  console.log(`total=${report.total} reference_note_candidates=${report.reference_note_candidates}`);
+  console.log('passage content policy: reject standalone reference-note / footnote fragments and non-terminal endings');
+  console.log(`total=${report.total} unreadable_content_candidates=${report.unreadable_content_candidates} reference_note_candidates=${report.reference_note_candidates} non_terminal_ending_candidates=${report.non_terminal_ending_candidates}`);
   for (const [reason, count] of Object.entries(byReason)) console.log(`${reason}=${count}`);
   console.log('\nsamples:');
   for (const row of report.samples) console.log(`- ${row.id} len=${row.len} ${row.title} — ${row.author} [${row.reason}]: ${row.preview}`);

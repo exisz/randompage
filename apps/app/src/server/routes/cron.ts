@@ -164,34 +164,83 @@ const MIN_PASSAGE_CHARS = 180;
 const TARGET_PASSAGE_CHARS = 300;
 const MAX_PASSAGE_CHARS = 800;
 
+
+function hasTerminalSentencePunctuation(text: string) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
+}
+
+function splitOnSentenceBoundaries(text: string): string[] {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  const matches = normalized.match(/[^.!?…。！？]+[.!?…。！？][\"'”’）)\]》」』]*/g) || [];
+  return matches.map((part: string) => part.trim()).filter(Boolean);
+}
+
+function isReadableTextCandidate(text: string) {
+  const len = text.length;
+  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text);
+}
+
+function sentenceBoundaryChunks(text: string): string[] {
+  const units = splitOnSentenceBoundaries(text).filter((unit: string) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit));
+  const chunks: string[] = [];
+  let buffer = '';
+  for (const unit of units) {
+    const next = buffer ? `${buffer} ${unit}` : unit;
+    if (next.length <= MAX_PASSAGE_CHARS) {
+      buffer = next;
+      if (buffer.length >= TARGET_PASSAGE_CHARS) {
+        if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+        buffer = '';
+      }
+      continue;
+    }
+    if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+    buffer = unit;
+    if (buffer.length >= TARGET_PASSAGE_CHARS) {
+      if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+      buffer = '';
+    }
+  }
+  if (isReadableTextCandidate(buffer)) chunks.push(buffer);
+  return chunks;
+}
+
 function slicePassages(raw: string, maxPassages: number) {
   const clean = stripBoilerplate(raw);
   const paragraphs = clean
     .split(/\n\s*\n/g)
     .map(p => p.replace(/\s+/g, ' ').trim())
-    .filter(p => p.length >= MIN_PASSAGE_CHARS && p.length <= MAX_PASSAGE_CHARS && !isLikelyBoilerplate(p) && !isLikelyReferenceNoteFragment(p));
+    .filter(p => p.length > 0 && !isLikelyBoilerplate(p) && !isLikelyReferenceNoteFragment(p));
 
   const slices: string[] = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
-    const next = buffer ? `${buffer}\n\n${paragraph}` : paragraph;
-    if (next.length < TARGET_PASSAGE_CHARS) {
-      buffer = next;
-      continue;
-    }
-    if (next.length <= MAX_PASSAGE_CHARS) {
-      slices.push(next);
-      buffer = '';
-    } else if (buffer) {
-      slices.push(buffer);
-      buffer = paragraph;
+    const candidates = paragraph.length <= MAX_PASSAGE_CHARS ? [paragraph] : sentenceBoundaryChunks(paragraph);
+    for (const candidate of candidates) {
+      if (!hasTerminalSentencePunctuation(candidate) || isLikelyReferenceNoteFragment(candidate)) continue;
+      const next = buffer ? `${buffer}\n\n${candidate}` : candidate;
+      if (next.length < TARGET_PASSAGE_CHARS) {
+        buffer = next;
+        continue;
+      }
+      if (isReadableTextCandidate(next)) {
+        slices.push(next);
+        buffer = '';
+      } else if (isReadableTextCandidate(buffer)) {
+        slices.push(buffer);
+        buffer = candidate;
+      } else {
+        buffer = candidate;
+      }
+      if (slices.length >= maxPassages) break;
     }
     if (slices.length >= maxPassages) break;
   }
-  if (slices.length < maxPassages && buffer.length >= MIN_PASSAGE_CHARS && buffer.length <= MAX_PASSAGE_CHARS) {
+  if (slices.length < maxPassages && isReadableTextCandidate(buffer)) {
     slices.push(buffer);
   }
-  return slices;
+  return slices.slice(0, maxPassages);
 }
 
 async function ensureCronTables(prisma: PrismaClient) {

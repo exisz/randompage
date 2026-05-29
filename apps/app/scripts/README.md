@@ -107,13 +107,14 @@ Policy: target ≈300 chars, valid 180–800 chars. `--repair-plan` groups affec
 books and counts user-referenced rows so a later repair can reslice sources,
 insert replacement fragments, and only delete unreferenced out-of-policy rows.
 
-## check-passage-content-policy.mjs — PLANET-2139
+## check-passage-content-policy.mjs — PLANET-2139 / PLANET-2227
 
-Corpus quality smoke for standalone reference-note / footnote fragments. Reads
-production Turso env from `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or
-`apps/app/.env.local` and reports count + samples for leading `↩`, note headings,
-editorial-note starts, note cross-reference starts such as `For …, see note …`,
-and dense reference-marker clusters.
+Corpus quality smoke for standalone reference-note / footnote fragments and
+sentence-boundary truncations. Reads production Turso env from
+`TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` or `apps/app/.env.local` and reports
+count + samples for leading `↩`, note headings, editorial-note starts, note
+cross-reference starts such as `For …, see note …`, dense reference-marker
+clusters, and passages ending without sentence-terminal punctuation.
 
 ```bash
 pnpm check:passage-content

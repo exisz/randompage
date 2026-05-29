@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-28 — PLANET-2139 note cross-reference fragment filter
+> 最后更新: 2026-05-29 — PLANET-2227 sentence-boundary truncation filter
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -125,7 +125,7 @@ exisz/randompage (GitHub)
 - `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。
 - `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；内置 30 本 public-domain seed queue（Gutenberg cache + 关键书目的 GITenberg mirror）按 title+author 去重，新 passages 以 `tags='[]'` 入库，等待每日补打标。
 - passage length policy (PLANET-2037/2054): 所有新增 passage 切片目标约 300 chars，允许 180–800 chars；`fetch-new-books`、`slice-epub.mjs`、`import-epub.mjs` 都使用该边界，避免 quote-sized rows 与 1k+ 多段长文进入 Discover。
-- passage content policy (PLANET-2139): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters). `pnpm check:passage-content` reports production counts + samples before any reviewed cleanup.
+- passage content policy (PLANET-2139/2227): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters) and fragments ending without sentence-terminal punctuation. `pnpm check:passage-content` reports production counts + samples before any reviewed cleanup.
 - `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
 - 10M-book source policy (PLANET-1964): `docs/source-policy-10m-book-adapter.md` is the ADR for metadata-first Open Library + Google Books + OAIster/WorldCat discovery. Allowed cache fields are metadata/linkout/access flags; full-text passage generation requires verified public-domain/licensed content.
 - Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
@@ -142,7 +142,7 @@ exisz/randompage (GitHub)
 | `check-source-policy.mjs` | PLANET-2101/2000 | 生产库 known protected-source 回归检查；review 后可 `--apply` 删除无用户引用违规行 |
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
-| `check-passage-content-policy.mjs` | PLANET-2139 | 生产 corpus reference-note/footnote fragment QA：count + samples by reason（含 `For …, see note …` cross-reference starts） |
+| `check-passage-content-policy.mjs` | PLANET-2139/2227 | 生产 corpus reference-note/footnote/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts 与 non-terminal endings） |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
@@ -155,6 +155,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-29 | PLANET-2227: passage content policy 新增 non-terminal-ending 检测；Discover/push runtime 过滤历史硬截断片段；fetch-new-books / import-epub / slice-epub 改为句末边界切片，避免未来 passage 以 mid-word/mid-sentence 结尾。 | Engineer Pod |
 | 2026-05-28 | PLANET-2139 follow-up: reference-note policy 扩展到 `For …, see note …` / `See note …` / `Cf. note …` cross-reference starts；生产 QA 从 1 条候选扩展识别到 id=43、346、348 共 3 条，runtime/import/push 同步过滤。 | Engineer Pod |
 | 2026-05-27 | PLANET-2139: 新增 reference-note/footnote fragment content policy；Discover/push runtime selection 与 `fetch-new-books`/EPUB slicer/importer 均过滤 leading `↩`、note headings、editorial-note starts、reference-marker clusters；新增 `pnpm check:passage-content` 生产 corpus QA。 | Engineer Pod |
 | 2026-05-26 | PLANET-2101: 恢复 `pnpm check:source-policy` + `apps/app/scripts/check-source-policy.mjs`，用于 known protected modern-book full-text 回归检查；脚本从 env 或 `.env.local` 读取 Turso 凭证，`--apply` 仅删除无用户引用违规行。 | Engineer Pod |
