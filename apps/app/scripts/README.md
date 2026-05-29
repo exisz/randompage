@@ -124,3 +124,13 @@ pnpm check:passage-content -- --json --sample 5
 These rows are excluded by runtime Discover/push filtering and by future import
 slicing; destructive cleanup still needs a separate reviewed repair run if rows
 have user references.
+
+## Tag failure QA
+
+```bash
+pnpm check:tag-failures
+pnpm check:tag-failures -- --json --sample 5
+pnpm check:tag-failures -- --fail-on-exhausted
+```
+
+Reports production `untagged`, `untagged_exhausted`, `failure_rows`, and `exhausted_failure_rows` counts so tag cron retries cannot silently strand passages after partial LLM failures.

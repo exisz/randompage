@@ -451,16 +451,22 @@ async function tagUntagged(req: Request, res: Response) {
       try {
         const results = await tagBatch(batch);
         for (const passage of batch) {
-          const tags = normalizeTags(results.get(passage.id), passage.language || 'en');
-          if (tags.length < 4) throw new Error(`LLM returned too few tags for ${passage.id}`);
-          await prisma.passage.update({ where: { id: passage.id }, data: { tags: JSON.stringify(tags) } });
-          await prisma.$executeRawUnsafe('DELETE FROM passage_tag_failures WHERE passage_id = ?', passage.id);
-          tagged++;
+          try {
+            const tags = normalizeTags(results.get(passage.id), passage.language || 'en');
+            if (tags.length < 4) throw new Error(`LLM returned too few tags for ${passage.id}`);
+            await prisma.passage.update({ where: { id: passage.id }, data: { tags: JSON.stringify(tags) } });
+            await prisma.$executeRawUnsafe('DELETE FROM passage_tag_failures WHERE passage_id = ?', passage.id);
+            tagged++;
+          } catch (err) {
+            failed++;
+            await recordTagFailure(prisma, passage.id, err);
+            console.log(`[cron/tag-untagged] passage ${passage.id} failed: ${truncate(err)}`);
+          }
         }
       } catch (err) {
         failed += batch.length;
         for (const passage of batch) await recordTagFailure(prisma, passage.id, err);
-        console.log(`[cron/tag-untagged] batch failed: ${truncate(err)}`);
+        console.log(`[cron/tag-untagged] batch request failed: ${truncate(err)}`);
       }
     }
 

@@ -22,7 +22,8 @@
     "search:sources": "node scripts/search-source-candidates.mjs",
     "import:epub": "node scripts/import-epub.mjs",
     "check:passage-lengths": "node scripts/check-passage-length-policy.mjs",
-    "check:passage-content": "node scripts/check-passage-content-policy.mjs"
+    "check:passage-content": "node scripts/check-passage-content-policy.mjs",
+    "check:tag-failures": "node scripts/check-tag-failure-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-29 — PLANET-2227 sentence-boundary truncation filter
+> 最后更新: 2026-05-30 — PLANET-2263 tag cron partial-failure isolation
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -122,7 +122,7 @@ exisz/randompage (GitHub)
 
 - 所有 cron route 使用 `CRON_SECRET` 鉴权：`Authorization: Bearer $CRON_SECRET`（也兼容 `x-cron-secret`）。
 - 可观测性：`RANDOMPAGE_DISCORD_WEBHOOK_URL`（fallback `DISCORD_WEBHOOK_URL`）存在时，`fetch-new-books` / `tag-untagged` 会发送 cron 名、处理条数、净增/打标数、失败数、耗时与截断错误。
-- `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。
+- `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。LLM 返回部分无效结果时按 passage 隔离失败：同一批次里的有效 sibling rows 会照常写入 tags，不会因为一个 bad row 被整批记失败。
 - `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；内置 30 本 public-domain seed queue（Gutenberg cache + 关键书目的 GITenberg mirror）按 title+author 去重，新 passages 以 `tags='[]'` 入库，等待每日补打标。
 - passage length policy (PLANET-2037/2054): 所有新增 passage 切片目标约 300 chars，允许 180–800 chars；`fetch-new-books`、`slice-epub.mjs`、`import-epub.mjs` 都使用该边界，避免 quote-sized rows 与 1k+ 多段长文进入 Discover。
 - passage content policy (PLANET-2139/2227): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters) and fragments ending without sentence-terminal punctuation. `pnpm check:passage-content` reports production counts + samples before any reviewed cleanup.
@@ -143,6 +143,7 @@ exisz/randompage (GitHub)
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-passage-content-policy.mjs` | PLANET-2139/2227 | 生产 corpus reference-note/footnote/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts 与 non-terminal endings） |
+| `check-tag-failure-policy.mjs` | PLANET-2263 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，防止 retry 耗尽后静默滞留 |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
@@ -155,6 +156,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-30 | PLANET-2263: `tag-untagged` LLM partial result 改为按 passage 隔离失败；新增 `pnpm check:tag-failures` QA 报告 untagged/exhausted retry rows；生产 5 条 Sherlock Holmes exhausted untagged rows 已重置并重新打标。 | Engineer Pod |
 | 2026-05-29 | PLANET-2227: passage content policy 新增 non-terminal-ending 检测；Discover/push runtime 过滤历史硬截断片段；fetch-new-books / import-epub / slice-epub 改为句末边界切片，避免未来 passage 以 mid-word/mid-sentence 结尾。 | Engineer Pod |
 | 2026-05-28 | PLANET-2139 follow-up: reference-note policy 扩展到 `For …, see note …` / `See note …` / `Cf. note …` cross-reference starts；生产 QA 从 1 条候选扩展识别到 id=43、346、348 共 3 条，runtime/import/push 同步过滤。 | Engineer Pod |
 | 2026-05-27 | PLANET-2139: 新增 reference-note/footnote fragment content policy；Discover/push runtime selection 与 `fetch-new-books`/EPUB slicer/importer 均过滤 leading `↩`、note headings、editorial-note starts、reference-marker clusters；新增 `pnpm check:passage-content` 生产 corpus QA。 | Engineer Pod |
