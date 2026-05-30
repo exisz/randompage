@@ -49,6 +49,12 @@ function shortExcerpt(text: string) {
     : normalized;
 }
 
+function passageErrorMessage(status: number) {
+  if (status === 401 || status === 403) return 'Session expired — sign in again or continue with public passages.';
+  if (status >= 500) return 'Could not load your personalized passage. Showing the public feed instead.';
+  return `Could not load passage (HTTP ${status}). Try again.`;
+}
+
 function passageAccent(tags: string[]) {
   const tagText = tags.join(' ').toLowerCase();
   if (/history|war|politic|power|empire/.test(tagText)) return 'from-amber-300/25 via-stone-900 to-base-200';
@@ -65,6 +71,7 @@ export default function Discover() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const pushPassageId = searchParams.get('passageId');
   const pushSource = searchParams.get('source');
@@ -90,6 +97,7 @@ export default function Discover() {
     setLoading(true);
     setBookmarked(false);
     setShareStatus(null);
+    setLoadError(null);
     try {
       const isAuth = await logtoClient.isAuthenticated();
       setAuthed(isAuth);
@@ -97,17 +105,37 @@ export default function Discover() {
       if (preferUnread && isAuth) params.set('preferUnread', '1');
       if (skippedPassageId && isAuth) params.set('skipPassageId', skippedPassageId);
       const query = params.toString() ? `?${params.toString()}` : '';
+
       let res: Response;
-      if (isAuth) {
-        res = await apiFetch(`/passages/random${query}`);
-      } else {
-        res = await fetch(`/api/passages/random${query}`);
+      try {
+        res = isAuth
+          ? await apiFetch(`/passages/random${query}`)
+          : await fetch(`/api/passages/random${query}`);
+      } catch (authError) {
+        if (!isAuth) throw authError;
+        console.error(authError);
+        setLoadError('Session refresh failed — showing the public feed. Sign in again if you want personalized passages.');
+        res = await fetch('/api/passages/random');
       }
+
+      if (!res.ok) {
+        const message = passageErrorMessage(res.status);
+        if (!isAuth || (res.status !== 401 && res.status !== 403 && res.status < 500)) {
+          throw new Error(message);
+        }
+        console.warn(message);
+        setLoadError(message);
+        res = await fetch('/api/passages/random');
+        if (!res.ok) throw new Error(`Public passage fallback returned ${res.status}`);
+      }
+
       const data = await res.json();
-      setPassage(data.passage);
+      setPassage(data.passage ?? null);
       if (isAuth) void fetchStats();
     } catch (e) {
       console.error(e);
+      setPassage(null);
+      setLoadError(e instanceof Error ? e.message : 'Could not load passage. Try again.');
     } finally {
       setLoading(false);
     }
@@ -117,6 +145,7 @@ export default function Discover() {
     setLoading(true);
     setBookmarked(false);
     setShareStatus(null);
+    setLoadError(null);
     try {
       const isAuth = await logtoClient.isAuthenticated();
       setAuthed(isAuth);
@@ -132,6 +161,7 @@ export default function Discover() {
       if (isAuth) void fetchStats();
     } catch (e) {
       console.error(e);
+      setLoadError('Could not load the pushed passage. Showing another passage instead.');
       await fetchPassage(true);
     } finally {
       setLoading(false);
@@ -240,7 +270,14 @@ export default function Discover() {
                 </div>
               </div>
             ) : passage ? (
-              <article className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-base-200/90 shadow-2xl backdrop-blur">
+              <div className="space-y-3">
+                {loadError && (
+                  <div className="alert alert-warning text-sm">
+                    <span>{loadError}</span>
+                    <button className="btn btn-ghost btn-xs" onClick={() => fetchPassage(true)}>Retry</button>
+                  </div>
+                )}
+                <article className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-base-200/90 shadow-2xl backdrop-blur">
                 <div className={`absolute inset-x-0 top-0 h-28 bg-gradient-to-r ${accent} opacity-60`} />
                 <div className="relative p-5 sm:p-7">
                   <div className="mb-5 flex items-start justify-between gap-4">
@@ -298,7 +335,14 @@ export default function Discover() {
                     )}
                   </div>
                 </div>
-              </article>
+                </article>
+              </div>
+            ) : loadError ? (
+              <div className="alert alert-error flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <span>{loadError}</span>
+                <button className="btn btn-sm" onClick={() => fetchPassage(true)}>Retry</button>
+                <Link to="/signin" className="btn btn-ghost btn-sm">Sign in again</Link>
+              </div>
             ) : (
               <div className="alert alert-warning">No passages found.</div>
             )}
