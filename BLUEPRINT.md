@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-30 — PLANET-2292/2293/2294 Discover card, sharing, reading habit stats
+> 最后更新: 2026-05-31 — PLANET-2290/2291 bookmark collections and saved/read search filters
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -39,8 +39,9 @@
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
-│  │    /api/bookmarks → 书签 CRUD                             │ │
-│  │    /api/browsing/history → 浏览/跳过事件历史               │ │
+│  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
+│  │    /api/bookmark-collections → bookmark collections CRUD   │ │
+│  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
@@ -54,7 +55,8 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │  Turso (生产 SQLite via libSQL)                                   │
 │  DB: turso-randompage-vercel-icfg-...                            │
-│  Tables: users, passages(561), bookmarks, push_subscriptions,    │
+│  Tables: users, passages(561), bookmarks, bookmark_collections, │
+│          bookmark_collection_items, push_subscriptions,          │
 │          push_history, browsing_events, user_preferences,        │
 │          credentials, sessions, ingest_runs, passage_tag_failures│
 │  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
@@ -86,6 +88,8 @@ exisz/randompage (GitHub)
 | sessions | 登录会话 (passkey 用) |
 | passages | 片段库 (543 条, EN+CN, 100% tagged, boilerplate-free) |
 | bookmarks | 用户收藏 |
+| bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
+| bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak |
@@ -157,6 +161,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-31 | PLANET-2290/2291: Bookmarks/History 增加移动优先 search + tag filters；Bookmarks 增加 user-owned collections（create/rename/delete、bookmark membership、collection chips/sections），后端新增 `bookmark_collections` / `bookmark_collection_items` 与 `/api/bookmark-collections` CRUD。 | Engineer Pod |
 | 2026-05-30 | PLANET-2292/2293/2294: Discover 改为移动优先的视觉 passage card，新增 Web Share API / copy fallback 分享动作，并新增 `/api/reading/stats` 显示今日阅读数与当前 UTC streak；匿名用户显示 sign-in habit prompt。 | Engineer Pod |
 | 2026-05-30 | PLANET-2263: `tag-untagged` LLM partial result 改为按 passage 隔离失败；新增 `pnpm check:tag-failures` QA 报告 untagged/exhausted retry rows；生产 5 条 Sherlock Holmes exhausted untagged rows 已重置并重新打标。 | Engineer Pod |
 | 2026-05-29 | PLANET-2227: passage content policy 新增 non-terminal-ending 检测；Discover/push runtime 过滤历史硬截断片段；fetch-new-books / import-epub / slice-epub 改为句末边界切片，避免未来 passage 以 mid-word/mid-sentence 结尾。 | Engineer Pod |

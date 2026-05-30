@@ -15,9 +15,10 @@ model User {
 
   credentials       Credential[]
   sessions          Session[]
-  pushSubscriptions PushSubscription[]
-  bookmarks         Bookmark[]
-  pushHistory       PushHistory[]
+  pushSubscriptions   PushSubscription[]
+  bookmarks           Bookmark[]
+  bookmarkCollections BookmarkCollection[]
+  pushHistory         PushHistory[]
   browsingEvents    BrowsingEvent[]
   userPreferences   UserPreference[]
 
@@ -72,8 +73,38 @@ model Bookmark {
 
   user    User    @relation(fields: [userId], references: [id])
   passage Passage @relation(fields: [passageId], references: [id])
+  collectionItems BookmarkCollectionItem[]
 
   @@map("bookmarks")
+}
+
+model BookmarkCollection {
+  id        String   @id
+  userId    String   @map("user_id")
+  name      String
+  createdAt DateTime @map("created_at")
+  updatedAt DateTime @map("updated_at")
+
+  user  User                     @relation(fields: [userId], references: [id])
+  items BookmarkCollectionItem[]
+
+  @@unique([userId, name])
+  @@index([userId, updatedAt])
+  @@map("bookmark_collections")
+}
+
+model BookmarkCollectionItem {
+  id           String   @id
+  collectionId String   @map("collection_id")
+  bookmarkId   String   @map("bookmark_id")
+  createdAt    DateTime @map("created_at")
+
+  collection BookmarkCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  bookmark   Bookmark           @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+
+  @@unique([collectionId, bookmarkId])
+  @@index([bookmarkId])
+  @@map("bookmark_collection_items")
 }
 
 model PushSubscription {
