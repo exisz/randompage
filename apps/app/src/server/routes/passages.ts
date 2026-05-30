@@ -79,6 +79,32 @@ async function markPushHistoryRead(
   });
 }
 
+
+function startOfUtcDay(date: Date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function utcDayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function addUtcDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
+function calculateCurrentStreak(viewDates: Date[], today: Date) {
+  const dayKeys = new Set(viewDates.map(utcDayKey));
+  let cursor = startOfUtcDay(today);
+  let streak = 0;
+  while (dayKeys.has(utcDayKey(cursor))) {
+    streak += 1;
+    cursor = addUtcDays(cursor, -1);
+  }
+  return streak;
+}
+
 async function recordInteraction(
   prisma: ReturnType<typeof getPrisma>,
   userId: string,
@@ -183,6 +209,50 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: msg });
+  }
+});
+
+
+// GET /api/reading/stats
+passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureBrowsingEventsTable(prisma);
+
+    const now = new Date();
+    const todayStart = startOfUtcDay(now);
+    const lookbackStart = addUtcDays(todayStart, -90);
+    const userId = claims.sub as string;
+
+    const [todayCount, recentViews] = await Promise.all([
+      prisma.browsingEvent.count({
+        where: {
+          userId,
+          action: 'view',
+          createdAt: { gte: todayStart },
+        },
+      }),
+      prisma.browsingEvent.findMany({
+        where: {
+          userId,
+          action: 'view',
+          createdAt: { gte: lookbackStart },
+        },
+        select: { createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const activeDays = Array.from(new Set(recentViews.map((event) => utcDayKey(event.createdAt)))).sort().reverse();
+    res.json({
+      todayCount,
+      streakDays: calculateCurrentStreak(recentViews.map((event) => event.createdAt), now),
+      activeDays,
+      timezone: 'UTC',
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
