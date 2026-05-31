@@ -18,6 +18,16 @@ interface ReadingStats {
   streakDays: number;
 }
 
+interface DailyQueueItem extends Passage {
+  queuePosition: number;
+}
+
+interface DailyQueue {
+  queue: DailyQueueItem[];
+  generatedFor: string;
+  freshOnly: boolean;
+}
+
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 const SHARE_EXCERPT_LENGTH = 220;
 
@@ -70,11 +80,33 @@ export default function Discover() {
   const [bookmarked, setBookmarked] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
+  const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const pushPassageId = searchParams.get('passageId');
   const pushSource = searchParams.get('source');
+
+  const fetchDailyQueue = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setDailyQueue(null);
+        return;
+      }
+      const res = await apiFetch('/passages/daily-queue?limit=5');
+      if (!res.ok) throw new Error(`Daily queue returned ${res.status}`);
+      const data = await res.json();
+      setDailyQueue({
+        queue: Array.isArray(data.queue) ? data.queue : [],
+        generatedFor: data.generatedFor ?? '',
+        freshOnly: Boolean(data.freshOnly),
+      });
+    } catch (e) {
+      console.error(e);
+      setDailyQueue(null);
+    }
+  }, []);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -131,7 +163,10 @@ export default function Discover() {
 
       const data = await res.json();
       setPassage(data.passage ?? null);
-      if (isAuth) void fetchStats();
+      if (isAuth) {
+        void fetchStats();
+        void fetchDailyQueue();
+      }
     } catch (e) {
       console.error(e);
       setPassage(null);
@@ -139,7 +174,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchStats]);
+  }, [fetchDailyQueue, fetchStats]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -158,7 +193,10 @@ export default function Discover() {
       if (!res.ok) throw new Error(`Passage ${passageId} returned ${res.status}`);
       const data = await res.json();
       setPassage(data.passage);
-      if (isAuth) void fetchStats();
+      if (isAuth) {
+        void fetchStats();
+        void fetchDailyQueue();
+      }
     } catch (e) {
       console.error(e);
       setLoadError('Could not load the pushed passage. Showing another passage instead.');
@@ -166,7 +204,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchPassage, fetchStats]);
+  }, [fetchDailyQueue, fetchPassage, fetchStats]);
 
   useEffect(() => {
     if (pushPassageId) {
@@ -259,6 +297,35 @@ export default function Discover() {
                 </div>
               )}
             </div>
+
+            {authed && (
+              <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
+                    <p className="mt-1 text-sm opacity-70">3–5 personalized unread picks, refreshed daily.</p>
+                  </div>
+                  <span className="badge badge-primary badge-outline">{dailyQueue?.queue.length ?? 0}/5</span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {dailyQueue?.queue.length ? dailyQueue.queue.map((item) => (
+                    <button
+                      key={item.id}
+                      className={`w-full rounded-2xl border px-3 py-2 text-left transition hover:border-primary/50 hover:bg-primary/10 ${passage?.id === item.id ? 'border-primary/60 bg-primary/15' : 'border-white/10 bg-base-100/40'}`}
+                      onClick={() => fetchPassageById(item.id, 'discover')}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="badge badge-sm">{item.queuePosition}</span>
+                        <span className="line-clamp-1 text-sm font-medium">{item.bookTitle}</span>
+                      </div>
+                      <div className="mt-1 line-clamp-1 text-xs opacity-60">{item.author} · {Math.max(1, Math.round(item.text.length / 220))} min</div>
+                    </button>
+                  )) : (
+                    <div className="rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-60">Your daily queue appears after sign-in sync.</div>
+                  )}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="mx-auto w-full max-w-2xl">

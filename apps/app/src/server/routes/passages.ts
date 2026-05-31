@@ -9,6 +9,35 @@ export const passagesRouter = Router();
 
 const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip']);
 const VALID_INTERACTION_SOURCES = new Set(['discover', 'push_inbox']);
+const DAILY_QUEUE_DEFAULT_LIMIT = 5;
+const DAILY_QUEUE_MAX_LIMIT = 5;
+
+
+function boundedDailyQueueLimit(raw: unknown) {
+  if (typeof raw !== 'string') return DAILY_QUEUE_DEFAULT_LIMIT;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return DAILY_QUEUE_DEFAULT_LIMIT;
+  return Math.min(DAILY_QUEUE_MAX_LIMIT, Math.max(3, parsed));
+}
+
+function hashUnit(seed: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) / 0xffffffff;
+}
+
+function scoreDailyQueueCandidate(
+  passage: { id: string; tags: string },
+  prefMap: Record<string, number>,
+  seed: string,
+) {
+  const preferenceScore = scorePassageTags(passage.tags, prefMap);
+  const dailyJitter = hashUnit(`${seed}:${passage.id}`);
+  return preferenceScore * (1 + dailyJitter * 0.35);
+}
 
 async function ensureBrowsingEventsTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe(`
@@ -213,6 +242,71 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
 });
 
 
+
+// GET /api/passages/daily-queue?limit=5
+// Returns a small deterministic-per-day recommendation stack for the signed-in reader.
+// It is a preview queue only: passage views are recorded when the reader opens a card.
+passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureBrowsingEventsTable(prisma);
+
+    const userId = claims.sub as string;
+    const limit = boundedDailyQueueLimit(req.query.limit);
+    const today = utcDayKey(new Date());
+    const seed = `${userId}:${today}`;
+
+    const [allPassages, prefs, historyEvents, pushHistory] = await Promise.all([
+      prisma.passage.findMany(),
+      prisma.userPreference.findMany({ where: { userId } }),
+      prisma.browsingEvent.findMany({
+        where: { userId, action: 'view' },
+        select: { passageId: true },
+        orderBy: { createdAt: 'desc' },
+        take: 250,
+      }),
+      prisma.pushHistory.findMany({
+        where: { userId },
+        select: { passageId: true },
+        orderBy: { sentAt: 'desc' },
+        take: 250,
+      }),
+    ]);
+
+    const readablePassages = filterReadablePassages(allPassages);
+    const seenIds = new Set([
+      ...historyEvents.map((event) => event.passageId),
+      ...pushHistory.map((delivery) => delivery.passageId),
+    ]);
+    const prefMap = Object.fromEntries(prefs.map((pref) => [pref.tag, pref.weight]));
+    const freshCandidates = readablePassages.filter((passage) => !seenIds.has(passage.id));
+    const pool = freshCandidates.length >= limit ? freshCandidates : readablePassages;
+
+    const queue = pool
+      .map((passage) => ({
+        passage,
+        queueScore: scoreDailyQueueCandidate(passage, prefMap, seed),
+      }))
+      .sort((a, b) => b.queueScore - a.queueScore)
+      .slice(0, limit)
+      .map(({ passage }, index) => ({
+        ...passage,
+        queuePosition: index + 1,
+      }));
+
+    res.json({
+      queue,
+      generatedFor: today,
+      requested: limit,
+      freshOnly: freshCandidates.length >= limit,
+      strategy: 'daily_user_preference_unread_weighted',
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 // GET /api/reading/stats
 passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
   try {
@@ -301,6 +395,8 @@ passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
       const now = new Date();
       await markPushHistoryRead(prisma, userId, passage.id, now);
       await recordInteraction(prisma, userId, passage.id, 'view', 'push_inbox');
+    } else if (userId && source === 'discover') {
+      await recordInteraction(prisma, userId, passage.id, 'view', 'discover');
     }
 
     res.json({ passage });

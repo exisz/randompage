@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-31 — PLANET-2290/2291 bookmark collections and saved/read search filters
+> 最后更新: 2026-05-31 — PLANET-2313 daily personalized recommendation queue prototype
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -38,6 +38,7 @@
 │  │    /api/health    → API health check                      │ │
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
+│  │    /api/passages/daily-queue → 每日个性化未读队列预览       │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
@@ -92,7 +93,7 @@ exisz/randompage (GitHub)
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -161,6 +162,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-05-31 | PLANET-2313: Discover 新增 “Today’s fresh pages” 每日个性化未读队列 UI；后端新增 `GET /api/passages/daily-queue?limit=5`，按 user_preferences + 最近 view/push history 过滤/加权生成每日 3–5 条 readable passage 预览，点击卡片记录 discover view。 | Engineer Pod |
 | 2026-05-31 | PLANET-2290/2291: Bookmarks/History 增加移动优先 search + tag filters；Bookmarks 增加 user-owned collections（create/rename/delete、bookmark membership、collection chips/sections），后端新增 `bookmark_collections` / `bookmark_collection_items` 与 `/api/bookmark-collections` CRUD。 | Engineer Pod |
 | 2026-05-30 | PLANET-2292/2293/2294: Discover 改为移动优先的视觉 passage card，新增 Web Share API / copy fallback 分享动作，并新增 `/api/reading/stats` 显示今日阅读数与当前 UTC streak；匿名用户显示 sign-in habit prompt。 | Engineer Pod |
 | 2026-05-30 | PLANET-2263: `tag-untagged` LLM partial result 改为按 passage 隔离失败；新增 `pnpm check:tag-failures` QA 报告 untagged/exhausted retry rows；生产 5 条 Sherlock Holmes exhausted untagged rows 已重置并重新打标。 | Engineer Pod |
