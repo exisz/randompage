@@ -162,6 +162,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-01 | PLANET-2332: Discover 新增横向 tag filter chip-strip；新增 `GET /api/passages/tags?limit=N` 端点返回 top tags；`GET /api/passages/random` 新增 `?tag=` 过滤参数（加权采样限定指定 tag，tag 激活时跳过 push inbox pass-through）；选中 tag 持久化至 localStorage。 | Engineer Pod |
 | 2026-05-31 | PLANET-2313: Discover 新增 “Today’s fresh pages” 每日个性化未读队列 UI；后端新增 `GET /api/passages/daily-queue?limit=5`，按 user_preferences + 最近 view/push history 过滤/加权生成每日 3–5 条 readable passage 预览，点击卡片记录 discover view。 | Engineer Pod |
 | 2026-05-31 | PLANET-2290/2291: Bookmarks/History 增加移动优先 search + tag filters；Bookmarks 增加 user-owned collections（create/rename/delete、bookmark membership、collection chips/sections），后端新增 `bookmark_collections` / `bookmark_collection_items` 与 `/api/bookmark-collections` CRUD。 | Engineer Pod |
 | 2026-05-30 | PLANET-2292/2293/2294: Discover 改为移动优先的视觉 passage card，新增 Web Share API / copy fallback 分享动作，并新增 `/api/reading/stats` 显示今日阅读数与当前 UTC streak；匿名用户显示 sign-in habit prompt。 | Engineer Pod |
