@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
@@ -83,9 +83,38 @@ export default function Discover() {
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [topTags, setTopTags] = useState<string[]>([]);
+  const [selectedTag, setSelectedTagState] = useState<string | null>(() => {
+    try { return localStorage.getItem('discover_tag_filter') || null; } catch { return null; }
+  });
+  const selectedTagRef = useRef<string | null>(null);
+  // Keep ref in sync with state for use inside useCallback closures
+  useEffect(() => { selectedTagRef.current = selectedTag; }, [selectedTag]);
+
+  const setSelectedTag = useCallback((tag: string | null) => {
+    selectedTagRef.current = tag;
+    setSelectedTagState(tag);
+    try {
+      if (tag) localStorage.setItem('discover_tag_filter', tag);
+      else localStorage.removeItem('discover_tag_filter');
+    } catch { /* ignore */ }
+  }, []);
+
   const [searchParams] = useSearchParams();
   const pushPassageId = searchParams.get('passageId');
   const pushSource = searchParams.get('source');
+
+  const fetchTopTags = useCallback(async () => {
+    try {
+      const res = await fetch('/api/passages/tags?limit=12');
+      if (!res.ok) throw new Error(`tags ${res.status}`);
+      const data = await res.json() as { tags: Array<{ tag: string }> };
+      setTopTags(data.tags.map((t) => t.tag));
+    } catch (e) {
+      console.error(e);
+      setTopTags([]);
+    }
+  }, []);
 
   const fetchDailyQueue = useCallback(async () => {
     try {
@@ -136,6 +165,8 @@ export default function Discover() {
       const params = new URLSearchParams();
       if (preferUnread && isAuth) params.set('preferUnread', '1');
       if (skippedPassageId && isAuth) params.set('skipPassageId', skippedPassageId);
+      const activeTag = selectedTagRef.current;
+      if (activeTag) params.set('tag', activeTag);
       const query = params.toString() ? `?${params.toString()}` : '';
 
       let res: Response;
@@ -207,12 +238,16 @@ export default function Discover() {
   }, [fetchDailyQueue, fetchPassage, fetchStats]);
 
   useEffect(() => {
+    void fetchTopTags();
+  }, [fetchTopTags]);
+
+  useEffect(() => {
     if (pushPassageId) {
       void fetchPassageById(pushPassageId, pushSource);
       return;
     }
     void fetchPassage(true);
-  }, [fetchPassage, fetchPassageById, pushPassageId, pushSource]);
+  }, [fetchPassage, fetchPassageById, fetchTopTags, pushPassageId, pushSource]);
 
   const handleBookmark = async () => {
     if (!passage || !authed) return;
@@ -256,7 +291,7 @@ export default function Discover() {
     <div className="min-h-screen overflow-hidden bg-base-100 text-base-content">
       <div className={`absolute inset-x-0 top-0 h-80 bg-gradient-to-br ${accent} opacity-80 blur-3xl`} />
       <div className="relative mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-4 sm:px-6">
-        <nav className="navbar mb-4 rounded-[2rem] border border-white/10 bg-base-200/70 shadow-2xl backdrop-blur md:mb-8">
+        <nav className="navbar mb-3 rounded-[2rem] border border-white/10 bg-base-200/70 shadow-2xl backdrop-blur md:mb-5">
           <div className="flex-1">
             <span className="font-serif text-lg tracking-wide sm:text-xl">📖 RandomPage</span>
           </div>
@@ -266,6 +301,36 @@ export default function Discover() {
             <Link to="/settings" className="btn btn-ghost btn-xs sm:btn-sm">Settings</Link>
           </div>
         </nav>
+
+        {/* Tag filter chip-strip */}
+        {topTags.length > 0 && (
+          <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-none">
+            <button
+              className={`btn btn-sm shrink-0 rounded-full ${
+                selectedTag === null ? 'btn-primary' : 'btn-outline border-white/20 bg-base-200/60'
+              }`}
+              onClick={() => { setSelectedTag(null); void fetchPassage(false, passage?.id ?? undefined); }}
+            >
+              All
+            </button>
+            {topTags.map((tag) => (
+              <button
+                key={tag}
+                className={`btn btn-sm shrink-0 rounded-full capitalize ${
+                  selectedTag === tag ? 'btn-primary' : 'btn-outline border-white/20 bg-base-200/60'
+                }`}
+                style={{ minHeight: '44px' }}
+                onClick={() => {
+                  const next = selectedTag === tag ? null : tag;
+                  setSelectedTag(next);
+                  void fetchPassage(false, passage?.id ?? undefined);
+                }}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+        )}
 
         <main className="grid flex-1 items-center gap-5 lg:grid-cols-[0.85fr_1.15fr]">
           <section className="space-y-4 lg:pb-20">

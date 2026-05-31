@@ -152,12 +152,39 @@ async function recordInteraction(
   await updatePreferencesForPassage(prisma, userId, passageId, action === 'skip' ? -1 : 1, now);
 }
 
-// GET /api/passages/random?preferUnread=1&skipPassageId=<id>
+// GET /api/passages/tags?limit=12 — top tags for the Discover chip-strip (no auth required)
+passagesRouter.get('/passages/tags', async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const allPassages = await prisma.passage.findMany({ select: { tags: true } });
+    const HIDDEN = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
+    const counts: Record<string, number> = {};
+    for (const p of allPassages) {
+      for (const tag of parsePassageTags(p.tags)) {
+        const t = tag.toLowerCase().trim();
+        if (!t || HIDDEN.has(t)) continue;
+        counts[t] = (counts[t] ?? 0) + 1;
+      }
+    }
+    const limitRaw = req.query.limit;
+    const limit = typeof limitRaw === 'string' ? Math.min(20, Math.max(1, Number.parseInt(limitRaw, 10) || 12)) : 12;
+    const topTags = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([tag, count]) => ({ tag, count }));
+    res.json({ tags: topTags });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/passages/random?preferUnread=1&skipPassageId=<id>&tag=<tag>
 passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
     const preferUnread = req.query.preferUnread === '1';
     const skipPassageId = typeof req.query.skipPassageId === 'string' ? req.query.skipPassageId : undefined;
+    const tagFilter = typeof req.query.tag === 'string' ? req.query.tag.toLowerCase().trim() : undefined;
     let userId: string | null = null;
 
     // Try to get user (optional auth)
@@ -182,9 +209,20 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       return;
     }
 
+    // Apply tag filter — fall back to full pool if no passages match the selected tag.
+    const tagFilteredPassages = tagFilter
+      ? (() => {
+          const filtered = readablePassages.filter((p) =>
+            parsePassageTags(p.tags).some((t) => t.toLowerCase() === tagFilter),
+          );
+          return filtered.length > 0 ? filtered : readablePassages;
+        })()
+      : readablePassages;
+
     let passage = null;
 
-    if (userId && preferUnread) {
+    // Skip push inbox when a tag filter is active — respect the user's chosen category.
+    if (userId && preferUnread && !tagFilter) {
       // Try to find an unread passage from push history first
       const recentPush = await prisma.pushHistory.findFirst({
         where: { userId, readAt: null },
@@ -209,8 +247,8 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       const prefs = await prisma.userPreference.findMany({ where: { userId } });
       const prefMap = Object.fromEntries(prefs.map(p => [p.tag, p.weight]));
 
-      // Get all readable passages and do weighted sampling
-      const weights = readablePassages.map(p => ({
+      // Use tag-filtered pool for weighted sampling
+      const weights = tagFilteredPassages.map(p => ({
         passage: p,
         weight: scorePassageTags(p.tags, prefMap),
       }));
@@ -224,10 +262,10 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
           break;
         }
       }
-      if (!passage) passage = readablePassages[Math.floor(Math.random() * readablePassages.length)];
+      if (!passage) passage = tagFilteredPassages[Math.floor(Math.random() * tagFilteredPassages.length)];
     } else {
-      // Pure random for anonymous, still bounded to readable fragments.
-      passage = readablePassages[Math.floor(Math.random() * readablePassages.length)];
+      // Pure random for anonymous, still bounded to readable + tag-filtered pool.
+      passage = tagFilteredPassages[Math.floor(Math.random() * tagFilteredPassages.length)];
     }
 
     if (userId && passage) {
