@@ -13,14 +13,15 @@ model User {
   displayName String   @map("display_name")
   createdAt   DateTime @map("created_at")
 
-  credentials       Credential[]
-  sessions          Session[]
+  credentials         Credential[]
+  sessions            Session[]
   pushSubscriptions   PushSubscription[]
   bookmarks           Bookmark[]
   bookmarkCollections BookmarkCollection[]
   pushHistory         PushHistory[]
-  browsingEvents    BrowsingEvent[]
-  userPreferences   UserPreference[]
+  browsingEvents      BrowsingEvent[]
+  userPreferences     UserPreference[]
+  passageReviews      PassageReview[]
 
   @@map("users")
 }
@@ -61,6 +62,7 @@ model Passage {
   bookmarks      Bookmark[]
   pushHistory    PushHistory[]
   browsingEvents BrowsingEvent[]
+  passageReviews PassageReview[]
 
   @@map("passages")
 }
@@ -71,9 +73,10 @@ model Bookmark {
   passageId String   @map("passage_id")
   createdAt DateTime @map("created_at")
 
-  user    User    @relation(fields: [userId], references: [id])
-  passage Passage @relation(fields: [passageId], references: [id])
+  user            User                     @relation(fields: [userId], references: [id])
+  passage         Passage                  @relation(fields: [passageId], references: [id])
   collectionItems BookmarkCollectionItem[]
+  passageReviews  PassageReview[]
 
   @@map("bookmarks")
 }
@@ -159,4 +162,22 @@ model UserPreference {
   user User @relation(fields: [userId], references: [id])
 
   @@map("user_preferences")
+}
+
+model PassageReview {
+  id         String   @id
+  userId     String   @map("user_id")
+  bookmarkId String   @map("bookmark_id")
+  passageId  String   @map("passage_id")
+  action     String
+  reviewedAt DateTime @map("reviewed_at")
+  dueAfter   DateTime @map("due_after")
+
+  user     User     @relation(fields: [userId], references: [id])
+  bookmark Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  passage  Passage  @relation(fields: [passageId], references: [id])
+
+  @@index([userId, dueAfter])
+  @@index([bookmarkId, reviewedAt])
+  @@map("passage_reviews")
 }

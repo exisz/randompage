@@ -33,6 +33,32 @@ async function ensureBookmarkCollectionTables(prisma: ReturnType<typeof getPrism
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS bookmark_collection_items_bookmark_idx ON bookmark_collection_items(bookmark_id)');
 }
 
+async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
+  await ensureBookmarkCollectionTables(prisma);
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS passage_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      bookmark_id TEXT NOT NULL,
+      passage_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      reviewed_at TEXT NOT NULL,
+      due_after TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_user_due_idx ON passage_reviews(user_id, due_after)');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_bookmark_reviewed_idx ON passage_reviews(bookmark_id, reviewed_at)');
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+}
+
 function normalizeCollectionName(value: unknown) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
 }
@@ -193,6 +219,79 @@ bookmarksRouter.delete('/bookmark-collections/:id/bookmarks/:bookmarkId', async 
     });
     await prisma.bookmarkCollection.update({ where: { id: collection.id }, data: { updatedAt: new Date() } });
     res.json({ ok: true });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/daily-review — resurface 1–3 saved passages due for revisit
+bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const now = new Date();
+
+    const bookmarks = await prisma.bookmark.findMany({
+      where: { userId },
+      include: {
+        passage: true,
+        passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 50,
+    });
+
+    const due = bookmarks
+      .filter((bookmark) => {
+        const latest = bookmark.passageReviews[0];
+        return !latest || latest.dueAfter <= now;
+      })
+      .slice(0, 3)
+      .map((bookmark, index) => ({
+        id: bookmark.id,
+        bookmarkId: bookmark.id,
+        passageId: bookmark.passageId,
+        reviewPosition: index + 1,
+        lastReviewedAt: bookmark.passageReviews[0]?.reviewedAt ?? null,
+        passage: bookmark.passage,
+      }));
+
+    res.json({ items: due, generatedFor: now.toISOString().slice(0, 10) });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/daily-review/:bookmarkId — keep/review or dismiss a due saved passage
+bookmarksRouter.post('/daily-review/:bookmarkId', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const action = req.body?.action === 'skip' ? 'skip' : 'reviewed';
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await prisma.bookmark.findFirst({
+      where: { id: req.params.bookmarkId, userId },
+      include: { passage: true },
+    });
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+
+    const now = new Date();
+    const dueAfter = action === 'reviewed' ? addDays(now, 7) : addDays(now, 1);
+    const review = await prisma.passageReview.create({
+      data: {
+        id: nanoid(),
+        userId,
+        bookmarkId: bookmark.id,
+        passageId: bookmark.passageId,
+        action,
+        reviewedAt: now,
+        dueAfter,
+      },
+    });
+    res.json({ review });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }

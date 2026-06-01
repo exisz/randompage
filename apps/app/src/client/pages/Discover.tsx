@@ -28,6 +28,20 @@ interface DailyQueue {
   freshOnly: boolean;
 }
 
+interface DailyReviewItem {
+  id: string;
+  bookmarkId: string;
+  passageId: string;
+  reviewPosition: number;
+  lastReviewedAt: string | null;
+  passage: Passage;
+}
+
+interface DailyReview {
+  items: DailyReviewItem[];
+  generatedFor: string;
+}
+
 interface UnreadPushSummary {
   count: number;
   latest: {
@@ -90,6 +104,8 @@ export default function Discover() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
+  const [dailyReview, setDailyReview] = useState<DailyReview | null>(null);
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -144,6 +160,26 @@ export default function Discover() {
     } catch (e) {
       console.error(e);
       setDailyQueue(null);
+    }
+  }, []);
+
+  const fetchDailyReview = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setDailyReview(null);
+        return;
+      }
+      const res = await apiFetch('/daily-review');
+      if (!res.ok) throw new Error(`Daily review returned ${res.status}`);
+      const data = await res.json();
+      setDailyReview({
+        items: Array.isArray(data.items) ? data.items : [],
+        generatedFor: data.generatedFor ?? '',
+      });
+    } catch (e) {
+      console.error(e);
+      setDailyReview(null);
     }
   }, []);
 
@@ -228,6 +264,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchDailyReview();
         void fetchUnreadPush();
       }
     } catch (e) {
@@ -237,7 +274,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchStats, fetchUnreadPush]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -259,6 +296,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchDailyReview();
         void fetchUnreadPush();
       }
     } catch (e) {
@@ -268,7 +306,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchPassage, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchStats, fetchUnreadPush]);
 
   useEffect(() => {
     void fetchTopTags();
@@ -281,6 +319,23 @@ export default function Discover() {
     }
     void fetchPassage(false);
   }, [fetchPassage, fetchPassageById, fetchTopTags, pushPassageId, pushSource]);
+
+  const handleReviewAction = async (item: DailyReviewItem, action: 'reviewed' | 'skip') => {
+    try {
+      await apiFetch(`/daily-review/${encodeURIComponent(item.bookmarkId)}`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      });
+      setReviewStatus(action === 'reviewed' ? 'Saved passage reviewed — it will come back later.' : 'Review skipped for now.');
+      setDailyReview((current) => current
+        ? { ...current, items: current.items.filter((candidate) => candidate.bookmarkId !== item.bookmarkId) }
+        : current);
+      window.setTimeout(() => setReviewStatus(null), 2500);
+    } catch (e) {
+      console.error(e);
+      setReviewStatus('Could not update review. Try again.');
+    }
+  };
 
   const handleBookmark = async () => {
     if (!passage || !authed) return;
@@ -412,6 +467,40 @@ export default function Discover() {
                 </div>
               </Link>
             )}
+
+            {authed && dailyReview?.items.length ? (
+              <div className="rounded-[2rem] border border-secondary/30 bg-secondary/10 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-secondary">Daily Review</p>
+                    <p className="mt-1 text-sm opacity-70">Revisit passages you already saved.</p>
+                  </div>
+                  <span className="badge badge-secondary badge-outline">{dailyReview.items.length} due</span>
+                </div>
+                {reviewStatus && <div className="alert alert-info mt-3 py-2 text-sm"><span>{reviewStatus}</span></div>}
+                <div className="mt-3 space-y-2">
+                  {dailyReview.items.map((item) => (
+                    <div key={item.bookmarkId} className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                      <button
+                        className="w-full text-left"
+                        onClick={() => fetchPassageById(item.passageId, 'discover')}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-sm badge-secondary">{item.reviewPosition}</span>
+                          <span className="line-clamp-1 text-sm font-semibold">{item.passage.bookTitle}</span>
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70">{shortExcerpt(item.passage.text)}</p>
+                        <p className="mt-1 text-xs opacity-50">{item.passage.author}</p>
+                      </button>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'reviewed')}>Reviewed</button>
+                        <button className="btn btn-ghost btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'skip')}>Skip today</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {authed && (
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">

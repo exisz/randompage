@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-05-31 — PLANET-2313 daily personalized recommendation queue prototype
+> 最后更新: 2026-06-02 — PLANET-2370 Daily Review resurfaces saved passages
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -39,6 +39,7 @@
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览       │ │
+│  │    /api/daily-review → 收藏片段 Daily Review / revisit      │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
@@ -57,8 +58,9 @@
 │  Turso (生产 SQLite via libSQL)                                   │
 │  DB: turso-randompage-vercel-icfg-...                            │
 │  Tables: users, passages(561), bookmarks, bookmark_collections, │
-│          bookmark_collection_items, push_subscriptions,          │
-│          push_history, browsing_events, user_preferences,        │
+│          bookmark_collection_items, passage_reviews,             │
+│          push_subscriptions, push_history, browsing_events,      │
+│          user_preferences,                                      │
 │          credentials, sessions, ingest_runs, passage_tag_failures│
 │  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
 └──────────────────────────────────────────────────────────────────┘
@@ -91,6 +93,7 @@ exisz/randompage (GitHub)
 | bookmarks | 用户收藏 |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
+| passage_reviews | Daily Review 复习记录（reviewed/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
@@ -162,6 +165,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-02 | PLANET-2370: Discover 新增 “Daily Review” saved-passage revisit card；后端新增 `GET /api/daily-review` 返回 1–3 条 due bookmarked passages，`POST /api/daily-review/:bookmarkId` 持久化 reviewed/skip 并写入 `passage_reviews.due_after`，无 bookmarks 时不显示空态。 | Engineer Pod |
 | 2026-06-01 | PLANET-2332: Discover 新增横向 tag filter chip-strip；新增 `GET /api/passages/tags?limit=N` 端点返回 top tags；`GET /api/passages/random` 新增 `?tag=` 过滤参数（加权采样限定指定 tag，tag 激活时跳过 push inbox pass-through）；选中 tag 持久化至 localStorage。 | Engineer Pod |
 | 2026-05-31 | PLANET-2313: Discover 新增 “Today’s fresh pages” 每日个性化未读队列 UI；后端新增 `GET /api/passages/daily-queue?limit=5`，按 user_preferences + 最近 view/push history 过滤/加权生成每日 3–5 条 readable passage 预览，点击卡片记录 discover view。 | Engineer Pod |
 | 2026-05-31 | PLANET-2290/2291: Bookmarks/History 增加移动优先 search + tag filters；Bookmarks 增加 user-owned collections（create/rename/delete、bookmark membership、collection chips/sections），后端新增 `bookmark_collections` / `bookmark_collection_items` 与 `/api/bookmark-collections` CRUD。 | Engineer Pod |
