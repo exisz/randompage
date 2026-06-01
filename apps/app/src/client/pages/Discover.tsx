@@ -28,6 +28,15 @@ interface DailyQueue {
   freshOnly: boolean;
 }
 
+interface UnreadPushSummary {
+  count: number;
+  latest: {
+    id: string;
+    sentAt: string;
+    passage: Passage;
+  } | null;
+}
+
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 const SHARE_EXCERPT_LENGTH = 220;
 
@@ -81,6 +90,7 @@ export default function Discover() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
+  const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [topTags, setTopTags] = useState<string[]>([]);
@@ -134,6 +144,27 @@ export default function Discover() {
     } catch (e) {
       console.error(e);
       setDailyQueue(null);
+    }
+  }, []);
+
+  const fetchUnreadPush = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setUnreadPush({ count: 0, latest: null });
+        return;
+      }
+      const res = await apiFetch('/push/history');
+      if (!res.ok) throw new Error(`Push history returned ${res.status}`);
+      const data = await res.json() as { history?: Array<{ id: string; sentAt: string; readAt: string | null; passage: Passage }> };
+      const unread = (data.history ?? []).filter((item) => !item.readAt);
+      setUnreadPush({
+        count: unread.length,
+        latest: unread[0] ? { id: unread[0].id, sentAt: unread[0].sentAt, passage: unread[0].passage } : null,
+      });
+    } catch (e) {
+      console.error(e);
+      setUnreadPush({ count: 0, latest: null });
     }
   }, []);
 
@@ -197,6 +228,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchUnreadPush();
       }
     } catch (e) {
       console.error(e);
@@ -205,7 +237,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchStats]);
+  }, [fetchDailyQueue, fetchStats, fetchUnreadPush]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -227,6 +259,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchUnreadPush();
       }
     } catch (e) {
       console.error(e);
@@ -235,7 +268,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchPassage, fetchStats]);
+  }, [fetchDailyQueue, fetchPassage, fetchStats, fetchUnreadPush]);
 
   useEffect(() => {
     void fetchTopTags();
@@ -246,7 +279,7 @@ export default function Discover() {
       void fetchPassageById(pushPassageId, pushSource);
       return;
     }
-    void fetchPassage(true);
+    void fetchPassage(false);
   }, [fetchPassage, fetchPassageById, fetchTopTags, pushPassageId, pushSource]);
 
   const handleBookmark = async () => {
@@ -362,6 +395,23 @@ export default function Discover() {
                 </div>
               )}
             </div>
+
+
+            {authed && unreadPush.count > 0 && unreadPush.latest && (
+              <Link
+                to="/history?tab=push"
+                className="block rounded-[2rem] border border-primary/40 bg-primary/15 p-4 shadow-xl backdrop-blur transition hover:border-primary hover:bg-primary/20"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-primary">Unread push inbox</p>
+                    <p className="mt-2 text-sm font-semibold">{unreadPush.count} pushed passage{unreadPush.count === 1 ? '' : 's'} waiting</p>
+                    <p className="mt-1 line-clamp-2 text-sm opacity-70">Latest: {unreadPush.latest.passage.bookTitle} — {unreadPush.latest.passage.author}</p>
+                  </div>
+                  <span className="badge badge-primary shrink-0">Open inbox</span>
+                </div>
+              </Link>
+            )}
 
             {authed && (
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">

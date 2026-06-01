@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 
@@ -34,12 +34,17 @@ function itemSearchText(item: HistoryItem) {
 
 export default function History() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [pushHistory, setPushHistory] = useState<PushHistoryEntry[]>([]);
   const [browsingHistory, setBrowsingHistory] = useState<BrowsingHistoryEntry[]>([]);
-  const [activeTab, setActiveTab] = useState<'browsing' | 'push'>('browsing');
+  const [activeTab, setActiveTab] = useState<'browsing' | 'push'>(() => searchParams.get('tab') === 'push' || window.location.hash === '#push-inbox' ? 'push' : 'browsing');
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState('all');
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'push' || window.location.hash === '#push-inbox') setActiveTab('push');
+  }, [searchParams]);
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -95,7 +100,7 @@ export default function History() {
         </div>
         <div className="tabs tabs-boxed mb-4">
           <button className={`tab ${activeTab === 'browsing' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('browsing'); clearFilters(); }}>Browsing</button>
-          <button className={`tab ${activeTab === 'push' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('push'); clearFilters(); }}>Push inbox</button>
+          <button id="push-inbox" className={`tab ${activeTab === 'push' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('push'); clearFilters(); }}>Push inbox</button>
         </div>
 
         <div className="card bg-base-200 shadow mb-4">
@@ -142,6 +147,11 @@ export default function History() {
                     <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 170)}{h.passage.text.length > 170 ? '…' : ''}</p>
                     <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
+                    {!isBrowsing && (
+                      <Link className="btn btn-primary btn-xs self-start" to={`/discover?passageId=${encodeURIComponent(h.passage.id)}&source=push`}>
+                        {isUnreadPush ? 'Open and mark read' : 'Open passage'}
+                      </Link>
+                    )}
                   </div>
                 </div>
               );
