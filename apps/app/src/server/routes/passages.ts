@@ -79,18 +79,23 @@ async function updatePreferencesForPassage(
   const passage = await prisma.passage.findUnique({ where: { id: passageId } });
   if (!passage) return;
 
+  const updatedAt = epochSeconds(now);
   const tags = parsePassageTags(passage.tags);
   for (const tag of tags) {
-    const existing = await prisma.userPreference.findFirst({ where: { userId, tag } });
-    if (existing) {
-      await prisma.userPreference.update({
-        where: { id: existing.id },
-        data: { weight: Math.max(1, existing.weight + delta), updatedAt: now },
-      });
+    const existing = await prisma.$queryRaw<Array<{ id: string; weight: number }>>`
+      SELECT id, weight FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag} LIMIT 1
+    `;
+    if (existing[0]) {
+      await prisma.$executeRaw`
+        UPDATE user_preferences
+        SET weight = ${Math.max(1, Number(existing[0].weight) + delta)}, updated_at = ${updatedAt}
+        WHERE id = ${existing[0].id}
+      `;
     } else if (delta > 0) {
-      await prisma.userPreference.create({
-        data: { id: nanoid(), userId, tag, weight: 1 + delta, updatedAt: now },
-      });
+      await prisma.$executeRaw`
+        INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+        VALUES (${nanoid()}, ${userId}, ${tag}, ${1 + delta}, ${updatedAt})
+      `;
     }
   }
 }

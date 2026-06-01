@@ -317,21 +317,26 @@ bookmarksRouter.post('/bookmarks', async (req: Request, res: Response) => {
     const now = new Date();
     await ensureUserRow(prisma, userId);
 
-    // Update preferences for passage tags
+    // Update preferences for passage tags. Production user_preferences.updated_at is INTEGER unix seconds.
     const passage = await prisma.passage.findUnique({ where: { id: passageId } });
     if (passage) {
       const tags = parsePassageTags(passage.tags);
+      const updatedAt = epochSeconds(now);
       for (const tag of tags) {
-        const existing = await prisma.userPreference.findFirst({ where: { userId, tag } });
-        if (existing) {
-          await prisma.userPreference.update({
-            where: { id: existing.id },
-            data: { weight: existing.weight + 1, updatedAt: now },
-          });
+        const existing = await prisma.$queryRaw<Array<{ id: string; weight: number }>>`
+          SELECT id, weight FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag} LIMIT 1
+        `;
+        if (existing[0]) {
+          await prisma.$executeRaw`
+            UPDATE user_preferences
+            SET weight = ${Number(existing[0].weight) + 1}, updated_at = ${updatedAt}
+            WHERE id = ${existing[0].id}
+          `;
         } else {
-          await prisma.userPreference.create({
-            data: { id: nanoid(), userId, tag, weight: 2, updatedAt: now },
-          });
+          await prisma.$executeRaw`
+            INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+            VALUES (${nanoid()}, ${userId}, ${tag}, ${2}, ${updatedAt})
+          `;
         }
       }
     }
