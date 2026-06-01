@@ -59,6 +59,17 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
+function epochSeconds(date: Date) {
+  return Math.floor(date.getTime() / 1000);
+}
+
+async function ensureUserRow(prisma: ReturnType<typeof getPrisma>, userId: string, displayName = 'Reader') {
+  await prisma.$executeRaw`
+    INSERT OR IGNORE INTO users (id, display_name, created_at)
+    VALUES (${userId}, ${displayName}, ${epochSeconds(new Date())})
+  `;
+}
+
 function normalizeCollectionName(value: unknown) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
 }
@@ -120,11 +131,7 @@ bookmarksRouter.post('/bookmark-collections', async (req: Request, res: Response
     await ensureBookmarkCollectionTables(prisma);
     const userId = claims.sub as string;
     const now = new Date();
-    await prisma.user.upsert({
-      where: { id: userId },
-      create: { id: userId, displayName: 'Reader', createdAt: now },
-      update: {},
-    });
+    await ensureUserRow(prisma, userId);
     const collection = await prisma.bookmarkCollection.create({
       data: { id: nanoid(), userId, name, createdAt: now, updatedAt: now },
       include: { items: { select: { bookmarkId: true } } },
@@ -305,14 +312,10 @@ bookmarksRouter.post('/bookmarks', async (req: Request, res: Response) => {
     if (!passageId) { res.status(400).json({ error: 'passageId required' }); return; }
     const prisma = getPrisma();
 
-    // Ensure user exists
+    // Ensure user exists. Production legacy users/bookmarks store created_at as INTEGER unix seconds.
     const userId = claims.sub as string;
     const now = new Date();
-    await prisma.user.upsert({
-      where: { id: userId },
-      create: { id: userId, displayName: 'Reader', createdAt: now },
-      update: {},
-    });
+    await ensureUserRow(prisma, userId);
 
     // Update preferences for passage tags
     const passage = await prisma.passage.findUnique({ where: { id: passageId } });
@@ -333,10 +336,12 @@ bookmarksRouter.post('/bookmarks', async (req: Request, res: Response) => {
       }
     }
 
-    const bookmark = await prisma.bookmark.create({
-      data: { id: nanoid(), userId, passageId, createdAt: now },
-    });
-    res.json({ bookmark });
+    const bookmarkId = nanoid();
+    await prisma.$executeRaw`
+      INSERT INTO bookmarks (id, user_id, passage_id, created_at)
+      VALUES (${bookmarkId}, ${userId}, ${passageId}, ${epochSeconds(now)})
+    `;
+    res.json({ bookmark: { id: bookmarkId, userId, passageId, createdAt: now.toISOString() } });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }

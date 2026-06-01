@@ -56,12 +56,17 @@ async function ensureBrowsingEventsTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS browsing_events_user_passage_idx ON browsing_events(user_id, passage_id)');
 }
 
+function epochSeconds(date: Date) {
+  return Math.floor(date.getTime() / 1000);
+}
+
 async function upsertReader(prisma: ReturnType<typeof getPrisma>, userId: string, now: Date) {
-  await prisma.user.upsert({
-    where: { id: userId },
-    create: { id: userId, displayName: 'Reader', createdAt: now },
-    update: {},
-  });
+  // Production legacy users.created_at is INTEGER unix seconds; raw insert avoids
+  // Prisma DateTime serializing ISO text into that column for first-time readers.
+  await prisma.$executeRaw`
+    INSERT OR IGNORE INTO users (id, display_name, created_at)
+    VALUES (${userId}, ${'Reader'}, ${epochSeconds(now)})
+  `;
 }
 
 async function updatePreferencesForPassage(
