@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-02 — PLANET-2370 Daily Review resurfaces saved passages
+> 最后更新: 2026-06-03 — PLANET-2418 Settings reading-goal onboarding seeds preferences
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -33,7 +33,7 @@
 │  │    /discover      → 发现页 (随机片段)                      │ │
 │  │    /bookmarks     → 书架                                   │ │
 │  │    /history       → 浏览历史 + 推送收件箱                  │ │
-│  │    /settings      → 设置/推送开关                          │ │
+│  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
 │  │    /callback      → Logto SSO 回调                        │ │
 │  │    /api/health    → API health check                      │ │
 │  │    /api/me        → 用户信息 (upsert)                     │ │
@@ -45,6 +45,7 @@
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
+│  │    /api/preferences → 读取偏好权重 + POST goals 种子写入     │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
@@ -97,7 +98,7 @@ exisz/randompage (GitHub)
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
 
@@ -153,6 +154,7 @@ exisz/randompage (GitHub)
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-passage-content-policy.mjs` | PLANET-2139/2227 | 生产 corpus reference-note/footnote/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts 与 non-terminal endings） |
 | `check-tag-failure-policy.mjs` | PLANET-2263 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，防止 retry 耗尽后静默滞留 |
+| `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
@@ -165,6 +167,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-03 | PLANET-2418: Settings 新增移动优先 “Personalization / Reading goals” card；`GET /api/preferences` 返回 goal presets + 当前权重，`POST /api/preferences/goals` 将 1–3 个 preset 映射到既有 `user_preferences` tag 权重（seed weight=7），Discover/daily queue 继续复用现有个性化采样。 | Engineer Pod |
 | 2026-06-02 | PLANET-2370: Discover 新增 “Daily Review” saved-passage revisit card；后端新增 `GET /api/daily-review` 返回 1–3 条 due bookmarked passages，`POST /api/daily-review/:bookmarkId` 持久化 reviewed/skip 并写入 `passage_reviews.due_after`，无 bookmarks 时不显示空态。 | Engineer Pod |
 | 2026-06-01 | PLANET-2332: Discover 新增横向 tag filter chip-strip；新增 `GET /api/passages/tags?limit=N` 端点返回 top tags；`GET /api/passages/random` 新增 `?tag=` 过滤参数（加权采样限定指定 tag，tag 激活时跳过 push inbox pass-through）；选中 tag 持久化至 localStorage。 | Engineer Pod |
 | 2026-05-31 | PLANET-2313: Discover 新增 “Today’s fresh pages” 每日个性化未读队列 UI；后端新增 `GET /api/passages/daily-queue?limit=5`，按 user_preferences + 最近 view/push history 过滤/加权生成每日 3–5 条 readable passage 预览，点击卡片记录 discover view。 | Engineer Pod |
