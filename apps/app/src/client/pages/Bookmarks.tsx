@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
+import { isOfflineError, readBookmarksOfflineCache, saveBookmarksOfflineCache, useOnlineStatus } from '../lib/offline';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -41,16 +42,38 @@ export default function Bookmarks() {
   const [activeCollection, setActiveCollection] = useState('all');
   const [newCollectionName, setNewCollectionName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
+  const online = useOnlineStatus();
+
+  const loadOfflineCache = () => {
+    const cached = readBookmarksOfflineCache();
+    if (!cached) return false;
+    setBookmarks((cached.bookmarks as Bookmark[]) || []);
+    setCollections((cached.collections as Collection[]) || []);
+    setOfflineMode(true);
+    setOfflineCachedAt(cached.cachedAt);
+    return true;
+  };
 
   const refresh = async () => {
-    const [bookmarksRes, collectionsRes] = await Promise.all([
-      apiFetch('/bookmarks'),
-      apiFetch('/bookmark-collections'),
-    ]);
-    const bookmarksData = await bookmarksRes.json();
-    const collectionsData = await collectionsRes.json();
-    setBookmarks(bookmarksData.bookmarks || []);
-    setCollections(collectionsData.collections || []);
+    try {
+      const [bookmarksRes, collectionsRes] = await Promise.all([
+        apiFetch('/bookmarks'),
+        apiFetch('/bookmark-collections'),
+      ]);
+      const bookmarksData = await bookmarksRes.json();
+      const collectionsData = await collectionsRes.json();
+      const nextBookmarks = bookmarksData.bookmarks || [];
+      const nextCollections = collectionsData.collections || [];
+      setBookmarks(nextBookmarks);
+      setCollections(nextCollections);
+      setOfflineMode(false);
+      setOfflineCachedAt(null);
+      saveBookmarksOfflineCache({ bookmarks: nextBookmarks, collections: nextCollections });
+    } catch (error) {
+      if (!isOfflineError(error) || !loadOfflineCache()) throw error;
+    }
   };
 
   useEffect(() => {
@@ -78,13 +101,14 @@ export default function Bookmarks() {
   }, [bookmarks, query, activeTag, activeCollection]);
 
   const removeBookmark = async (id: string) => {
+    if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
     await refresh();
   };
 
   const createCollection = async () => {
     const name = newCollectionName.trim();
-    if (!name) return;
+    if (!name || offlineMode) return;
     setBusy(true);
     try {
       await apiFetch('/bookmark-collections', { method: 'POST', body: JSON.stringify({ name }) });
@@ -95,7 +119,7 @@ export default function Bookmarks() {
 
   const renameCollection = async (collection: Collection) => {
     const name = window.prompt('Rename collection', collection.name)?.trim();
-    if (!name || name === collection.name) return;
+    if (!name || name === collection.name || offlineMode) return;
     setBusy(true);
     try {
       await apiFetch(`/bookmark-collections/${collection.id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
@@ -104,7 +128,7 @@ export default function Bookmarks() {
   };
 
   const deleteCollection = async (collection: Collection) => {
-    if (!window.confirm(`Delete collection “${collection.name}”? Bookmarks stay saved.`)) return;
+    if (offlineMode || !window.confirm(`Delete collection “${collection.name}”? Bookmarks stay saved.`)) return;
     setBusy(true);
     try {
       await apiFetch(`/bookmark-collections/${collection.id}`, { method: 'DELETE' });
@@ -114,6 +138,7 @@ export default function Bookmarks() {
   };
 
   const setBookmarkCollection = async (bookmark: Bookmark, collectionId: string) => {
+    if (offlineMode) return;
     setBusy(true);
     try {
       const currentIds = bookmark.collectionItems?.map(item => item.collection.id) ?? [];
@@ -146,6 +171,12 @@ export default function Bookmarks() {
           <h2 className="text-2xl font-serif">🔖 Bookmarks</h2>
         </div>
 
+        {(!online || offlineMode) && (
+          <div className="alert alert-info mb-4 shadow">
+            <span>Offline library mode — showing cached saved passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Reconnect to edit collections or sync fresh bookmarks.</span>
+          </div>
+        )}
+
         <div className="card bg-base-200 shadow mb-4">
           <div className="card-body gap-3 p-4">
             <label className="input input-bordered flex items-center gap-2 w-full">
@@ -172,7 +203,7 @@ export default function Bookmarks() {
             <h3 className="font-serif text-lg">Collections</h3>
             <div className="join w-full">
               <input className="input input-bordered join-item flex-1" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} placeholder="New collection, e.g. Philosophy" />
-              <button className="btn btn-primary join-item" disabled={busy || !newCollectionName.trim()} onClick={createCollection}>Create</button>
+              <button className="btn btn-primary join-item" disabled={offlineMode || busy || !newCollectionName.trim()} onClick={createCollection}>Create</button>
             </div>
             {collections.length > 0 && <div className="flex flex-wrap gap-2">
               {collections.map(collection => (
@@ -209,11 +240,11 @@ export default function Bookmarks() {
                     <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                     <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
-                      <select className="select select-bordered select-sm w-full sm:max-w-xs" disabled={busy} value={bm.collectionItems?.[0]?.collection.id ?? ''} onChange={e => setBookmarkCollection(bm, e.target.value)}>
+                      <select className="select select-bordered select-sm w-full sm:max-w-xs" disabled={offlineMode || busy} value={bm.collectionItems?.[0]?.collection.id ?? ''} onChange={e => setBookmarkCollection(bm, e.target.value)}>
                         <option value="">No collection</option>
                         {collections.map(collection => <option key={collection.id} value={collection.id}>{collection.name}</option>)}
                       </select>
-                      <button className="btn btn-ghost btn-xs text-error" onClick={() => removeBookmark(bm.id)}>Remove bookmark</button>
+                      <button className="btn btn-ghost btn-xs text-error" disabled={offlineMode} onClick={() => removeBookmark(bm.id)}>Remove bookmark</button>
                     </div>
                   </div>
                 </div>

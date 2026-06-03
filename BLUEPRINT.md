@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-03 — PLANET-2418 Settings reading-goal onboarding seeds preferences
+> 最后更新: 2026-06-04 — PLANET-2456 PWA offline cache for saved passages and push inbox
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -51,7 +51,8 @@
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
 │  │    /api/cron/fetch-new-books → 每周拉书切片入库 (Sun UTC) │ │
 │  │    /api/import/telegram-epub-handoff → Telegram EPUB 元数据 POC   │ │
-│  │    /manifest.json + /manifest.webmanifest → PWA manifest         │ │
+│  │    /manifest.json + /manifest.webmanifest → PWA manifest         │
+│    /sw.js          → offline shell/static cache + push click handler│ │
 │  └────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 
@@ -97,6 +98,7 @@ exisz/randompage (GitHub)
 | passage_reviews | Daily Review 复习记录（reviewed/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
+| offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
@@ -143,6 +145,13 @@ exisz/randompage (GitHub)
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
+## PWA / Offline
+
+- Service worker `apps/app/src/client/public/sw.js` caches navigations/app shell and static assets so `/discover`, `/bookmarks`, `/history`, `/settings` can render offline after a successful online session.
+- Client offline helper `apps/app/src/client/lib/offline.ts` persists the last 30 bookmarks and last 30 browsing/push history entries in localStorage after authenticated online loads.
+- Offline Bookmarks/History are read-only and show explicit cached/offline banners; Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
+- Static regression: `pnpm --filter @randompage/app check:offline-cache`.
+
 ## 数据维护脚本 (`apps/app/scripts/`)
 
 | 脚本 | Ticket | 用途 |
@@ -155,6 +164,7 @@ exisz/randompage (GitHub)
 | `check-passage-content-policy.mjs` | PLANET-2139/2227 | 生产 corpus reference-note/footnote/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts 与 non-terminal endings） |
 | `check-tag-failure-policy.mjs` | PLANET-2263 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，防止 retry 耗尽后静默滞留 |
 | `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
+| `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
@@ -167,6 +177,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-04 | PLANET-2456: PWA offline access for saved passages and push inbox — service worker caches app shell/static assets; Bookmarks/History cache last online saved/history responses in localStorage and render read-only offline banners; Discover shows graceful offline network-required message; added `check:offline-cache`. | Engineer Pod |
 | 2026-06-03 | PLANET-2418: Settings 新增移动优先 “Personalization / Reading goals” card；`GET /api/preferences` 返回 goal presets + 当前权重，`POST /api/preferences/goals` 将 1–3 个 preset 映射到既有 `user_preferences` tag 权重（seed weight=7），Discover/daily queue 继续复用现有个性化采样。 | Engineer Pod |
 | 2026-06-02 | PLANET-2370: Discover 新增 “Daily Review” saved-passage revisit card；后端新增 `GET /api/daily-review` 返回 1–3 条 due bookmarked passages，`POST /api/daily-review/:bookmarkId` 持久化 reviewed/skip 并写入 `passage_reviews.due_after`，无 bookmarks 时不显示空态。 | Engineer Pod |
 | 2026-06-01 | PLANET-2332: Discover 新增横向 tag filter chip-strip；新增 `GET /api/passages/tags?limit=N` 端点返回 top tags；`GET /api/passages/random` 新增 `?tag=` 过滤参数（加权采样限定指定 tag，tag 激活时跳过 push inbox pass-through）；选中 tag 持久化至 localStorage。 | Engineer Pod |

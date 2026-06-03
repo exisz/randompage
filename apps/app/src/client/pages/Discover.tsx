@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
+import { isOfflineError, useOnlineStatus } from '../lib/offline';
 
 interface Passage {
   id: string;
@@ -109,6 +110,7 @@ export default function Discover() {
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const online = useOnlineStatus();
   const [topTags, setTopTags] = useState<string[]>([]);
   const [selectedTag, setSelectedTagState] = useState<string | null>(() => {
     try { return localStorage.getItem('discover_tag_filter') || null; } catch { return null; }
@@ -270,7 +272,9 @@ export default function Discover() {
     } catch (e) {
       console.error(e);
       setPassage(null);
-      setLoadError(e instanceof Error ? e.message : 'Could not load passage. Try again.');
+      setLoadError(isOfflineError(e)
+        ? 'You are offline. Fresh Discover recommendations need the network; saved passages and push inbox can be read from cached Bookmarks/History after a prior online sync.'
+        : e instanceof Error ? e.message : 'Could not load passage. Try again.');
     } finally {
       setLoading(false);
     }
@@ -301,8 +305,13 @@ export default function Discover() {
       }
     } catch (e) {
       console.error(e);
-      setLoadError('Could not load the pushed passage. Showing another passage instead.');
-      await fetchPassage(true);
+      if (isOfflineError(e)) {
+        setPassage(null);
+        setLoadError('You are offline. Reconnect to open and mark this pushed passage read, or use History to read cached push-inbox cards from your last online session.');
+      } else {
+        setLoadError('Could not load the pushed passage. Showing another passage instead.');
+        await fetchPassage(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -417,6 +426,12 @@ export default function Discover() {
                 {tag}
               </button>
             ))}
+          </div>
+        )}
+
+        {(!online || loadError?.includes('offline')) && (
+          <div className="alert alert-info mb-4 shadow-xl">
+            <span>Offline mode — fresh recommendations need network. Cached saved and pushed passages are available from Bookmarks and History after an online sync.</span>
           </div>
         )}
 
@@ -611,8 +626,8 @@ export default function Discover() {
             ) : loadError ? (
               <div className="alert alert-error flex-col items-start gap-3 sm:flex-row sm:items-center">
                 <span>{loadError}</span>
-                <button className="btn btn-sm" onClick={() => fetchPassage(true)}>Retry</button>
-                <Link to="/signin" className="btn btn-ghost btn-sm">Sign in again</Link>
+                <button className="btn btn-sm" disabled={!online} onClick={() => fetchPassage(true)}>Retry</button>
+                <Link to="/history" className="btn btn-ghost btn-sm">Cached history</Link>
               </div>
             ) : (
               <div className="alert alert-warning">No passages found.</div>

@@ -24,7 +24,8 @@
     "check:passage-lengths": "node scripts/check-passage-length-policy.mjs",
     "check:passage-content": "node scripts/check-passage-content-policy.mjs",
     "check:tag-failures": "node scripts/check-tag-failure-policy.mjs",
-    "check:preferences-goals": "node scripts/check-preferences-goals-policy.mjs"
+    "check:preferences-goals": "node scripts/check-preferences-goals-policy.mjs",
+    "check:offline-cache": "node scripts/check-offline-cache-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

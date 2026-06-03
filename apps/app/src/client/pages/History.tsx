@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
+import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOnlineStatus } from '../lib/offline';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
@@ -41,6 +42,9 @@ export default function History() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState('all');
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
+  const online = useOnlineStatus();
 
   useEffect(() => {
     if (searchParams.get('tab') === 'push' || window.location.hash === '#push-inbox') setActiveTab('push');
@@ -53,8 +57,21 @@ export default function History() {
         .then(async ([browsingRes, pushRes]) => {
           const browsing = await browsingRes.json();
           const push = await pushRes.json();
-          setBrowsingHistory(browsing.history || []);
-          setPushHistory(push.history || []);
+          const nextBrowsingHistory = browsing.history || [];
+          const nextPushHistory = push.history || [];
+          setBrowsingHistory(nextBrowsingHistory);
+          setPushHistory(nextPushHistory);
+          setOfflineMode(false);
+          setOfflineCachedAt(null);
+          saveHistoryOfflineCache({ browsingHistory: nextBrowsingHistory, pushHistory: nextPushHistory });
+        })
+        .catch(error => {
+          const cached = readHistoryOfflineCache();
+          if (!isOfflineError(error) || !cached) throw error;
+          setBrowsingHistory((cached.browsingHistory as BrowsingHistoryEntry[]) || []);
+          setPushHistory((cached.pushHistory as PushHistoryEntry[]) || []);
+          setOfflineMode(true);
+          setOfflineCachedAt(cached.cachedAt);
         })
         .finally(() => setLoading(false));
     });
@@ -98,6 +115,11 @@ export default function History() {
           <p className="text-xs uppercase tracking-[0.25em] opacity-50">Knowledge trail</p>
           <h2 className="text-2xl font-serif">📚 Reading History</h2>
         </div>
+        {(!online || offlineMode) && (
+          <div className="alert alert-info mb-4 shadow">
+            <span>Offline inbox mode — showing cached browsing and push-inbox passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Reconnect to mark pushed passages read or load fresh history.</span>
+          </div>
+        )}
         <div className="tabs tabs-boxed mb-4">
           <button className={`tab ${activeTab === 'browsing' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('browsing'); clearFilters(); }}>Browsing</button>
           <button id="push-inbox" className={`tab ${activeTab === 'push' ? 'tab-active' : ''}`} onClick={() => { setActiveTab('push'); clearFilters(); }}>Push inbox</button>
@@ -148,8 +170,8 @@ export default function History() {
                     <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
                     {!isBrowsing && (
-                      <Link className="btn btn-primary btn-xs self-start" to={`/discover?passageId=${encodeURIComponent(h.passage.id)}&source=push`}>
-                        {isUnreadPush ? 'Open and mark read' : 'Open passage'}
+                      <Link className={`btn btn-primary btn-xs self-start ${offlineMode ? 'btn-disabled' : ''}`} to={`/discover?passageId=${encodeURIComponent(h.passage.id)}&source=push`}>
+                        {offlineMode ? 'Reconnect to open' : isUnreadPush ? 'Open and mark read' : 'Open passage'}
                       </Link>
                     )}
                   </div>
