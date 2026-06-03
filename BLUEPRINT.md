@@ -51,8 +51,8 @@
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
 │  │    /api/cron/fetch-new-books → 每周拉书切片入库 (Sun UTC) │ │
 │  │    /api/import/telegram-epub-handoff → Telegram EPUB 元数据 POC   │ │
-│  │    /manifest.json + /manifest.webmanifest → PWA manifest         │
-│    /sw.js          → offline shell/static cache + push click handler│ │
+│  │    /manifest.json + /manifest.webmanifest → PWA manifest         │ │
+│  │    /sw.js          → offline shell/static cache + push click handler │ │
 │  └────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 
