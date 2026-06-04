@@ -19,8 +19,16 @@ interface ReadingStats {
   streakDays: number;
 }
 
+interface RecommendationExplanation {
+  label: 'High match' | 'Good match';
+  reason: string;
+  matchedTags: string[];
+  score: number;
+}
+
 interface DailyQueueItem extends Passage {
   queuePosition: number;
+  whyPersonalized?: RecommendationExplanation | null;
 }
 
 interface DailyQueue {
@@ -100,6 +108,7 @@ function passageAccent(tags: string[]) {
 
 export default function Discover() {
   const [passage, setPassage] = useState<Passage | null>(null);
+  const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
   const [authed, setAuthed] = useState(false);
@@ -226,6 +235,7 @@ export default function Discover() {
   const fetchPassage = useCallback(async (preferUnread = false, skippedPassageId?: string) => {
     setLoading(true);
     setBookmarked(false);
+    setWhyPersonalized(null);
     setShareStatus(null);
     setLoadError(null);
     try {
@@ -263,6 +273,7 @@ export default function Discover() {
 
       const data = await res.json();
       setPassage(data.passage ?? null);
+      setWhyPersonalized(data.whyPersonalized ?? null);
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
@@ -283,6 +294,7 @@ export default function Discover() {
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
     setBookmarked(false);
+    setWhyPersonalized(null);
     setShareStatus(null);
     setLoadError(null);
     try {
@@ -297,6 +309,7 @@ export default function Discover() {
       if (!res.ok) throw new Error(`Passage ${passageId} returned ${res.status}`);
       const data = await res.json();
       setPassage(data.passage);
+      setWhyPersonalized(data.whyPersonalized ?? null);
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
@@ -538,6 +551,9 @@ export default function Discover() {
                         <span className="line-clamp-1 text-sm font-medium">{item.bookTitle}</span>
                       </div>
                       <div className="mt-1 line-clamp-1 text-xs opacity-60">{item.author} · {Math.max(1, Math.round(item.text.length / 220))} min</div>
+                      {item.whyPersonalized && (
+                        <div className="mt-1 line-clamp-1 text-xs text-primary/80">{item.whyPersonalized.label}: {item.whyPersonalized.matchedTags.slice(0, 2).join(' + ')}</div>
+                      )}
                     </button>
                   )) : (
                     <div className="rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-60">Your daily queue appears after sign-in sync.</div>
@@ -587,6 +603,21 @@ export default function Discover() {
                       <span key={tag} className="badge badge-outline border-primary/30 bg-base-100/40 text-xs">{tag}</span>
                     ))}
                   </div>
+
+                  {authed && whyPersonalized && (
+                    <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="badge badge-primary badge-outline">{whyPersonalized.label}</span>
+                        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/80">Why this page?</span>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed opacity-80">{whyPersonalized.reason}</p>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {whyPersonalized.matchedTags.slice(0, 3).map(tag => (
+                          <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {shareStatus && (
                     <div className="toast toast-top toast-center z-20">

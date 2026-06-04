@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-04 — PLANET-2456 PWA offline cache for saved passages and push inbox
+> 最后更新: 2026-06-04 — PLANET-2467 recommendation match explanations
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -99,6 +99,7 @@ exisz/randompage (GitHub)
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
+| recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
@@ -177,6 +178,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-04 | PLANET-2467: Discover/Daily Queue/History/Push inbox now include compact “Why this page?” explanations derived from existing `user_preferences` × passage tags, with graceful no-claim fallback for anonymous/no-preference users; added `check:recommendation-explanations`. | Engineer Pod |
 | 2026-06-04 | PLANET-2456: PWA offline access for saved passages and push inbox — service worker caches app shell/static assets; Bookmarks/History cache last online saved/history responses in localStorage and render read-only offline banners; Discover shows graceful offline network-required message; added `check:offline-cache`. | Engineer Pod |
 | 2026-06-03 | PLANET-2418: Settings 新增移动优先 “Personalization / Reading goals” card；`GET /api/preferences` 返回 goal presets + 当前权重，`POST /api/preferences/goals` 将 1–3 个 preset 映射到既有 `user_preferences` tag 权重（seed weight=7），Discover/daily queue 继续复用现有个性化采样。 | Engineer Pod |
 | 2026-06-02 | PLANET-2370: Discover 新增 “Daily Review” saved-passage revisit card；后端新增 `GET /api/daily-review` 返回 1–3 条 due bookmarked passages，`POST /api/daily-review/:bookmarkId` 持久化 reviewed/skip 并写入 `passage_reviews.due_after`，无 bookmarks 时不显示空态。 | Engineer Pod |

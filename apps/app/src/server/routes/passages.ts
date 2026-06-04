@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { parsePassageTags, scorePassageTags } from '../lib/passageTags.js';
+import { explainRecommendation, preferenceMapFromRows } from '../lib/recommendationExplanation.js';
 import { filterReadablePassages, isReadablePassage } from '../lib/passageLengthPolicy.js';
 
 export const passagesRouter = Router();
@@ -231,6 +232,9 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
 
     let passage = null;
 
+    const prefs = userId ? await prisma.userPreference.findMany({ where: { userId } }) : [];
+    const prefMap = preferenceMapFromRows(prefs);
+
     // Skip push inbox when a tag filter is active — respect the user's chosen category.
     if (userId && preferUnread && !tagFilter) {
       // Try to find an unread passage from push history first
@@ -247,16 +251,17 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
           data: { readAt: now },
         });
         await recordInteraction(prisma, userId, recentPush.passageId, 'view', 'push_inbox');
-        res.json({ passage: recentPush.passage, fromInbox: true });
+        res.json({
+          passage: recentPush.passage,
+          fromInbox: true,
+          whyPersonalized: explainRecommendation(recentPush.passage, prefMap),
+        });
         return;
       }
     }
 
     if (userId) {
       // Weighted random based on user preferences
-      const prefs = await prisma.userPreference.findMany({ where: { userId } });
-      const prefMap = Object.fromEntries(prefs.map(p => [p.tag, p.weight]));
-
       // Use tag-filtered pool for weighted sampling
       const weights = tagFilteredPassages.map(p => ({
         passage: p,
@@ -282,7 +287,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       await recordInteraction(prisma, userId, passage.id, 'view', 'discover');
     }
 
-    res.json({ passage });
+    res.json({ passage, whyPersonalized: userId && passage ? explainRecommendation(passage, prefMap) : null });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: msg });
@@ -327,7 +332,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       ...historyEvents.map((event) => event.passageId),
       ...pushHistory.map((delivery) => delivery.passageId),
     ]);
-    const prefMap = Object.fromEntries(prefs.map((pref) => [pref.tag, pref.weight]));
+    const prefMap = preferenceMapFromRows(prefs);
     const freshCandidates = readablePassages.filter((passage) => !seenIds.has(passage.id));
     const pool = freshCandidates.length >= limit ? freshCandidates : readablePassages;
 
@@ -341,6 +346,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       .map(({ passage }, index) => ({
         ...passage,
         queuePosition: index + 1,
+        whyPersonalized: explainRecommendation(passage, prefMap),
       }));
 
     res.json({
@@ -404,13 +410,23 @@ passagesRouter.get('/browsing/history', async (req: Request, res: Response) => {
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
     await ensureBrowsingEventsTable(prisma);
-    const history = await prisma.browsingEvent.findMany({
-      where: { userId: claims.sub as string },
-      include: { passage: true },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
+    const userId = claims.sub as string;
+    const [history, prefs] = await Promise.all([
+      prisma.browsingEvent.findMany({
+        where: { userId },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      prisma.userPreference.findMany({ where: { userId } }),
+    ]);
+    const prefMap = preferenceMapFromRows(prefs);
+    res.json({
+      history: history.map((item) => ({
+        ...item,
+        whyPersonalized: explainRecommendation(item.passage, prefMap),
+      })),
     });
-    res.json({ history });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -447,7 +463,8 @@ passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
       await recordInteraction(prisma, userId, passage.id, 'view', 'discover');
     }
 
-    res.json({ passage });
+    const prefs = userId ? await prisma.userPreference.findMany({ where: { userId } }) : [];
+    res.json({ passage, whyPersonalized: userId ? explainRecommendation(passage, prefs) : null });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: msg });

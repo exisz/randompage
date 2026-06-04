@@ -7,11 +7,17 @@ import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOn
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
 }
+interface RecommendationExplanation {
+  label: 'High match' | 'Good match';
+  reason: string;
+  matchedTags: string[];
+  score: number;
+}
 interface PushHistoryEntry {
-  id: string; sentAt: string; readAt: string | null; passage: Passage;
+  id: string; sentAt: string; readAt: string | null; passage: Passage; whyPersonalized?: RecommendationExplanation | null;
 }
 interface BrowsingHistoryEntry {
-  id: string; createdAt: string; action: 'view' | 'skip'; source: string; passage: Passage;
+  id: string; createdAt: string; action: 'view' | 'skip'; source: string; passage: Passage; whyPersonalized?: RecommendationExplanation | null;
 }
 
 type HistoryItem = (BrowsingHistoryEntry & { kind: 'browsing' }) | (PushHistoryEntry & { kind: 'push' });
@@ -169,6 +175,15 @@ export default function History() {
                     <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 170)}{h.passage.text.length > 170 ? '…' : ''}</p>
                     <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
+                    {h.whyPersonalized && (
+                      <div className="rounded-2xl border border-primary/20 bg-primary/10 p-2 text-xs">
+                        <div className="mb-1 flex flex-wrap items-center gap-2">
+                          <span className="badge badge-primary badge-outline badge-xs">{h.whyPersonalized.label}</span>
+                          <span className="font-semibold uppercase tracking-[0.16em] text-primary/80">Why this page?</span>
+                        </div>
+                        <p className="opacity-75">{h.whyPersonalized.reason}</p>
+                      </div>
+                    )}
                     {!isBrowsing && (
                       <Link className={`btn btn-primary btn-xs self-start ${offlineMode ? 'btn-disabled' : ''}`} to={`/discover?passageId=${encodeURIComponent(h.passage.id)}&source=push`}>
                         {offlineMode ? 'Reconnect to open' : isUnreadPush ? 'Open and mark read' : 'Open passage'}

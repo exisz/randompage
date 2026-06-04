@@ -5,6 +5,7 @@ import type { Passage, PrismaClient, PushSubscription } from '../generated/prism
 import { nanoid } from 'nanoid';
 import webpush from 'web-push';
 import { scorePassageTags } from '../lib/passageTags.js';
+import { explainRecommendation, preferenceMapFromRows } from '../lib/recommendationExplanation.js';
 import { filterReadablePassages } from '../lib/passageLengthPolicy.js';
 
 export const pushRouter = Router();
@@ -217,13 +218,23 @@ pushRouter.get('/push/history', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
-    const history = await prisma.pushHistory.findMany({
-      where: { userId: claims.sub as string },
-      include: { passage: true },
-      orderBy: { sentAt: 'desc' },
-      take: 50,
+    const userId = claims.sub as string;
+    const [history, prefs] = await Promise.all([
+      prisma.pushHistory.findMany({
+        where: { userId },
+        include: { passage: true },
+        orderBy: { sentAt: 'desc' },
+        take: 50,
+      }),
+      prisma.userPreference.findMany({ where: { userId } }),
+    ]);
+    const prefMap = preferenceMapFromRows(prefs);
+    res.json({
+      history: history.map((item) => ({
+        ...item,
+        whyPersonalized: explainRecommendation(item.passage, prefMap),
+      })),
     });
-    res.json({ history });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
