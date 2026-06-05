@@ -2,8 +2,32 @@
 
 Database maintenance scripts for the RandomPage Turso DB.
 
-Both scripts read `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` from the
-environment (see `apps/app/.env.example`).
+Most production DB scripts read `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` from
+the environment (see `apps/app/.env.example`). Evaluation-only pilots are marked
+separately and do not write production data.
+
+## ia-ocr-pilot.mjs — PLANET-2502
+
+Small Internet Archive OCR fetch-to-passages pilot. It selects 10 IA text items
+across philosophy, psychology, history, literature, and essays; downloads the
+best `_djvu.txt`/OCR plaintext file; cleans obvious OCR/page boilerplate; slices
+with RandomPage's existing passage bounds (target ≈300 chars, accepted 180–800
+chars); and writes a markdown report plus JSON samples.
+
+```bash
+pnpm --filter @randompage/app pilot:ia-ocr -- --limit 10
+pnpm --filter @randompage/app pilot:ia-ocr -- --ids item1,item2 --refresh
+```
+
+Outputs:
+- `apps/app/docs/ia-ocr-pilot-report.md`
+- `apps/app/docs/ia-ocr-pilot-samples.json`
+- transient cache under `apps/app/.cache/ia-ocr-pilot/` (gitignored)
+
+Safety/rate limits:
+- Serial requests only, descriptive User-Agent, short delay between downloads.
+- Retries only for 429/5xx.
+- No Turso inserts and no high-volume crawling.
 
 ## tag-passages.mjs — PLANET-1173
 

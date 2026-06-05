@@ -11,6 +11,7 @@ apps/app/prisma/dev.db
 apps/app/prisma/dev.db-journal
 apps/app/src/server/generated
 apps/app/api-dist
+apps/app/.cache
 apps/admin/prisma/dev.db
 apps/admin/prisma/dev.db-journal
 apps/admin/src/server/generated
