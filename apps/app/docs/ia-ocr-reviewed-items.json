@@ -1,0 +1,18 @@
+[
+  {
+    "identifier": "understandinghum00adlerich",
+    "title": "Understanding human nature",
+    "author": "Alfred Adler",
+    "textFile": "understandinghum00adlerich_djvu.txt",
+    "reviewed": true,
+    "review_note": "Selected from PLANET-2502 pilot for tiny dry-run/apply path validation; public-domain-era psychology text with enough OCR/plaintext output for passage slicing. Review samples before any apply."
+  },
+  {
+    "identifier": "mindenergylectur0000berg_n5y3",
+    "title": "Mind-energy, lectures and essays",
+    "author": "Henri Bergson",
+    "textFile": "mindenergylectur0000berg_n5y3_djvu.txt",
+    "reviewed": true,
+    "review_note": "Selected from PLANET-2502 pilot for tiny dry-run/apply path validation; philosophy/psychology-adjacent essays with serial OCR/plaintext fetch. Review samples before any apply."
+  }
+]

@@ -1,0 +1,64 @@
+{
+  "mode": "dry-run",
+  "rows": [
+    {
+      "id": "46e0554e5e26b612",
+      "text": "were more satisfactory. Disturbing social relationships\n\ncould then be obviated, for we know that unfortunate adjustments are possible only when we do not understand one\n\nanother and are therefore exposed to the danger of being\n\ndeceived by superficial dissimulations.",
+      "book_title": "Understanding human nature",
+      "author": "Alfred Adler",
+      "chapter": "Internet Archive OCR: understandinghum00adlerich",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://archive.org/download/understandinghum00adlerich/understandinghum00adlerich_djvu.txt",
+      "archiveUrl": "https://archive.org/details/understandinghum00adlerich",
+      "charCount": 268
+    },
+    {
+      "id": "562049c76bbdf5f8",
+      "text": "what great misfortunes follow decades after a misinterpretation of a fellow man. Such dismal occurrences teach us\n\nthe necessity and duty of every man to acquire a working\n\nknowledge of human nature.",
+      "book_title": "Understanding human nature",
+      "author": "Alfred Adler",
+      "chapter": "Internet Archive OCR: understandinghum00adlerich",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://archive.org/download/understandinghum00adlerich/understandinghum00adlerich_djvu.txt",
+      "archiveUrl": "https://archive.org/details/understandinghum00adlerich",
+      "charCount": 199
+    },
+    {
+      "id": "ebb5e0bba384d837",
+      "text": "greater part of our investigation to the childhood of all\n\npatients; and thus we developed the art of being able,\n\noften, to reveal characteristics of a mature person whose\n\nchildhood we knew, before we were told of them. What we\n\nobserve in him as an adult we consider the direct projection of that which he has experienced in childhood.",
+      "book_title": "Understanding human nature",
+      "author": "Alfred Adler",
+      "chapter": "Internet Archive OCR: understandinghum00adlerich",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://archive.org/download/understandinghum00adlerich/understandinghum00adlerich_djvu.txt",
+      "archiveUrl": "https://archive.org/details/understandinghum00adlerich",
+      "charCount": 338
+    }
+  ],
+  "itemResults": [
+    {
+      "identifier": "understandinghum00adlerich",
+      "title": "Understanding human nature",
+      "author": "Alfred Adler",
+      "file": "understandinghum00adlerich_djvu.txt",
+      "sourceUrl": "https://archive.org/download/understandinghum00adlerich/understandinghum00adlerich_djvu.txt",
+      "archiveUrl": "https://archive.org/details/understandinghum00adlerich",
+      "rawChars": 612114,
+      "cleanChars": 519716,
+      "acceptedPassages": [
+        "were more satisfactory. Disturbing social relationships\n\ncould then be obviated, for we know that unfortunate adjustments are possible only when we do not understand one\n\nanother and are therefore exposed to the danger of being\n\ndeceived by superficial dissimulations.",
+        "what great misfortunes follow decades after a misinterpretation of a fellow man. Such dismal occurrences teach us\n\nthe necessity and duty of every man to acquire a working\n\nknowledge of human nature.",
+        "greater part of our investigation to the childhood of all\n\npatients; and thus we developed the art of being able,\n\noften, to reveal characteristics of a mature person whose\n\nchildhood we knew, before we were told of them. What we\n\nobserve in him as an adult we consider the direct projection of that which he has experienced in childhood."
+      ],
+      "rejected": {},
+      "status": "ready",
+      "reason": null
+    }
+  ],
+  "failures": [],
+  "inserted": 0,
+  "blockedReason": null
+}

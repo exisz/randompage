@@ -27,7 +27,8 @@
     "check:preferences-goals": "node scripts/check-preferences-goals-policy.mjs",
     "check:offline-cache": "node scripts/check-offline-cache-policy.mjs",
     "check:recommendation-explanations": "node scripts/check-recommendation-explanation-policy.mjs",
-    "pilot:ia-ocr": "node scripts/ia-ocr-pilot.mjs"
+    "pilot:ia-ocr": "node scripts/ia-ocr-pilot.mjs",
+    "ingest:ia-ocr": "node scripts/ia-ocr-ingest.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

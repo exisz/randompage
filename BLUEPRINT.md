@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-04 — PLANET-2467 recommendation match explanations
+> 最后更新: 2026-06-05 — PLANET-2508 IA OCR reviewed small-batch ingestion path
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -141,6 +141,7 @@ exisz/randompage (GitHub)
 - passage content policy (PLANET-2139/2227): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters) and fragments ending without sentence-terminal punctuation. `pnpm check:passage-content` reports production counts + samples before any reviewed cleanup.
 - `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
 - 10M-book source policy (PLANET-1964): `docs/source-policy-10m-book-adapter.md` is the ADR for metadata-first Open Library + Google Books + OAIster/WorldCat discovery. Allowed cache fields are metadata/linkout/access flags; full-text passage generation requires verified public-domain/licensed content.
+- IA OCR reviewed ingest (PLANET-2508): `pnpm --filter @randompage/app ingest:ia-ocr` reads an explicit reviewed item list, serially fetches IA metadata + reviewed OCR/plaintext files, applies 180–800 char length/content checks, and dry-runs by default with report/sample output. `--apply --ack-reviewed` is required for tiny Turso inserts; rows enter `passages` with `tags='[]'` for later tag cron.
 - Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
 - Protected-source regression guard (PLANET-2101/2000): `pnpm check:source-policy` checks production Turso for known blocked modern-book full-text sources (currently Colleen Hoover / *It Ends With Us*) and fails if they reappear; `--apply` is reviewed cleanup only and refuses user-referenced rows.
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
@@ -169,6 +170,7 @@ exisz/randompage (GitHub)
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
+| `ia-ocr-ingest.mjs` | PLANET-2508 | Reviewed tiny-batch IA OCR ingestion path; dry-run report by default, `--apply --ack-reviewed` required for Turso inserts with `tags='[]'` |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
@@ -179,6 +181,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-05 | PLANET-2508: Added reviewed IA OCR tiny-batch ingest path (`pnpm --filter @randompage/app ingest:ia-ocr`) with explicit reviewed item list, length/content checks before rows, report/sample output, and gated `--apply --ack-reviewed` Turso insert mode. | Engineer Pod |
 | 2026-06-04 | PLANET-2467: Discover/Daily Queue/History/Push inbox now include compact “Why this page?” explanations derived from existing `user_preferences` × passage tags, with graceful no-claim fallback for anonymous/no-preference users; added `check:recommendation-explanations`. | Engineer Pod |
 | 2026-06-05 | PLANET-2502: Added Internet Archive OCR fetch-to-passages pilot (`pnpm --filter @randompage/app pilot:ia-ocr -- --limit 10`) plus report/samples under `apps/app/docs`; pilot passed 10/10 items and 2315 candidate passages without production ingest. | Engineer Pod |
 | 2026-06-04 | PLANET-2456: PWA offline access for saved passages and push inbox — service worker caches app shell/static assets; Bookmarks/History cache last online saved/history responses in localStorage and render read-only offline banners; Discover shows graceful offline network-required message; added `check:offline-cache`. | Engineer Pod |

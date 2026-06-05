@@ -29,6 +29,42 @@ Safety/rate limits:
 - Retries only for 429/5xx.
 - No Turso inserts and no high-volume crawling.
 
+## ia-ocr-ingest.mjs — PLANET-2508
+
+Guarded tiny-batch ingestion path for reviewed Internet Archive OCR/plaintext
+items. Dry-run is default. The script reads an explicit reviewed item list,
+serially fetches each item’s IA metadata and reviewed `.txt` file, reuses the
+IA OCR cleaner/slicer, applies RandomPage passage length/content policy checks,
+and writes a markdown report plus JSON samples. Candidate rows use `tags='[]'`
+so the existing tag cron can classify them later.
+
+```bash
+pnpm --filter @randompage/app ingest:ia-ocr -- --max-items 2 --max-passages-per-item 10
+pnpm --filter @randompage/app ingest:ia-ocr -- --reviewed docs/ia-ocr-reviewed-items.json --json
+```
+
+Outputs:
+- `apps/app/docs/ia-ocr-ingest-report.md`
+- `apps/app/docs/ia-ocr-ingest-samples.json`
+
+Apply is intentionally gated:
+
+```bash
+pnpm --filter @randompage/app ingest:ia-ocr -- --apply --ack-reviewed --max-items 1 --max-passages-per-item 5
+```
+
+Apply requires `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` from env or
+`apps/app/.env.local`. It blocks unless `--ack-reviewed` is supplied, skips
+already-present book titles/duplicate row ids, persists item-level failures in
+the report, and never performs broad search/crawling.
+
+Safety/rate limits:
+- Reviewed item list only; no broad crawler/search behavior.
+- Serial requests, descriptive User-Agent, 750ms inter-item delay.
+- Retries only for 429/5xx with short backoff.
+- Passage checks reject out-of-bounds rows, standalone reference/footnote
+  fragments, non-terminal endings, and low-letter-ratio OCR noise before insert.
+
 ## tag-passages.mjs — PLANET-1173
 
 Backfill `tags` for any passage where `tags IS NULL OR '' OR '[]'`.
