@@ -160,6 +160,16 @@ function isLikelyReferenceNoteFragment(text: string) {
   return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
 }
 
+function isLikelyChapterListFragment(text: string) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
+  const chapterMatches = normalized.match(/(?:^|[\s.;:!?。！？])(?:chapter|chap\.|book|part|section)\s+(?:[0-9ivxlcdm]+|[a-z][a-z'’-]{1,30})(?=[\s.:;,-])/gi) ?? [];
+  if (chapterMatches.length < 4) return false;
+  const proseWords = normalized.match(/\b(?:the|and|but|for|with|from|that|this|they|their|there|then|when|where|while|into|upon|because|said|was|were|had|have|will|would|could|should|not)\b/gi) ?? [];
+  const proseRatio = proseWords.length / Math.max(1, normalized.split(/\s+/).length);
+  return chapterMatches.length >= 6 || proseRatio < 0.18;
+}
+
 const MIN_PASSAGE_CHARS = 180;
 const TARGET_PASSAGE_CHARS = 300;
 const MAX_PASSAGE_CHARS = 800;
@@ -178,11 +188,11 @@ function splitOnSentenceBoundaries(text: string): string[] {
 
 function isReadableTextCandidate(text: string) {
   const len = text.length;
-  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text);
+  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text) && !isLikelyChapterListFragment(text);
 }
 
 function sentenceBoundaryChunks(text: string): string[] {
-  const units = splitOnSentenceBoundaries(text).filter((unit: string) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit));
+  const units = splitOnSentenceBoundaries(text).filter((unit: string) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit) && !isLikelyChapterListFragment(unit));
   const chunks: string[] = [];
   let buffer = '';
   for (const unit of units) {
@@ -211,14 +221,14 @@ function slicePassages(raw: string, maxPassages: number) {
   const paragraphs = clean
     .split(/\n\s*\n/g)
     .map(p => p.replace(/\s+/g, ' ').trim())
-    .filter(p => p.length > 0 && !isLikelyBoilerplate(p) && !isLikelyReferenceNoteFragment(p));
+    .filter(p => p.length > 0 && !isLikelyBoilerplate(p) && !isLikelyReferenceNoteFragment(p) && !isLikelyChapterListFragment(p));
 
   const slices: string[] = [];
   let buffer = '';
   for (const paragraph of paragraphs) {
     const candidates = paragraph.length <= MAX_PASSAGE_CHARS ? [paragraph] : sentenceBoundaryChunks(paragraph);
     for (const candidate of candidates) {
-      if (!hasTerminalSentencePunctuation(candidate) || isLikelyReferenceNoteFragment(candidate)) continue;
+      if (!hasTerminalSentencePunctuation(candidate) || isLikelyReferenceNoteFragment(candidate) || isLikelyChapterListFragment(candidate)) continue;
       const next = buffer ? `${buffer}\n\n${candidate}` : candidate;
       if (next.length < TARGET_PASSAGE_CHARS) {
         buffer = next;

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-05 — PLANET-2508 IA OCR reviewed small-batch ingestion path
+> 最后更新: 2026-06-06 — PLANET-2517/2522 push timestamp guard + chapter-list content policy
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -138,13 +138,14 @@ exisz/randompage (GitHub)
 - `tag-untagged` 成本控制：默认 `limit=50`、`batch=5`，可用 query/env 调整；失败 passage 记录在 `passage_tag_failures`，`retry_count >= 3` 自动跳过。LLM 返回部分无效结果时按 passage 隔离失败：同一批次里的有效 sibling rows 会照常写入 tags，不会因为一个 bad row 被整批记失败。
 - `fetch-new-books` 成本控制：默认每周 `books=1`、最多 `passages=75`；内置 30 本 public-domain seed queue（Gutenberg cache + 关键书目的 GITenberg mirror）按 title+author 去重，新 passages 以 `tags='[]'` 入库，等待每日补打标。
 - passage length policy (PLANET-2037/2054): 所有新增 passage 切片目标约 300 chars，允许 180–800 chars；`fetch-new-books`、`slice-epub.mjs`、`import-epub.mjs` 都使用该边界，避免 quote-sized rows 与 1k+ 多段长文进入 Discover。
-- passage content policy (PLANET-2139/2227): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters) and fragments ending without sentence-terminal punctuation. `pnpm check:passage-content` reports production counts + samples before any reviewed cleanup.
+- passage content policy (PLANET-2139/2227/2522): Discover/push runtime selection and future import slicing reject standalone reference-note/footnote fragments (leading `↩`, note headings, editorial-note starts, note cross-reference starts such as `For …, see note …`, dense reference-marker clusters), table-of-contents/chapter-list fragments (repeated `CHAPTER`/`Book`/`Part` headings with little prose), and fragments ending without sentence-terminal punctuation. `pnpm check:passage-content` reports production counts + samples by reason before any reviewed cleanup.
 - `fetch-new-books` source policy：每本书使用 ordered plaintext mirrors；有 GITenberg raw mirror 的书优先 GitHub raw，全部书 fallback Project Gutenberg cache/files URLs；所有 fetch 带 `RandomPage/1.0` user-agent，全部 mirror 失败时返回 207 并记录具体 URL 错误；当 30 本 seed queue 全部已有 passages 时返回 409 并发 Discord 摘要，避免静默空转。
 - 10M-book source policy (PLANET-1964): `docs/source-policy-10m-book-adapter.md` is the ADR for metadata-first Open Library + Google Books + OAIster/WorldCat discovery. Allowed cache fields are metadata/linkout/access flags; full-text passage generation requires verified public-domain/licensed content.
 - IA OCR reviewed ingest (PLANET-2508): `pnpm --filter @randompage/app ingest:ia-ocr` reads an explicit reviewed item list, serially fetches IA metadata + reviewed OCR/plaintext files, applies 180–800 char length/content checks, and dry-runs by default with report/sample output. `--apply --ack-reviewed` is required for tiny Turso inserts; rows enter `passages` with `tags='[]'` for later tag cron.
 - Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
 - Protected-source regression guard (PLANET-2101/2000): `pnpm check:source-policy` checks production Turso for known blocked modern-book full-text sources (currently Colleen Hoover / *It Ends With Us*) and fails if they reappear; `--apply` is reviewed cleanup only and refuses user-referenced rows.
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
+- Push subscription timestamp guard (PLANET-2517): `push_subscriptions.created_at` is a legacy INTEGER unix-seconds column in production. `/api/push/subscribe`, `/api/push/send`, and `/api/cron/daily-push` normalize accidental ISO text rows before Prisma reads and write new subscription rows via raw SQL with unix seconds; `pnpm check:push-policy` guards this path.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
 ## PWA / Offline
@@ -163,7 +164,7 @@ exisz/randompage (GitHub)
 | `check-source-policy.mjs` | PLANET-2101/2000 | 生产库 known protected-source 回归检查；review 后可 `--apply` 删除无用户引用违规行 |
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
-| `check-passage-content-policy.mjs` | PLANET-2139/2227 | 生产 corpus reference-note/footnote/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts 与 non-terminal endings） |
+| `check-passage-content-policy.mjs` | PLANET-2139/2227/2522 | 生产 corpus reference-note/footnote/chapter-list/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts、TOC/chapter lists 与 non-terminal endings） |
 | `check-tag-failure-policy.mjs` | PLANET-2263 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，防止 retry 耗尽后静默滞留 |
 | `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
@@ -181,6 +182,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-06 | PLANET-2517/2522: Push send now normalizes legacy `push_subscriptions.created_at` ISO text into INTEGER unix seconds before Prisma reads and writes new subscriptions raw; passage content policy/runtime/import checks now reject repeated table-of-contents/chapter-list fragments and report samples by reason. | Engineer Pod |
 | 2026-06-05 | PLANET-2508: Added reviewed IA OCR tiny-batch ingest path (`pnpm --filter @randompage/app ingest:ia-ocr`) with explicit reviewed item list, length/content checks before rows, report/sample output, and gated `--apply --ack-reviewed` Turso insert mode. | Engineer Pod |
 | 2026-06-04 | PLANET-2467: Discover/Daily Queue/History/Push inbox now include compact “Why this page?” explanations derived from existing `user_preferences` × passage tags, with graceful no-claim fallback for anonymous/no-preference users; added `check:recommendation-explanations`. | Engineer Pod |
 | 2026-06-05 | PLANET-2502: Added Internet Archive OCR fetch-to-passages pilot (`pnpm --filter @randompage/app pilot:ia-ocr -- --limit 10`) plus report/samples under `apps/app/docs`; pilot passed 10/10 items and 2315 candidate passages without production ingest. | Engineer Pod |

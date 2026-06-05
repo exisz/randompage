@@ -1,16 +1,32 @@
 export type PassageTextLike = { text: string };
 
 export type PassageContentMatch = {
-  reason: 'leading-return-marker' | 'standalone-note-heading' | 'reference-marker-cluster' | 'editorial-note-start' | 'note-cross-reference-start' | 'non-terminal-ending';
+  reason: 'leading-return-marker' | 'standalone-note-heading' | 'reference-marker-cluster' | 'editorial-note-start' | 'note-cross-reference-start' | 'chapter-list-fragment' | 'non-terminal-ending';
 };
 
 const NOTE_HEADING_RE = /^(?:note|notes|footnote|footnotes|endnote|endnotes)\s*[:.\-—]/i;
 const EDITORIAL_NOTE_START_RE = /^(?:\[[^\]]{1,80}\]|\([^)]{1,80}\))\s*(?:note|footnote|editor|translator|transcriber)/i;
 const NOTE_CROSS_REFERENCE_START_RE = /^(?:for\s+.{1,80},\s*)?(?:see|cf\.)\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b|^for\s+.{1,80},\s*see\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b/i;
 const REFERENCE_MARKER_RE = /(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi;
+const CHAPTER_LIST_RE = /(?:^|[\s.;:!?。！？])(?:chapter|chap\.|book|part|section)\s+(?:[0-9ivxlcdm]+|[a-z][a-z'’-]{1,30})(?=[\s.:;,-])/gi;
+const PROSE_WORD_RE = /\b(?:the|and|but|for|with|from|that|this|they|their|there|then|when|where|while|into|upon|because|said|was|were|had|have|will|would|could|should|not)\b/gi;
 
 export function normalizePassageText(text: string) {
   return String(text || '').replace(/\s+/g, ' ').trim();
+}
+
+export function detectChapterListFragment(text: string): PassageContentMatch | null {
+  const normalized = normalizePassageText(text);
+  if (!normalized) return null;
+
+  const chapterMatches = normalized.match(CHAPTER_LIST_RE) ?? [];
+  if (chapterMatches.length < 4) return null;
+
+  const proseWords = normalized.match(PROSE_WORD_RE) ?? [];
+  const proseRatio = proseWords.length / Math.max(1, normalized.split(/\s+/).length);
+  if (chapterMatches.length >= 6 || proseRatio < 0.18) return { reason: 'chapter-list-fragment' };
+
+  return null;
 }
 
 export function detectReferenceNoteFragment(text: string): PassageContentMatch | null {
@@ -43,7 +59,7 @@ export function detectTruncatedEnding(text: string): PassageContentMatch | null 
 }
 
 export function detectUnreadablePassageContent(text: string): PassageContentMatch | null {
-  return detectReferenceNoteFragment(text) ?? detectTruncatedEnding(text);
+  return detectReferenceNoteFragment(text) ?? detectChapterListFragment(text) ?? detectTruncatedEnding(text);
 }
 
 export function isReadablePassageContent(passage: PassageTextLike | null | undefined) {

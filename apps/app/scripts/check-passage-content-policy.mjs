@@ -3,7 +3,8 @@
  * check-passage-content-policy.mjs — PLANET-2139
  *
  * Reports RandomPage corpus rows that look like standalone reference notes,
- * footnotes, editorial note fragments, or sentence-boundary truncations rather than readable prose.
+ * footnotes, table-of-contents/chapter-list fragments, editorial note fragments,
+ * or sentence-boundary truncations rather than readable prose.
  *
  * Usage:
  *   pnpm check:passage-content
@@ -76,6 +77,16 @@ function hasTerminalSentencePunctuation(text) {
   return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
 }
 
+function detectChapterListFragment(text) {
+  const normalized = normalize(text);
+  if (!normalized) return false;
+  const chapterMatches = normalized.match(/(?:^|[\s.;:!?。！？])(?:chapter|chap\.|book|part|section)\s+(?:[0-9ivxlcdm]+|[a-z][a-z'’-]{1,30})(?=[\s.:;,-])/gi) ?? [];
+  if (chapterMatches.length < 4) return false;
+  const proseWords = normalized.match(/\b(?:the|and|but|for|with|from|that|this|they|their|there|then|when|where|while|into|upon|because|said|was|were|had|have|will|would|could|should|not)\b/gi) ?? [];
+  const proseRatio = proseWords.length / Math.max(1, normalized.split(/\s+/).length);
+  return chapterMatches.length >= 6 || proseRatio < 0.18;
+}
+
 function detectUnreadablePassageContent(text) {
   const normalized = normalize(text);
   if (!normalized) return null;
@@ -85,6 +96,7 @@ function detectUnreadablePassageContent(text) {
   if (/^(?:for\s+.{1,80},\s*)?(?:see|cf\.)\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b|^for\s+.{1,80},\s*see\s+(?:note|notes|footnote|footnotes|endnote|endnotes)\b/i.test(normalized)) return 'note-cross-reference-start';
   const markers = normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? [];
   if (markers.length >= 3) return 'reference-marker-cluster';
+  if (detectChapterListFragment(normalized)) return 'chapter-list-fragment';
   if (!hasTerminalSentencePunctuation(normalized)) return 'non-terminal-ending';
   return null;
 }
@@ -124,11 +136,12 @@ const byReason = matches.reduce((acc, row) => {
 }, {});
 const report = {
   policy: {
-    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'note cross-reference starts such as “For …, see note …”', 'dense reference-marker clusters in the opening text', 'passages ending without sentence-terminal punctuation'],
+    rejects: ['leading ↩ return markers', 'standalone note/footnote/endnote headings', 'editorial note starts', 'note cross-reference starts such as “For …, see note …”', 'dense reference-marker clusters in the opening text', 'table-of-contents/chapter-list fragments', 'passages ending without sentence-terminal punctuation'],
   },
   total: rows.length,
   unreadable_content_candidates: matches.length,
-  reference_note_candidates: matches.filter((row) => row.reason !== 'non-terminal-ending').length,
+  reference_note_candidates: matches.filter((row) => row.reason !== 'non-terminal-ending' && row.reason !== 'chapter-list-fragment').length,
+  chapter_list_candidates: matches.filter((row) => row.reason === 'chapter-list-fragment').length,
   non_terminal_ending_candidates: matches.filter((row) => row.reason === 'non-terminal-ending').length,
   by_reason: byReason,
   samples: matches.slice(0, sampleLimit).map((row) => ({
@@ -139,16 +152,30 @@ const report = {
     reason: row.reason,
     preview: preview(row.text),
   })),
+  samples_by_reason: Object.fromEntries(Object.keys(byReason).sort().map((reason) => [
+    reason,
+    matches.filter((row) => row.reason === reason).slice(0, sampleLimit).map((row) => ({
+      id: row.id,
+      len: row.len,
+      title: row.book_title,
+      author: row.author,
+      preview: preview(row.text),
+    })),
+  ])),
 };
 
 if (args.json) {
   console.log(JSON.stringify(report, null, 2));
 } else {
-  console.log('passage content policy: reject standalone reference-note / footnote fragments and non-terminal endings');
-  console.log(`total=${report.total} unreadable_content_candidates=${report.unreadable_content_candidates} reference_note_candidates=${report.reference_note_candidates} non_terminal_ending_candidates=${report.non_terminal_ending_candidates}`);
+  console.log('passage content policy: reject standalone reference-note / footnote fragments, chapter-list fragments, and non-terminal endings');
+  console.log(`total=${report.total} unreadable_content_candidates=${report.unreadable_content_candidates} reference_note_candidates=${report.reference_note_candidates} chapter_list_candidates=${report.chapter_list_candidates} non_terminal_ending_candidates=${report.non_terminal_ending_candidates}`);
   for (const [reason, count] of Object.entries(byReason)) console.log(`${reason}=${count}`);
   console.log('\nsamples:');
   for (const row of report.samples) console.log(`- ${row.id} len=${row.len} ${row.title} — ${row.author} [${row.reason}]: ${row.preview}`);
+  console.log('\nsamples_by_reason:');
+  for (const [reason, rows] of Object.entries(report.samples_by_reason)) {
+    for (const row of rows) console.log(`- ${reason}: ${row.id} len=${row.len} ${row.title} — ${row.author}: ${row.preview}`);
+  }
 }
 
 await client.close?.();

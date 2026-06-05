@@ -185,6 +185,16 @@ function isLikelyReferenceNoteFragment(text) {
   return ((normalized.slice(0, 220).match(/(?:↩|\[[0-9ivxlcdm]+\]|\([0-9ivxlcdm]+\)|\^[0-9]+|†|‡)/gi) ?? []).length >= 3);
 }
 
+function isLikelyChapterListFragment(text) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+  if (!normalized) return false;
+  const chapterMatches = normalized.match(/(?:^|[\s.;:!?。！？])(?:chapter|chap\.|book|part|section)\s+(?:[0-9ivxlcdm]+|[a-z][a-z'’-]{1,30})(?=[\s.:;,-])/gi) ?? [];
+  if (chapterMatches.length < 4) return false;
+  const proseWords = normalized.match(/\b(?:the|and|but|for|with|from|that|this|they|their|there|then|when|where|while|into|upon|because|said|was|were|had|have|will|would|could|should|not)\b/gi) ?? [];
+  const proseRatio = proseWords.length / Math.max(1, normalized.split(/\s+/).length);
+  return chapterMatches.length >= 6 || proseRatio < 0.18;
+}
+
 function hasTerminalSentencePunctuation(text) {
   const normalized = String(text || '').replace(/\s+/g, ' ').trim();
   return /[.!?…。！？][\"'”’）)\]》」』]*$/.test(normalized);
@@ -198,11 +208,11 @@ function splitOnSentenceBoundaries(text) {
 
 function isReadableTextCandidate(text) {
   const len = text.length;
-  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text);
+  return len >= MIN_PASSAGE_CHARS && len <= MAX_PASSAGE_CHARS && hasTerminalSentencePunctuation(text) && !isLikelyReferenceNoteFragment(text) && !isLikelyChapterListFragment(text);
 }
 
 function sentenceBoundaryChunks(text) {
-  const units = splitOnSentenceBoundaries(text).filter((unit) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit));
+  const units = splitOnSentenceBoundaries(text).filter((unit) => unit.length <= MAX_PASSAGE_CHARS && !isLikelyReferenceNoteFragment(unit) && !isLikelyChapterListFragment(unit));
   const chunks = [];
   let buffer = '';
   for (const unit of units) {

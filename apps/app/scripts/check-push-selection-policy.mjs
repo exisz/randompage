@@ -14,13 +14,26 @@ if (handlerStart === -1 || postRouteStart === -1 || getRouteStart === -1) {
 const handlerEnd = source.indexOf('\n}\n\npushRouter.get', handlerStart);
 const cronBlock = source.slice(handlerStart, handlerEnd === -1 ? source.length : handlerEnd);
 
-const required = [
+const requiredInCron = [
   'sendPersonalizedPushes(prisma, subscriptions, passages',
   'personalized',
+  'getAllPushSubscriptions(prisma)',
 ];
-for (const token of required) {
+for (const token of requiredInCron) {
   if (!cronBlock.includes(token)) {
     throw new Error(`/api/cron/daily-push is missing shared personalized policy token: ${token}`);
+  }
+}
+
+const requiredGlobally = [
+  'normalizePushSubscriptionCreatedAt(prisma)',
+  'unixepoch(created_at)',
+  'findPushSubscriptionByUserEndpoint',
+  'createPushSubscriptionRaw',
+];
+for (const token of requiredGlobally) {
+  if (!source.includes(token)) {
+    throw new Error(`push routes are missing subscription timestamp safety token: ${token}`);
   }
 }
 

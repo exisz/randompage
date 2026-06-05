@@ -40,6 +40,47 @@ type PushDeliveryStats = {
   failures: PushFailure[];
 };
 
+async function normalizePushSubscriptionCreatedAt(prisma: PrismaClient) {
+  // Production legacy schema stores push_subscriptions.created_at as INTEGER unix seconds.
+  // A prior Prisma write path could leave ISO text in the INTEGER-affinity column, which
+  // makes prisma.pushSubscription.findMany() throw before /api/push/send can deliver.
+  await prisma.$executeRawUnsafe(`
+    UPDATE push_subscriptions
+    SET created_at = unixepoch(created_at)
+    WHERE typeof(created_at) = 'text'
+      AND unixepoch(created_at) IS NOT NULL
+  `);
+}
+
+async function findPushSubscriptionByUserEndpoint(prisma: PrismaClient, userId: string, endpoint: string) {
+  const rows = await prisma.$queryRawUnsafe<{ id: string }[]>(
+    'SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint = ? LIMIT 1',
+    userId,
+    endpoint,
+  );
+  return rows[0] ?? null;
+}
+
+async function createPushSubscriptionRaw(
+  prisma: PrismaClient,
+  data: Pick<PushSubscription, 'id' | 'userId' | 'endpoint' | 'p256dh' | 'auth'>,
+) {
+  await prisma.$executeRawUnsafe(
+    'INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    data.id,
+    data.userId,
+    data.endpoint,
+    data.p256dh,
+    data.auth,
+    Math.floor(Date.now() / 1000),
+  );
+}
+
+async function getAllPushSubscriptions(prisma: PrismaClient) {
+  await normalizePushSubscriptionCreatedAt(prisma);
+  return prisma.pushSubscription.findMany();
+}
+
 function groupSubscriptionsByUser(subscriptions: PushSubscription[]) {
   const subsByUser = new Map<string, PushSubscription[]>();
   for (const s of subscriptions) {
@@ -195,12 +236,12 @@ pushRouter.post('/push/subscribe', async (req: Request, res: Response) => {
       update: {},
     });
 
-    // Upsert subscription by endpoint
-    const existing = await prisma.pushSubscription.findFirst({ where: { userId, endpoint } });
+    // Upsert subscription by endpoint. Use raw SQL for push_subscriptions because the
+    // production legacy table stores created_at as INTEGER unix seconds.
+    await normalizePushSubscriptionCreatedAt(prisma);
+    const existing = await findPushSubscriptionByUserEndpoint(prisma, userId, endpoint);
     if (!existing) {
-      await prisma.pushSubscription.create({
-        data: { id: nanoid(), userId, endpoint, p256dh, auth, createdAt: now },
-      });
+      await createPushSubscriptionRaw(prisma, { id: nanoid(), userId, endpoint, p256dh, auth });
     }
     res.json({ ok: true });
   } catch (e: unknown) {
@@ -257,7 +298,7 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
     // Use once to flush genuinely stale subs that don't return a clean 4xx, then drop the param.
     const forceClean = req.query.force_clean_failed === '1' || req.query.force_clean_failed === 'true';
     const prisma = getPrisma();
-    const subscriptions = await prisma.pushSubscription.findMany();
+    const subscriptions = await getAllPushSubscriptions(prisma);
 
     // Pre-load all passages once (small dataset, ~636 rows); selection filters to readable fragments.
     const passages = await prisma.passage.findMany();
@@ -286,7 +327,7 @@ async function dailyPushHandler(req: Request, res: Response) {
       return;
     }
     const prisma = getPrisma();
-    const subscriptions = await prisma.pushSubscription.findMany();
+    const subscriptions = await getAllPushSubscriptions(prisma);
     const passages = await prisma.passage.findMany();
     if (passages.length === 0) {
       res.json({ ok: true, sent: 0, failed: 0, removed: 0, personalized: [], failures: [] });
