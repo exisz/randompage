@@ -173,12 +173,27 @@ export default function Settings() {
         <div className="flex-1"><Link to="/discover" className="font-serif text-xl">📖 RandomPage</Link></div>
         <div className="flex-none gap-2">
           <Link to="/discover" className="btn btn-ghost btn-sm">Discover</Link>
+          <Link to="/today" className="btn btn-ghost btn-sm">Today</Link>
           <Link to="/bookmarks" className="btn btn-ghost btn-sm">Bookmarks</Link>
           <Link to="/history" className="btn btn-ghost btn-sm">History</Link>
         </div>
       </nav>
       <div className="max-w-md mx-auto">
         <h2 className="text-2xl font-serif mb-6">⚙️ Settings</h2>
+        <div className="card overflow-hidden border border-primary/20 bg-primary/10 shadow mb-4">
+          <div className="card-body gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="card-title text-base">Today shortcut</h3>
+                <p className="text-sm opacity-70">
+                  Open a widget-like daily passage surface from your home screen. Add RandomPage to your phone home screen, then use Today for the latest pushed or personalized page.
+                </p>
+              </div>
+              <span className="badge badge-primary badge-outline shrink-0">PWA</span>
+            </div>
+            <Link to="/today" className="btn btn-primary btn-sm rounded-2xl">Open Today page</Link>
+          </div>
+        </div>
         <div className="card bg-base-200 shadow mb-4">
           <div className="card-body gap-3">
             <h3 className="card-title text-base">Account</h3>
