@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-06 — PLANET-2538 Today shortcut / widget-like daily teaser
+> 最后更新: 2026-06-07 — PLANET-2559 Themed Review queue by saved tag/collection
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -40,7 +40,7 @@
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览       │ │
-│  │    /api/daily-review → 收藏片段 Daily Review / revisit      │ │
+│  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
@@ -96,7 +96,7 @@ exisz/randompage (GitHub)
 | bookmarks | 用户收藏 |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
-| passage_reviews | Daily Review 复习记录（reviewed/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
+| passage_reviews | Daily Review / Themed Review 复习记录（reviewed/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
@@ -183,6 +183,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-07 | PLANET-2559: Bookmarks 新增 Themed Review focused queue，用户可按已保存 passage 的 tag 或 collection 选择 1–5 条 due saved passages；Reviewed/Skip today 复用既有 `passage_reviews`，避免同一主题内立即重复。 | Engineer Pod |
 | 2026-06-06 | PLANET-2538: Added `/today` PWA-friendly Today shortcut surface that reads existing push_history first and falls back to `/api/passages/daily-queue`; Settings exposes add/open Today guidance and manifest shortcuts point to `/today`. | Engineer Pod |
 | 2026-06-06 | PLANET-2517/2522: Push send now normalizes legacy `push_subscriptions.created_at` ISO text into INTEGER unix seconds before Prisma reads and writes new subscriptions raw; passage content policy/runtime/import checks now reject repeated table-of-contents/chapter-list fragments and report samples by reason. | Engineer Pod |
 | 2026-06-05 | PLANET-2508: Added reviewed IA OCR tiny-batch ingest path (`pnpm --filter @randompage/app ingest:ia-ocr`) with explicit reviewed item list, length/content checks before rows, report/sample output, and gated `--apply --ack-reviewed` Turso insert mode. | Engineer Pod |

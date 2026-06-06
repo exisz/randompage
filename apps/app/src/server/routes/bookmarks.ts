@@ -89,12 +89,13 @@ bookmarksRouter.get('/bookmarks', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
-    await ensureBookmarkCollectionTables(prisma);
+    await ensurePassageReviewTable(prisma);
     const bookmarks = await prisma.bookmark.findMany({
       where: { userId: claims.sub as string },
       include: {
         passage: true,
         collectionItems: { include: { collection: true } },
+        passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
     });

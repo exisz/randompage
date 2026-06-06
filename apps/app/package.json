@@ -29,7 +29,8 @@
     "check:recommendation-explanations": "node scripts/check-recommendation-explanation-policy.mjs",
     "pilot:ia-ocr": "node scripts/ia-ocr-pilot.mjs",
     "ingest:ia-ocr": "node scripts/ia-ocr-ingest.mjs",
-    "check:today-shortcut": "node scripts/check-today-shortcut-policy.mjs"
+    "check:today-shortcut": "node scripts/check-today-shortcut-policy.mjs",
+    "check:themed-review": "node scripts/check-themed-review-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

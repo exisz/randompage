@@ -8,8 +8,13 @@ interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
 }
 interface BookmarkCollectionItem { collection: { id: string; name: string } }
+interface PassageReview {
+  reviewedAt: string;
+  dueAfter: string;
+  action: string;
+}
 interface Bookmark {
-  id: string; createdAt: string; passage: Passage; collectionItems?: BookmarkCollectionItem[];
+  id: string; createdAt: string; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[];
 }
 interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
@@ -44,6 +49,8 @@ export default function Bookmarks() {
   const [busy, setBusy] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
+  const [reviewTheme, setReviewTheme] = useState('');
+  const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -100,6 +107,32 @@ export default function Bookmarks() {
     });
   }, [bookmarks, query, activeTag, activeCollection]);
 
+  const reviewThemes = useMemo(() => {
+    const options = [
+      ...tags.map(tag => ({ value: `tag:${tag}`, label: `#${tag}`, type: 'tag' })),
+      ...collections.map(collection => ({ value: `collection:${collection.id}`, label: collection.name, type: 'collection' })),
+    ];
+    return options;
+  }, [tags, collections]);
+
+  const themedReviewQueue = useMemo(() => {
+    if (!reviewTheme) return [];
+    const now = Date.now();
+    return bookmarks
+      .filter(bookmark => {
+        if (reviewTheme.startsWith('tag:')) {
+          const tag = reviewTheme.slice(4);
+          if (!parseTags(bookmark.passage.tags).includes(tag)) return false;
+        } else if (reviewTheme.startsWith('collection:')) {
+          const collectionId = reviewTheme.slice(11);
+          if (!bookmark.collectionItems?.some(item => item.collection.id === collectionId)) return false;
+        } else return false;
+        const latest = bookmark.passageReviews?.[0];
+        return !latest || new Date(latest.dueAfter).getTime() <= now;
+      })
+      .slice(0, 5);
+  }, [bookmarks, reviewTheme]);
+
   const removeBookmark = async (id: string) => {
     if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
@@ -151,6 +184,20 @@ export default function Bookmarks() {
           body: JSON.stringify({ bookmarkId: bookmark.id }),
         });
       }
+      await refresh();
+    } finally { setBusy(false); }
+  };
+
+  const markThemedReview = async (bookmarkId: string, action: 'reviewed' | 'skip') => {
+    if (offlineMode) return;
+    setBusy(true);
+    setReviewStatus(null);
+    try {
+      await apiFetch(`/daily-review/${bookmarkId}`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      });
+      setReviewStatus(action === 'reviewed' ? 'Saved passage reviewed — it will rest before returning.' : 'Skipped for today — it will not immediately repeat.');
       await refresh();
     } finally { setBusy(false); }
   };
@@ -214,6 +261,51 @@ export default function Bookmarks() {
                 </div>
               ))}
             </div>}
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-primary/10 via-base-200 to-secondary/10 shadow mb-4">
+          <div className="card-body gap-3 p-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] opacity-50">Themed Review</p>
+              <h3 className="font-serif text-lg">Revisit a focused shelf</h3>
+              <p className="text-sm opacity-70">Choose a saved tag or collection to review 1–5 due book passages outside the default Daily Review.</p>
+            </div>
+            <select className="select select-bordered w-full" value={reviewTheme} onChange={e => { setReviewTheme(e.target.value); setReviewStatus(null); }} disabled={offlineMode || reviewThemes.length === 0}>
+              <option value="">Select a tag or collection…</option>
+              {tags.length > 0 && <optgroup label="Tags">{tags.map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</optgroup>}
+              {collections.length > 0 && <optgroup label="Collections">{collections.map(collection => <option key={`collection:${collection.id}`} value={`collection:${collection.id}`}>{collection.name}</option>)}</optgroup>}
+            </select>
+            {reviewThemes.length === 0 && <p className="text-sm opacity-70">Save passages with tags or create a collection first, then come back for a focused review queue.</p>}
+            {reviewStatus && <div className="alert alert-success py-2 text-sm"><span>{reviewStatus}</span></div>}
+            {reviewTheme && themedReviewQueue.length === 0 && (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">No saved passages are due for this theme right now.</p>
+                <p className="opacity-70 mt-1">Try another tag/collection, save more passages in <Link to="/discover" className="link">Discover</Link>, or organize saved passages into <button className="link" onClick={() => setActiveCollection('all')}>Bookmarks</button>.</p>
+              </div>
+            )}
+            {themedReviewQueue.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {themedReviewQueue.map((bookmark, index) => {
+                  const bmTags = parseTags(bookmark.passage.tags).slice(0, 4);
+                  return (
+                    <div key={bookmark.id} className="rounded-box bg-base-100/80 p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-2 text-xs opacity-60">
+                        <span>Review {index + 1} of {themedReviewQueue.length}</span>
+                        {bookmark.passageReviews?.[0]?.reviewedAt && <span>last reviewed {new Date(bookmark.passageReviews[0].reviewedAt).toLocaleDateString()}</span>}
+                      </div>
+                      <p className="font-serif leading-relaxed mt-2">{bookmark.passage.text.slice(0, 260)}{bookmark.passage.text.length > 260 ? '…' : ''}</p>
+                      <div className="text-right opacity-60 text-sm mt-2">{bookmark.passage.bookTitle} — {bookmark.passage.author}</div>
+                      {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                      <div className="flex gap-2 justify-end mt-3">
+                        <button className="btn btn-ghost btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'skip')}>Skip today</button>
+                        <button className="btn btn-primary btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'reviewed')}>Reviewed</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
