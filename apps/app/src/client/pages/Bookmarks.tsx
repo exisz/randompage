@@ -50,6 +50,7 @@ export default function Bookmarks() {
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
   const [reviewTheme, setReviewTheme] = useState('');
+  const [reviewTopic, setReviewTopic] = useState('');
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const online = useOnlineStatus();
 
@@ -115,12 +116,31 @@ export default function Bookmarks() {
     return options;
   }, [tags, collections]);
 
+  const topicNeedles = useMemo(() => {
+    const stopwords = new Set(['a', 'an', 'and', 'are', 'for', 'in', 'of', 'on', 'or', 'the', 'to', 'under', 'with']);
+    return reviewTopic
+      .trim()
+      .toLowerCase()
+      .split(/[^a-z0-9-]+/)
+      .filter(needle => needle.length > 2 && !stopwords.has(needle));
+  }, [reviewTopic]);
+
+  const reviewThemeLabel = useMemo(() => {
+    if (reviewTopic.trim()) return `topic: ${reviewTopic.trim()}`;
+    if (reviewTheme.startsWith('tag:')) return `#${reviewTheme.slice(4)}`;
+    if (reviewTheme.startsWith('collection:')) return collections.find(collection => collection.id === reviewTheme.slice(11))?.name ?? 'selected collection';
+    return '';
+  }, [collections, reviewTheme, reviewTopic]);
+
   const themedReviewQueue = useMemo(() => {
-    if (!reviewTheme) return [];
+    if (!reviewTheme && topicNeedles.length === 0) return [];
     const now = Date.now();
     return bookmarks
       .filter(bookmark => {
-        if (reviewTheme.startsWith('tag:')) {
+        if (topicNeedles.length > 0) {
+          const haystack = passageSearchText(bookmark);
+          if (!topicNeedles.every(needle => haystack.includes(needle))) return false;
+        } else if (reviewTheme.startsWith('tag:')) {
           const tag = reviewTheme.slice(4);
           if (!parseTags(bookmark.passage.tags).includes(tag)) return false;
         } else if (reviewTheme.startsWith('collection:')) {
@@ -131,7 +151,7 @@ export default function Bookmarks() {
         return !latest || new Date(latest.dueAfter).getTime() <= now;
       })
       .slice(0, 5);
-  }, [bookmarks, reviewTheme]);
+  }, [bookmarks, reviewTheme, topicNeedles]);
 
   const removeBookmark = async (id: string) => {
     if (offlineMode) return;
@@ -269,19 +289,31 @@ export default function Bookmarks() {
             <div>
               <p className="text-xs uppercase tracking-[0.25em] opacity-50">Themed Review</p>
               <h3 className="font-serif text-lg">Revisit a focused shelf</h3>
-              <p className="text-sm opacity-70">Choose a saved tag or collection to review 1–5 due book passages outside the default Daily Review.</p>
+              <p className="text-sm opacity-70">Choose a saved tag/collection, or type a topic like “stoicism under stress”, to review 1–5 due saved book passages outside the default Daily Review.</p>
             </div>
-            <select className="select select-bordered w-full" value={reviewTheme} onChange={e => { setReviewTheme(e.target.value); setReviewStatus(null); }} disabled={offlineMode || reviewThemes.length === 0}>
+            <label className="input input-bordered flex items-center gap-2 w-full">
+              <span className="opacity-50">Topic</span>
+              <input
+                value={reviewTopic}
+                onChange={e => { setReviewTopic(e.target.value); setReviewStatus(null); }}
+                className="grow"
+                placeholder="stoicism under stress, grief, courage…"
+                disabled={offlineMode}
+              />
+            </label>
+            <div className="divider my-0 text-xs opacity-60">or pick a saved shelf</div>
+            <select className="select select-bordered w-full" value={reviewTheme} onChange={e => { setReviewTheme(e.target.value); setReviewTopic(''); setReviewStatus(null); }} disabled={offlineMode || reviewThemes.length === 0}>
               <option value="">Select a tag or collection…</option>
               {tags.length > 0 && <optgroup label="Tags">{tags.map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</optgroup>}
               {collections.length > 0 && <optgroup label="Collections">{collections.map(collection => <option key={`collection:${collection.id}`} value={`collection:${collection.id}`}>{collection.name}</option>)}</optgroup>}
             </select>
-            {reviewThemes.length === 0 && <p className="text-sm opacity-70">Save passages with tags or create a collection first, then come back for a focused review queue.</p>}
+            {reviewThemes.length === 0 && !reviewTopic.trim() && <p className="text-sm opacity-70">Save passages with tags or create a collection first, then come back for a focused review queue.</p>}
             {reviewStatus && <div className="alert alert-success py-2 text-sm"><span>{reviewStatus}</span></div>}
-            {reviewTheme && themedReviewQueue.length === 0 && (
+            {reviewThemeLabel && <p className="text-xs opacity-60">Focused queue for <span className="font-medium">{reviewThemeLabel}</span>, searched only across your saved RandomPage book passages.</p>}
+            {(reviewTheme || reviewTopic.trim()) && themedReviewQueue.length === 0 && (
               <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
-                <p className="font-medium">No saved passages are due for this theme right now.</p>
-                <p className="opacity-70 mt-1">Try another tag/collection, save more passages in <Link to="/discover" className="link">Discover</Link>, or organize saved passages into <button className="link" onClick={() => setActiveCollection('all')}>Bookmarks</button>.</p>
+                <p className="font-medium">No saved passages match this topic or are due for review right now.</p>
+                <p className="opacity-70 mt-1">Try another topic/tag/collection, save more passages in <Link to="/discover" className="link">Discover</Link>, or organize saved passages in <button className="link" onClick={() => setActiveCollection('all')}>Bookmarks</button>.</p>
               </div>
             )}
             {themedReviewQueue.length > 0 && (

@@ -10,7 +10,9 @@ const checks = [
   ['theme selector offers tags and collections', bookmarks.includes('optgroup label="Tags"') && bookmarks.includes('optgroup label="Collections"')],
   ['queue limits focused review to 1–5 saved passages', bookmarks.includes('.slice(0, 5)')],
   ['review actions reuse existing daily-review endpoint', bookmarks.includes('apiFetch(`/daily-review/${bookmarkId}`')],
-  ['empty theme state links back to Discover/Bookmarks', bookmarks.includes('No saved passages are due for this theme') && bookmarks.includes('to="/discover"')],
+  ['natural-language topic input searches saved passages', bookmarks.includes('reviewTopic') && bookmarks.includes('topicNeedles') && bookmarks.includes('passageSearchText(bookmark)')],
+  ['focused topic label states saved RandomPage book passage boundary', bookmarks.includes('Focused queue for') && bookmarks.includes('searched only across your saved RandomPage book passages')],
+  ['empty theme state links back to Discover/Bookmarks', bookmarks.includes('No saved passages match this topic') && bookmarks.includes('to="/discover"')],
 ];
 
 let failed = false;
