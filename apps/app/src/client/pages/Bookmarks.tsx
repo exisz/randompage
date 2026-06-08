@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 import { isOfflineError, readBookmarksOfflineCache, saveBookmarksOfflineCache, useOnlineStatus } from '../lib/offline';
+import ListenControl from '../components/ListenControl';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -327,6 +328,7 @@ export default function Bookmarks() {
                         {bookmark.passageReviews?.[0]?.reviewedAt && <span>last reviewed {new Date(bookmark.passageReviews[0].reviewedAt).toLocaleDateString()}</span>}
                       </div>
                       <p className="font-serif leading-relaxed mt-2">{bookmark.passage.text.slice(0, 260)}{bookmark.passage.text.length > 260 ? '…' : ''}</p>
+                      <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} saved passage`} compact className="mt-2" />
                       <div className="text-right opacity-60 text-sm mt-2">{bookmark.passage.bookTitle} — {bookmark.passage.author}</div>
                       {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                       <div className="flex gap-2 justify-end mt-3">
@@ -361,6 +363,7 @@ export default function Bookmarks() {
                 <div key={bm.id} className="card bg-base-200 shadow">
                   <div className="card-body gap-3 py-4">
                     <p className="font-serif leading-relaxed">{bm.passage.text.slice(0, 220)}{bm.passage.text.length > 220 ? '…' : ''}</p>
+                    <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                     <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                     <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">

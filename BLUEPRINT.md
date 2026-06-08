@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-08 — PLANET-2594 avoid/exclude mood tags in personalization
+> 最后更新: 2026-06-09 — PLANET-2615 Web Speech listen controls
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -32,7 +32,7 @@
 │  │    /              → Landing (→ /discover if authed)       │ │
 │  │    /discover      → 发现页 (随机片段)                      │ │
 │  │    /bookmarks     → 书架 + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
-│  │    /history       → 浏览历史 + 推送收件箱                  │ │
+│  │    /history       → 浏览历史 + 推送收件箱（saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
 │  │    /callback      → Logto SSO 回调                        │ │
@@ -156,6 +156,13 @@ exisz/randompage (GitHub)
 - Offline Bookmarks/History are read-only and show explicit cached/offline banners; Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
 - Static regression: `pnpm --filter @randompage/app check:offline-cache`.
 
+## Passage Listen Controls
+
+- `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
+- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present.
+- Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
+- Static regression: `pnpm --filter @randompage/app check:listen-control`.
+
 ## 数据维护脚本 (`apps/app/scripts/`)
 
 | 脚本 | Ticket | 用途 |
@@ -184,6 +191,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-09 | PLANET-2615: Added reusable Web Speech Listen controls for Discover current passages, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards; v1 stays browser-only with graceful unsupported/no-voice fallback and `check:listen-control`. | Engineer Pod |
 | 2026-06-08 | PLANET-2594: Settings Personalization 新增 “Avoid for now” real passage-tag controls；保存为既有 `user_preferences` 的 `avoid:<tag>` negative rows；Discover random、daily queue、push selection 对 avoided moods/topics soft down-rank/优先避开，同时保留无合适替代时的 graceful fallback；新增 `check:avoid-tags`. | Engineer Pod |
 | 2026-06-07 | PLANET-2569: Bookmarks Themed Review 新增自然语言 topic 输入（如 “stoicism under stress”），在用户 saved RandomPage book passages 的 text/title/author/tags/collections 内匹配 1–5 条 due passages；Reviewed/Skip today 继续复用 `passage_reviews`，避免同一 topic 立即重复。 | Engineer Pod |
 | 2026-06-07 | PLANET-2559: Bookmarks 新增 Themed Review focused queue，用户可按已保存 passage 的 tag 或 collection 选择 1–5 条 due saved passages；Reviewed/Skip today 复用既有 `passage_reviews`，避免同一主题内立即重复。 | Engineer Pod |

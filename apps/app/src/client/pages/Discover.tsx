@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 import { isOfflineError, useOnlineStatus } from '../lib/offline';
+import ListenControl from '../components/ListenControl';
 
 interface Passage {
   id: string;
@@ -627,13 +628,14 @@ export default function Discover() {
                     </div>
                   )}
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
                     <button
                       className="btn btn-primary btn-lg rounded-2xl"
                       onClick={() => fetchPassage(false, passage.id)}
                     >
                       Next passage →
                     </button>
+                    <ListenControl text={passage.text} title={`${passage.bookTitle} passage`} />
                     <button className="btn btn-outline rounded-2xl" onClick={handleShare}>
                       Share
                     </button>

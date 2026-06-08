@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOnlineStatus } from '../lib/offline';
+import ListenControl from '../components/ListenControl';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
@@ -173,6 +174,7 @@ export default function History() {
                       <span className="text-xs opacity-40">{new Date(isBrowsing ? h.createdAt : h.sentAt).toLocaleString()}</span>
                     </div>
                     <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 170)}{h.passage.text.length > 170 ? '…' : ''}</p>
+                    <ListenControl text={h.passage.text} title={`${h.passage.bookTitle} ${h.kind === 'push' ? 'pushed' : 'history'} passage`} compact />
                     <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
                     {h.whyPersonalized && (
