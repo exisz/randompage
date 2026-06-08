@@ -15,6 +15,11 @@ type UserPreference = {
   weight: number;
 };
 
+type AvoidTagOption = {
+  tag: string;
+  count?: number;
+};
+
 const FALLBACK_READING_GOALS: ReadingGoal[] = [
   {
     id: 'reflective-philosophy',
@@ -51,8 +56,12 @@ export default function Settings() {
   const [readingGoals, setReadingGoals] = useState<ReadingGoal[]>(FALLBACK_READING_GOALS);
   const [selectedGoalIds, setSelectedGoalIds] = useState<string[]>([]);
   const [preferences, setPreferences] = useState<UserPreference[]>([]);
+  const [avoidTags, setAvoidTags] = useState<AvoidTagOption[]>([]);
+  const [selectedAvoidTags, setSelectedAvoidTags] = useState<string[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const [avoidLoading, setAvoidLoading] = useState(false);
   const [goalsStatus, setGoalsStatus] = useState('');
+  const [avoidStatus, setAvoidStatus] = useState('');
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -75,6 +84,8 @@ export default function Settings() {
           const nextPrefs = Array.isArray(d.preferences) ? d.preferences : [];
           setReadingGoals(nextGoals);
           setPreferences(nextPrefs);
+          setAvoidTags(Array.isArray(d.avoidTags) ? d.avoidTags : []);
+          setSelectedAvoidTags(Array.isArray(d.selectedAvoidTags) ? d.selectedAvoidTags : []);
           const prefTags = new Set(nextPrefs.filter((pref: UserPreference) => Number(pref.weight) >= 7).map((pref: UserPreference) => pref.tag));
           const inferredGoals = nextGoals
             .filter((goal: ReadingGoal) => goal.tags.some((tag) => prefTags.has(tag)))
@@ -111,6 +122,15 @@ export default function Settings() {
     });
   };
 
+  const toggleAvoidTag = (tag: string) => {
+    setAvoidStatus('');
+    setSelectedAvoidTags(current => {
+      if (current.includes(tag)) return current.filter(item => item !== tag);
+      if (current.length >= 5) return current;
+      return [...current, tag];
+    });
+  };
+
   const saveReadingGoals = async () => {
     if (selectedGoalIds.length < 1 || selectedGoalIds.length > 3) {
       setGoalsStatus('Choose 1–3 reading goals first.');
@@ -126,12 +146,38 @@ export default function Settings() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Save failed');
       setPreferences(Array.isArray(data.preferences) ? data.preferences : []);
+      setAvoidTags(Array.isArray(data.avoidTags) ? data.avoidTags : avoidTags);
+      setSelectedAvoidTags(Array.isArray(data.selectedAvoidTags) ? data.selectedAvoidTags : selectedAvoidTags);
       setGoalsStatus('Saved — Discover will now weight fresh pages toward these topics.');
     } catch (e) {
       console.error(e);
       setGoalsStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setGoalsLoading(false);
+    }
+  };
+
+  const saveAvoidTags = async () => {
+    setAvoidLoading(true);
+    setAvoidStatus('');
+    try {
+      const response = await apiFetch('/preferences/avoid-tags', {
+        method: 'POST',
+        body: JSON.stringify({ avoidTags: selectedAvoidTags }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setPreferences(Array.isArray(data.preferences) ? data.preferences : []);
+      setAvoidTags(Array.isArray(data.avoidTags) ? data.avoidTags : []);
+      setSelectedAvoidTags(Array.isArray(data.selectedAvoidTags) ? data.selectedAvoidTags : []);
+      setAvoidStatus(selectedAvoidTags.length > 0
+        ? "Saved — we'll show fewer pages with these moods."
+        : 'Saved — no avoid tags are active.');
+    } catch (e) {
+      console.error(e);
+      setAvoidStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAvoidLoading(false);
     }
   };
 
@@ -250,6 +296,46 @@ export default function Settings() {
                   <p className="text-xs opacity-60">No preference weights yet — save goals or read/bookmark passages to start learning.</p>
                 )}
                 {goalsStatus ? <p className="text-xs opacity-70">{goalsStatus}</p> : null}
+                <div className="divider my-1" />
+                <div>
+                  <h4 className="font-semibold text-sm">Avoid for now</h4>
+                  <p className="text-sm opacity-70">
+                    Pick moods or topics you want less of today. We'll show fewer pages with these moods, not a hard safety filter.
+                  </p>
+                </div>
+                {avoidTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {avoidTags.map(option => {
+                      const selected = selectedAvoidTags.includes(option.tag);
+                      const disabled = !selected && selectedAvoidTags.length >= 5;
+                      return (
+                        <button
+                          key={option.tag}
+                          type="button"
+                          className={`btn btn-xs rounded-full ${selected ? 'btn-warning' : 'btn-outline'}`}
+                          onClick={() => toggleAvoidTag(option.tag)}
+                          disabled={disabled || avoidLoading}
+                        >
+                          {option.tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs opacity-60">Avoid tags will appear after the passage library syncs.</p>
+                )}
+                <button
+                  className="btn btn-warning btn-sm"
+                  onClick={saveAvoidTags}
+                  disabled={avoidLoading}
+                >
+                  {avoidLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Save avoid tags
+                </button>
+                {selectedAvoidTags.length > 0 ? (
+                  <p className="text-xs opacity-60">Avoiding: {selectedAvoidTags.join(' · ')}</p>
+                ) : null}
+                {avoidStatus ? <p className="text-xs opacity-70">{avoidStatus}</p> : null}
               </>
             ) : (
               <div className="rounded-box border border-dashed border-base-300 p-3">

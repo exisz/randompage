@@ -2,10 +2,14 @@ import { Router, type Request, type Response } from 'express';
 import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
+import { parsePassageTags } from '../lib/passageTags.js';
+import { AVOID_TAG_WEIGHT, avoidPreferenceTag, normalizeAvoidTag, splitPreferenceControls } from '../lib/preferenceControls.js';
 
 export const preferencesRouter = Router();
 
 const GOAL_SEED_WEIGHT = 7;
+const DEFAULT_AVOID_TAGS = ['dark', 'tense', 'deception', 'suffering', 'violence'];
+const MAX_AVOID_TAGS = 5;
 
 const READING_GOALS = [
   {
@@ -58,13 +62,46 @@ async function fetchPreferences(prisma: ReturnType<typeof getPrisma>, userId: st
   });
 }
 
+async function fetchAvoidTagOptions(prisma: ReturnType<typeof getPrisma>) {
+  const rows = await prisma.passage.findMany({ select: { tags: true } });
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    for (const tag of parsePassageTags(row.tags)) {
+      const normalized = normalizeAvoidTag(tag);
+      if (!normalized) continue;
+      counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    }
+  }
+
+  const preferred = DEFAULT_AVOID_TAGS
+    .filter((tag) => (counts.get(tag) ?? 0) > 0)
+    .map((tag) => ({ tag, count: counts.get(tag) ?? 0 }));
+  const fallback = Array.from(counts.entries())
+    .filter(([tag]) => !DEFAULT_AVOID_TAGS.includes(tag))
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 8)
+    .map(([tag, count]) => ({ tag, count }));
+
+  return [...preferred, ...fallback].slice(0, 12);
+}
+
+function normalizeAvoidTags(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value
+    .filter((tag): tag is string => typeof tag === 'string')
+    .map(normalizeAvoidTag)
+    .filter(Boolean)));
+}
+
 // GET /api/preferences
 preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
     const prefs = await fetchPreferences(prisma, claims.sub as string);
-    res.json({ preferences: prefs, readingGoals: READING_GOALS });
+    const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
+    const avoidTags = await fetchAvoidTagOptions(prisma);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -110,7 +147,55 @@ preferencesRouter.post('/preferences/goals', async (req: Request, res: Response)
     }
 
     const prefs = await fetchPreferences(prisma, userId);
-    res.json({ preferences: prefs, selectedGoals, seededTags: tags });
+    const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
+    const avoidTags = await fetchAvoidTagOptions(prisma);
+    res.json({ preferences: positivePreferences, selectedGoals, seededTags: tags, avoidTags, selectedAvoidTags });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/preferences/avoid-tags
+// Stores lightweight negative preference controls in existing user_preferences rows.
+preferencesRouter.post('/preferences/avoid-tags', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const selectedAvoidTags = normalizeAvoidTags(req.body?.avoidTags);
+    if (selectedAvoidTags.length > MAX_AVOID_TAGS) {
+      res.status(400).json({ error: `Choose up to ${MAX_AVOID_TAGS} avoid tags.` });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    const optionRows = await fetchAvoidTagOptions(prisma);
+    const validTags = new Set(optionRows.map((option) => option.tag));
+    const invalid = selectedAvoidTags.filter((tag) => !validTags.has(tag));
+    if (invalid.length > 0) {
+      res.status(400).json({ error: `Unknown avoid tags: ${invalid.join(', ')}` });
+      return;
+    }
+
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId} AND tag LIKE 'avoid:%'
+    `;
+
+    for (const tag of selectedAvoidTags) {
+      await prisma.$executeRaw`
+        INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+        VALUES (${nanoid()}, ${userId}, ${avoidPreferenceTag(tag)}, ${AVOID_TAG_WEIGHT}, ${updatedAt})
+      `;
+    }
+
+    const prefs = await fetchPreferences(prisma, userId);
+    const { positivePreferences, avoidTags: savedAvoidTags } = splitPreferenceControls(prefs);
+    const avoidTags = await fetchAvoidTagOptions(prisma);
+    res.json({ preferences: positivePreferences, avoidTags, selectedAvoidTags: savedAvoidTags });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

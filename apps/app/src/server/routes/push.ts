@@ -4,8 +4,8 @@ import { getPrisma } from '../lib/prisma.js';
 import type { Passage, PrismaClient, PushSubscription } from '../generated/prisma/index.js';
 import { nanoid } from 'nanoid';
 import webpush from 'web-push';
-import { scorePassageTags } from '../lib/passageTags.js';
-import { explainRecommendation, preferenceMapFromRows } from '../lib/recommendationExplanation.js';
+import { explainRecommendation } from '../lib/recommendationExplanation.js';
+import { preferenceMapWithoutAvoids, scorePassageTagsWithAvoidance, splitPreferenceControls } from '../lib/preferenceControls.js';
 import { filterReadablePassages } from '../lib/passageLengthPolicy.js';
 
 export const pushRouter = Router();
@@ -106,7 +106,8 @@ async function selectPersonalizedPassageForUser(
   const excludeIds = new Set(recent.map(r => r.passageId));
 
   const prefs = await prisma.userPreference.findMany({ where: { userId } });
-  const prefMap = Object.fromEntries(prefs.map(p => [p.tag, p.weight]));
+  const { avoidTags } = splitPreferenceControls(prefs);
+  const prefMap = preferenceMapWithoutAvoids(prefs);
 
   const readablePassages = filterReadablePassages(passages);
   const sourcePool = readablePassages.length > 0 ? readablePassages : passages;
@@ -115,7 +116,7 @@ async function selectPersonalizedPassageForUser(
 
   const weights = pool.map(p => ({
     passage: p,
-    weight: scorePassageTags(p.tags, prefMap),
+    weight: scorePassageTagsWithAvoidance(p.tags, prefMap, avoidTags),
   }));
   const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
   let rand = Math.random() * totalWeight;
@@ -269,7 +270,7 @@ pushRouter.get('/push/history', async (req: Request, res: Response) => {
       }),
       prisma.userPreference.findMany({ where: { userId } }),
     ]);
-    const prefMap = preferenceMapFromRows(prefs);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
     res.json({
       history: history.map((item) => ({
         ...item,

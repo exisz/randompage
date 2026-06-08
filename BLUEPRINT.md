@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-07 — PLANET-2569 natural-language Themed Review topic search
+> 最后更新: 2026-06-08 — PLANET-2594 avoid/exclude mood tags in personalization
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -46,7 +46,7 @@
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
-│  │    /api/preferences → 读取偏好权重 + POST goals 种子写入     │ │
+│  │    /api/preferences → 读取偏好权重 + goals/avoid tags 控制     │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
@@ -102,7 +102,7 @@ exisz/randompage (GitHub)
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1） |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制） |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
 
@@ -168,6 +168,7 @@ exisz/randompage (GitHub)
 | `check-passage-content-policy.mjs` | PLANET-2139/2227/2522 | 生产 corpus reference-note/footnote/chapter-list/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts、TOC/chapter lists 与 non-terminal endings） |
 | `check-tag-failure-policy.mjs` | PLANET-2263 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，防止 retry 耗尽后静默滞留 |
 | `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
+| `check-avoid-tags-policy.mjs` | PLANET-2594 | 静态回归检查 Settings “Avoid for now”、`POST /api/preferences/avoid-tags`、Discover/daily queue/push soft down-rank 路径 |
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -183,6 +184,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-08 | PLANET-2594: Settings Personalization 新增 “Avoid for now” real passage-tag controls；保存为既有 `user_preferences` 的 `avoid:<tag>` negative rows；Discover random、daily queue、push selection 对 avoided moods/topics soft down-rank/优先避开，同时保留无合适替代时的 graceful fallback；新增 `check:avoid-tags`. | Engineer Pod |
 | 2026-06-07 | PLANET-2569: Bookmarks Themed Review 新增自然语言 topic 输入（如 “stoicism under stress”），在用户 saved RandomPage book passages 的 text/title/author/tags/collections 内匹配 1–5 条 due passages；Reviewed/Skip today 继续复用 `passage_reviews`，避免同一 topic 立即重复。 | Engineer Pod |
 | 2026-06-07 | PLANET-2559: Bookmarks 新增 Themed Review focused queue，用户可按已保存 passage 的 tag 或 collection 选择 1–5 条 due saved passages；Reviewed/Skip today 复用既有 `passage_reviews`，避免同一主题内立即重复。 | Engineer Pod |
 | 2026-06-06 | PLANET-2538: Added `/today` PWA-friendly Today shortcut surface that reads existing push_history first and falls back to `/api/passages/daily-queue`; Settings exposes add/open Today guidance and manifest shortcuts point to `/today`. | Engineer Pod |

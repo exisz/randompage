@@ -30,7 +30,8 @@
     "pilot:ia-ocr": "node scripts/ia-ocr-pilot.mjs",
     "ingest:ia-ocr": "node scripts/ia-ocr-ingest.mjs",
     "check:today-shortcut": "node scripts/check-today-shortcut-policy.mjs",
-    "check:themed-review": "node scripts/check-themed-review-policy.mjs"
+    "check:themed-review": "node scripts/check-themed-review-policy.mjs",
+    "check:avoid-tags": "node scripts/check-avoid-tags-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

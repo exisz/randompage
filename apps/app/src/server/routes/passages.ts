@@ -2,8 +2,9 @@ import { Router, type Request, type Response } from 'express';
 import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
-import { parsePassageTags, scorePassageTags } from '../lib/passageTags.js';
-import { explainRecommendation, preferenceMapFromRows } from '../lib/recommendationExplanation.js';
+import { parsePassageTags } from '../lib/passageTags.js';
+import { explainRecommendation } from '../lib/recommendationExplanation.js';
+import { preferenceMapWithoutAvoids, scorePassageTagsWithAvoidance, splitPreferenceControls } from '../lib/preferenceControls.js';
 import { filterReadablePassages, isReadablePassage } from '../lib/passageLengthPolicy.js';
 
 export const passagesRouter = Router();
@@ -33,9 +34,10 @@ function hashUnit(seed: string) {
 function scoreDailyQueueCandidate(
   passage: { id: string; tags: string },
   prefMap: Record<string, number>,
+  avoidTags: string[],
   seed: string,
 ) {
-  const preferenceScore = scorePassageTags(passage.tags, prefMap);
+  const preferenceScore = scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags);
   const dailyJitter = hashUnit(`${seed}:${passage.id}`);
   return preferenceScore * (1 + dailyJitter * 0.35);
 }
@@ -233,7 +235,8 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     let passage = null;
 
     const prefs = userId ? await prisma.userPreference.findMany({ where: { userId } }) : [];
-    const prefMap = preferenceMapFromRows(prefs);
+    const { avoidTags } = splitPreferenceControls(prefs);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
 
     // Skip push inbox when a tag filter is active — respect the user's chosen category.
     if (userId && preferUnread && !tagFilter) {
@@ -265,7 +268,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
       // Use tag-filtered pool for weighted sampling
       const weights = tagFilteredPassages.map(p => ({
         passage: p,
-        weight: scorePassageTags(p.tags, prefMap),
+        weight: scorePassageTagsWithAvoidance(p.tags, prefMap, avoidTags),
       }));
 
       const totalWeight = weights.reduce((sum, w) => sum + w.weight, 0);
@@ -332,14 +335,17 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       ...historyEvents.map((event) => event.passageId),
       ...pushHistory.map((delivery) => delivery.passageId),
     ]);
-    const prefMap = preferenceMapFromRows(prefs);
+    const { avoidTags } = splitPreferenceControls(prefs);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
     const freshCandidates = readablePassages.filter((passage) => !seenIds.has(passage.id));
-    const pool = freshCandidates.length >= limit ? freshCandidates : readablePassages;
+    const basePool = freshCandidates.length >= limit ? freshCandidates : readablePassages;
+    const avoidFreePool = basePool.filter((passage) => scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags) === scorePassageTagsWithAvoidance(passage.tags, prefMap, []));
+    const pool = avoidFreePool.length >= limit ? avoidFreePool : basePool;
 
     const queue = pool
       .map((passage) => ({
         passage,
-        queueScore: scoreDailyQueueCandidate(passage, prefMap, seed),
+        queueScore: scoreDailyQueueCandidate(passage, prefMap, avoidTags, seed),
       }))
       .sort((a, b) => b.queueScore - a.queueScore)
       .slice(0, limit)
@@ -420,7 +426,7 @@ passagesRouter.get('/browsing/history', async (req: Request, res: Response) => {
       }),
       prisma.userPreference.findMany({ where: { userId } }),
     ]);
-    const prefMap = preferenceMapFromRows(prefs);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
     res.json({
       history: history.map((item) => ({
         ...item,
@@ -464,7 +470,8 @@ passagesRouter.get('/passages/:id', async (req: Request, res: Response) => {
     }
 
     const prefs = userId ? await prisma.userPreference.findMany({ where: { userId } }) : [];
-    res.json({ passage, whyPersonalized: userId ? explainRecommendation(passage, prefs) : null });
+    const prefMap = preferenceMapWithoutAvoids(prefs);
+    res.json({ passage, whyPersonalized: userId ? explainRecommendation(passage, prefMap) : null });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: msg });
