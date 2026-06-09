@@ -53,6 +53,8 @@ export default function Bookmarks() {
   const [reviewTheme, setReviewTheme] = useState('');
   const [reviewTopic, setReviewTopic] = useState('');
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
+  const [recallMode, setRecallMode] = useState(false);
+  const [revealedRecallIds, setRevealedRecallIds] = useState<Set<string>>(() => new Set());
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -154,6 +156,16 @@ export default function Bookmarks() {
       .slice(0, 5);
   }, [bookmarks, reviewTheme, topicNeedles]);
 
+  const recallQueue = useMemo(() => {
+    const now = Date.now();
+    return bookmarks
+      .filter(bookmark => {
+        const latest = bookmark.passageReviews?.[0];
+        return !latest || new Date(latest.dueAfter).getTime() <= now;
+      })
+      .slice(0, 5);
+  }, [bookmarks]);
+
   const removeBookmark = async (id: string) => {
     if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
@@ -209,7 +221,7 @@ export default function Bookmarks() {
     } finally { setBusy(false); }
   };
 
-  const markThemedReview = async (bookmarkId: string, action: 'reviewed' | 'skip') => {
+  const markThemedReview = async (bookmarkId: string, action: 'reviewed' | 'review_later' | 'skip') => {
     if (offlineMode) return;
     setBusy(true);
     setReviewStatus(null);
@@ -218,7 +230,18 @@ export default function Bookmarks() {
         method: 'POST',
         body: JSON.stringify({ action }),
       });
-      setReviewStatus(action === 'reviewed' ? 'Saved passage reviewed — it will rest before returning.' : 'Skipped for today — it will not immediately repeat.');
+      setReviewStatus(
+        action === 'reviewed'
+          ? 'Saved passage reviewed — it will rest before returning.'
+          : action === 'review_later'
+            ? 'Review later set — this recall card will come back tomorrow.'
+            : 'Skipped for today — it will not immediately repeat.'
+      );
+      setRevealedRecallIds(prev => {
+        const next = new Set(prev);
+        next.delete(bookmarkId);
+        return next;
+      });
       await refresh();
     } finally { setBusy(false); }
   };
@@ -282,6 +305,70 @@ export default function Bookmarks() {
                 </div>
               ))}
             </div>}
+          </div>
+        </div>
+
+
+        <div className="card bg-gradient-to-br from-accent/15 via-base-200 to-primary/10 shadow mb-4">
+          <div className="card-body gap-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] opacity-50">Recall Cards</p>
+                <h3 className="font-serif text-lg">Remember saved ideas</h3>
+                <p className="text-sm opacity-70">A lightweight memory mode for due saved passages. Try to recall the idea first, then reveal the page and mark what should happen next.</p>
+              </div>
+              <button className={`btn btn-sm ${recallMode ? 'btn-accent' : 'btn-outline'}`} onClick={() => setRecallMode(value => !value)} disabled={offlineMode || bookmarks.length === 0}>
+                {recallMode ? 'Close' : 'Start recall'}
+              </button>
+            </div>
+            {bookmarks.length === 0 && (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">No saved passages yet.</p>
+                <p className="opacity-70 mt-1">Save a passage from <Link to="/discover" className="link">Discover</Link>, then return here to build your recall deck.</p>
+              </div>
+            )}
+            {bookmarks.length > 0 && recallQueue.length === 0 && (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">Nothing due for recall right now.</p>
+                <p className="opacity-70 mt-1">Remembered cards rest for a week; Review later and Skip return sooner.</p>
+              </div>
+            )}
+            {recallMode && recallQueue.length > 0 && (
+              <div className="flex flex-col gap-3">
+                {recallQueue.map((bookmark, index) => {
+                  const isRevealed = revealedRecallIds.has(bookmark.id);
+                  const bmTags = parseTags(bookmark.passage.tags).slice(0, 4);
+                  return (
+                    <div key={bookmark.id} className="rounded-box bg-base-100/85 p-3 shadow-sm border border-accent/20">
+                      <div className="flex items-center justify-between gap-2 text-xs opacity-60">
+                        <span>Recall {index + 1} of {recallQueue.length}</span>
+                        {bookmark.passageReviews?.[0]?.reviewedAt && <span>last reviewed {new Date(bookmark.passageReviews[0].reviewedAt).toLocaleDateString()}</span>}
+                      </div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-accent mt-3">Before revealing</p>
+                      <h4 className="font-serif text-lg mt-1">What idea did this page contain?</h4>
+                      <div className="rounded-box bg-base-200/80 p-3 mt-2 text-sm">
+                        <p className="font-medium">{bookmark.passage.bookTitle}</p>
+                        <p className="opacity-70">{bookmark.passage.author}{bookmark.passage.chapter ? ` · ${bookmark.passage.chapter}` : ''}</p>
+                      </div>
+                      {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                      {!isRevealed ? (
+                        <button className="btn btn-accent btn-sm mt-3 w-full sm:w-auto" onClick={() => setRevealedRecallIds(prev => new Set(prev).add(bookmark.id))}>Reveal passage</button>
+                      ) : (
+                        <div className="mt-3">
+                          <p className="font-serif leading-relaxed">{bookmark.passage.text}</p>
+                          <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} recall card`} compact className="mt-2" />
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                        <button className="btn btn-primary btn-sm" disabled={offlineMode || busy || !isRevealed} onClick={() => markThemedReview(bookmark.id, 'reviewed')}>Remembered</button>
+                        <button className="btn btn-outline btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'review_later')}>Review later</button>
+                        <button className="btn btn-ghost btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'skip')}>Skip</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 

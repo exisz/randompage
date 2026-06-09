@@ -276,7 +276,8 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
 bookmarksRouter.post('/daily-review/:bookmarkId', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
-    const action = req.body?.action === 'skip' ? 'skip' : 'reviewed';
+    const requestedAction = String(req.body?.action || 'reviewed');
+    const action = requestedAction === 'skip' || requestedAction === 'review_later' ? requestedAction : 'reviewed';
     const prisma = getPrisma();
     await ensurePassageReviewTable(prisma);
     const userId = claims.sub as string;

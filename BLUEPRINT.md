@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-09 — PLANET-2615 Web Speech listen controls
+> 最后更新: 2026-06-10 — PLANET-2641 saved-passage recall cards
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -31,7 +31,7 @@
 │  │  Routes:                                                  │ │
 │  │    /              → Landing (→ /discover if authed)       │ │
 │  │    /discover      → 发现页 (随机片段)                      │ │
-│  │    /bookmarks     → 书架 + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
+│  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
 │  │    /history       → 浏览历史 + 推送收件箱（saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
@@ -96,7 +96,7 @@ exisz/randompage (GitHub)
 | bookmarks | 用户收藏 |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
-| passage_reviews | Daily Review / Themed Review 复习记录（reviewed/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
+| passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
@@ -156,6 +156,13 @@ exisz/randompage (GitHub)
 - Offline Bookmarks/History are read-only and show explicit cached/offline banners; Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
 - Static regression: `pnpm --filter @randompage/app check:offline-cache`.
 
+## Saved-Passage Recall Cards
+
+- `apps/app/src/client/pages/Bookmarks.tsx` exposes an optional mobile-first Recall Cards mode for due saved passages. The card shows title/author/chapter plus the prompt “What idea did this page contain?” before revealing the passage body.
+- Recall actions reuse the existing `POST /api/daily-review/:bookmarkId` / `passage_reviews` path: `reviewed` (Remembered, due in 7 days), `review_later` (due tomorrow), and `skip` (due tomorrow). No new table or scheduler is introduced.
+- Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls.
+- Static regression: `pnpm --filter @randompage/app check:recall-cards`.
+
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
@@ -191,6 +198,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-10 | PLANET-2641: Bookmarks 新增 saved-passage Recall Cards；due saved passages 先隐藏正文并提示 “What idea did this page contain?”，Reveal 后可 Remembered / Review later / Skip，继续复用 `passage_reviews`，无新表。 | Engineer Pod |
 | 2026-06-09 | PLANET-2615: Added reusable Web Speech Listen controls for Discover current passages, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards; v1 stays browser-only with graceful unsupported/no-voice fallback and `check:listen-control`. | Engineer Pod |
 | 2026-06-08 | PLANET-2594: Settings Personalization 新增 “Avoid for now” real passage-tag controls；保存为既有 `user_preferences` 的 `avoid:<tag>` negative rows；Discover random、daily queue、push selection 对 avoided moods/topics soft down-rank/优先避开，同时保留无合适替代时的 graceful fallback；新增 `check:avoid-tags`. | Engineer Pod |
 | 2026-06-07 | PLANET-2569: Bookmarks Themed Review 新增自然语言 topic 输入（如 “stoicism under stress”），在用户 saved RandomPage book passages 的 text/title/author/tags/collections 内匹配 1–5 条 due passages；Reviewed/Skip today 继续复用 `passage_reviews`，避免同一 topic 立即重复。 | Engineer Pod |
