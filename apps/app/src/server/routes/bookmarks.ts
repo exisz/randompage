@@ -33,8 +33,16 @@ async function ensureBookmarkCollectionTables(prisma: ReturnType<typeof getPrism
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS bookmark_collection_items_bookmark_idx ON bookmark_collection_items(bookmark_id)');
 }
 
+async function ensureBookmarkNotesColumn(prisma: ReturnType<typeof getPrisma>) {
+  const columns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(bookmarks)');
+  if (!columns.some((column) => column.name === 'note')) {
+    await prisma.$executeRawUnsafe('ALTER TABLE bookmarks ADD COLUMN note TEXT');
+  }
+}
+
 async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
   await ensureBookmarkCollectionTables(prisma);
+  await ensureBookmarkNotesColumn(prisma);
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS passage_reviews (
       id TEXT PRIMARY KEY NOT NULL,
@@ -77,6 +85,13 @@ function normalizeCollectionName(value: unknown) {
 async function requireOwnedBookmark(prisma: ReturnType<typeof getPrisma>, userId: string, bookmarkId: string) {
   const bookmark = await prisma.bookmark.findFirst({ where: { id: bookmarkId, userId } });
   return bookmark;
+}
+
+function normalizeBookmarkNote(value: unknown) {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, 1200) : null;
 }
 
 async function requireOwnedCollection(prisma: ReturnType<typeof getPrisma>, userId: string, collectionId: string) {
@@ -189,6 +204,7 @@ bookmarksRouter.post('/bookmark-collections/:id/bookmarks', async (req: Request,
     if (!bookmarkId) { res.status(400).json({ error: 'bookmarkId required' }); return; }
     const prisma = getPrisma();
     await ensureBookmarkCollectionTables(prisma);
+    await ensureBookmarkNotesColumn(prisma);
     const userId = claims.sub as string;
     const [collection, bookmark] = await Promise.all([
       requireOwnedCollection(prisma, userId, req.params.id),
@@ -216,6 +232,7 @@ bookmarksRouter.delete('/bookmark-collections/:id/bookmarks/:bookmarkId', async 
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
     await ensureBookmarkCollectionTables(prisma);
+    await ensureBookmarkNotesColumn(prisma);
     const userId = claims.sub as string;
     const [collection, bookmark] = await Promise.all([
       requireOwnedCollection(prisma, userId, req.params.id),
@@ -263,6 +280,7 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
         passageId: bookmark.passageId,
         reviewPosition: index + 1,
         lastReviewedAt: bookmark.passageReviews[0]?.reviewedAt ?? null,
+        note: bookmark.note ?? null,
         passage: bookmark.passage,
       }));
 
@@ -343,12 +361,35 @@ bookmarksRouter.post('/bookmarks', async (req: Request, res: Response) => {
       }
     }
 
+    await ensureBookmarkNotesColumn(prisma);
     const bookmarkId = nanoid();
     await prisma.$executeRaw`
-      INSERT INTO bookmarks (id, user_id, passage_id, created_at)
-      VALUES (${bookmarkId}, ${userId}, ${passageId}, ${epochSeconds(now)})
+      INSERT INTO bookmarks (id, user_id, passage_id, created_at, note)
+      VALUES (${bookmarkId}, ${userId}, ${passageId}, ${epochSeconds(now)}, ${null})
     `;
-    res.json({ bookmark: { id: bookmarkId, userId, passageId, createdAt: now.toISOString() } });
+    res.json({ bookmark: { id: bookmarkId, userId, passageId, createdAt: now.toISOString(), note: null } });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// PATCH /api/bookmarks/:id/note
+bookmarksRouter.patch('/bookmarks/:id/note', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const note = normalizeBookmarkNote(req.body?.note);
+    if (note === undefined) { res.status(400).json({ error: 'note must be a string or null' }); return; }
+    const prisma = getPrisma();
+    await ensureBookmarkNotesColumn(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await requireOwnedBookmark(prisma, userId, req.params.id);
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+    await prisma.bookmark.update({ where: { id: bookmark.id }, data: { note } });
+    const updated = await prisma.bookmark.findFirst({
+      where: { id: bookmark.id, userId },
+      include: { passage: true, collectionItems: { include: { collection: true } }, passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 } },
+    });
+    res.json({ bookmark: updated });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -360,6 +401,7 @@ bookmarksRouter.delete('/bookmarks/:id', async (req: Request, res: Response) => 
     const claims = await verifyBearer(req.header('authorization'));
     const prisma = getPrisma();
     await ensureBookmarkCollectionTables(prisma);
+    await ensureBookmarkNotesColumn(prisma);
     const bookmark = await requireOwnedBookmark(prisma, claims.sub as string, req.params.id);
     if (bookmark) {
       await prisma.bookmarkCollectionItem.deleteMany({ where: { bookmarkId: bookmark.id } });

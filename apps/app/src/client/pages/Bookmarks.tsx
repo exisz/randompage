@@ -15,7 +15,7 @@ interface PassageReview {
   action: string;
 }
 interface Bookmark {
-  id: string; createdAt: string; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[];
+  id: string; createdAt: string; note?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[];
 }
 interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
@@ -33,7 +33,7 @@ function parseTags(tags: string) {
 function passageSearchText(bookmark: Bookmark) {
   const tags = parseTags(bookmark.passage.tags).join(' ');
   const collections = bookmark.collectionItems?.map(item => item.collection.name).join(' ') ?? '';
-  return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, tags, collections]
+  return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, bookmark.note ?? '', tags, collections]
     .join(' ')
     .toLowerCase();
 }
@@ -55,12 +55,16 @@ export default function Bookmarks() {
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [recallMode, setRecallMode] = useState(false);
   const [revealedRecallIds, setRevealedRecallIds] = useState<Set<string>>(() => new Set());
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
     const cached = readBookmarksOfflineCache();
     if (!cached) return false;
-    setBookmarks((cached.bookmarks as Bookmark[]) || []);
+    const cachedBookmarks = (cached.bookmarks as Bookmark[]) || [];
+    setBookmarks(cachedBookmarks);
+    setNoteDrafts(Object.fromEntries(cachedBookmarks.map(bookmark => [bookmark.id, bookmark.note ?? ''])));
     setCollections((cached.collections as Collection[]) || []);
     setOfflineMode(true);
     setOfflineCachedAt(cached.cachedAt);
@@ -78,6 +82,7 @@ export default function Bookmarks() {
       const nextBookmarks = bookmarksData.bookmarks || [];
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
+      setNoteDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, bookmark.note ?? ''])));
       setCollections(nextCollections);
       setOfflineMode(false);
       setOfflineCachedAt(null);
@@ -170,6 +175,18 @@ export default function Bookmarks() {
     if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
     await refresh();
+  };
+
+  const saveBookmarkNote = async (bookmark: Bookmark, note: string | null) => {
+    if (offlineMode) return;
+    setNoteBusyId(bookmark.id);
+    try {
+      await apiFetch(`/bookmarks/${bookmark.id}/note`, {
+        method: 'PATCH',
+        body: JSON.stringify({ note }),
+      });
+      await refresh();
+    } finally { setNoteBusyId(null); }
   };
 
   const createCollection = async () => {
@@ -350,6 +367,12 @@ export default function Bookmarks() {
                         <p className="font-medium">{bookmark.passage.bookTitle}</p>
                         <p className="opacity-70">{bookmark.passage.author}{bookmark.passage.chapter ? ` · ${bookmark.passage.chapter}` : ''}</p>
                       </div>
+                      {bookmark.note && (
+                        <div className="rounded-box bg-warning/10 border border-warning/20 p-3 mt-2 text-sm">
+                          <p className="text-xs uppercase tracking-[0.18em] opacity-60">Your private note</p>
+                          <p className="mt-1">{bookmark.note}</p>
+                        </div>
+                      )}
                       {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                       {!isRevealed ? (
                         <button className="btn btn-accent btn-sm mt-3 w-full sm:w-auto" onClick={() => setRevealedRecallIds(prev => new Set(prev).add(bookmark.id))}>Reveal passage</button>
@@ -414,6 +437,12 @@ export default function Bookmarks() {
                         <span>Review {index + 1} of {themedReviewQueue.length}</span>
                         {bookmark.passageReviews?.[0]?.reviewedAt && <span>last reviewed {new Date(bookmark.passageReviews[0].reviewedAt).toLocaleDateString()}</span>}
                       </div>
+                      {bookmark.note && (
+                        <div className="rounded-box bg-warning/10 border border-warning/20 p-3 mt-2 text-sm">
+                          <p className="text-xs uppercase tracking-[0.18em] opacity-60">Your private note</p>
+                          <p className="mt-1">{bookmark.note}</p>
+                        </div>
+                      )}
                       <p className="font-serif leading-relaxed mt-2">{bookmark.passage.text.slice(0, 260)}{bookmark.passage.text.length > 260 ? '…' : ''}</p>
                       <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} saved passage`} compact className="mt-2" />
                       <div className="text-right opacity-60 text-sm mt-2">{bookmark.passage.bookTitle} — {bookmark.passage.author}</div>
@@ -453,6 +482,34 @@ export default function Bookmarks() {
                     <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                     <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                    <div className="rounded-box bg-base-100/70 border border-base-content/10 p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-xs uppercase tracking-[0.18em] opacity-60">Private note</span>
+                        {bm.note ? <span className="badge badge-warning badge-sm">saved</span> : <span className="badge badge-ghost badge-sm">optional</span>}
+                      </div>
+                      {bm.note && <p className="text-sm opacity-80 mb-2">{bm.note.length > 180 ? `${bm.note.slice(0, 180)}…` : bm.note}</p>}
+                      <textarea
+                        className="textarea textarea-bordered w-full text-sm"
+                        rows={3}
+                        maxLength={1200}
+                        value={noteDrafts[bm.id] ?? bm.note ?? ''}
+                        onChange={e => setNoteDrafts(prev => ({ ...prev, [bm.id]: e.target.value }))}
+                        placeholder="Add a private reflection, context, or why this passage mattered…"
+                        disabled={offlineMode || noteBusyId === bm.id}
+                      />
+                      <div className="flex flex-wrap justify-end gap-2 mt-2">
+                        <button
+                          className="btn btn-primary btn-xs"
+                          disabled={offlineMode || noteBusyId === bm.id || (noteDrafts[bm.id] ?? bm.note ?? '').trim() === (bm.note ?? '')}
+                          onClick={() => saveBookmarkNote(bm, (noteDrafts[bm.id] ?? '').trim() || null)}
+                        >Save note</button>
+                        <button
+                          className="btn btn-ghost btn-xs"
+                          disabled={offlineMode || noteBusyId === bm.id || !(bm.note || (noteDrafts[bm.id] ?? '').trim())}
+                          onClick={() => { setNoteDrafts(prev => ({ ...prev, [bm.id]: '' })); saveBookmarkNote(bm, null); }}
+                        >Clear</button>
+                      </div>
+                    </div>
                     <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
                       <select className="select select-bordered select-sm w-full sm:max-w-xs" disabled={offlineMode || busy} value={bm.collectionItems?.[0]?.collection.id ?? ''} onChange={e => setBookmarkCollection(bm, e.target.value)}>
                         <option value="">No collection</option>

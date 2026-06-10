@@ -33,7 +33,8 @@
     "check:themed-review": "node scripts/check-themed-review-policy.mjs",
     "check:avoid-tags": "node scripts/check-avoid-tags-policy.mjs",
     "check:listen-control": "node scripts/check-listen-control-policy.mjs",
-    "check:recall-cards": "node scripts/check-recall-cards-policy.mjs"
+    "check:recall-cards": "node scripts/check-recall-cards-policy.mjs",
+    "check:bookmark-notes": "node scripts/check-bookmark-notes-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

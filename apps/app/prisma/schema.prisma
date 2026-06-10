@@ -72,6 +72,7 @@ model Bookmark {
   userId    String   @map("user_id")
   passageId String   @map("passage_id")
   createdAt DateTime @map("created_at")
+  note      String?  @map("note")
 
   user            User                     @relation(fields: [userId], references: [id])
   passage         Passage                  @relation(fields: [passageId], references: [id])

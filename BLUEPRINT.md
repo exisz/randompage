@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-10 — PLANET-2641 saved-passage recall cards
+> 最后更新: 2026-06-10 — PLANET-2661 private notes on saved passages
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -93,7 +93,7 @@ exisz/randompage (GitHub)
 | credentials | WebAuthn 凭证 (passkey) |
 | sessions | 登录会话 (passkey 用) |
 | passages | 片段库 (543 条, EN+CN, 100% tagged, boilerplate-free) |
-| bookmarks | 用户收藏 |
+| bookmarks | 用户收藏；`note` 字段保存该用户对 saved passage 的私密笔记/反思（user-passage relationship，不写到 passages 全局内容） |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
@@ -156,6 +156,13 @@ exisz/randompage (GitHub)
 - Offline Bookmarks/History are read-only and show explicit cached/offline banners; Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
 - Static regression: `pnpm --filter @randompage/app check:offline-cache`.
 
+## Saved-Passage Private Notes
+
+- `bookmarks.note` stores the signed-in user’s optional private note/reflection on a saved passage. Notes belong to the user-bookmark relationship, not to `passages`, so another user cannot see or overwrite them.
+- `PATCH /api/bookmarks/:id/note` updates or clears only an owned bookmark after auth; runtime `ensureBookmarkNotesColumn` adds the nullable `note` column for existing Turso tables before reads/writes.
+- Bookmarks renders inline private-note edit/save/clear controls; Daily Review/Themed Review/Recall Cards show a compact “Your private note” snippet when a saved passage resurfaces. Offline cached Bookmarks remains read-only.
+- Static regression: `pnpm --filter @randompage/app check:bookmark-notes`.
+
 ## Saved-Passage Recall Cards
 
 - `apps/app/src/client/pages/Bookmarks.tsx` exposes an optional mobile-first Recall Cards mode for due saved passages. The card shows title/author/chapter plus the prompt “What idea did this page contain?” before revealing the passage body.
@@ -198,6 +205,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-10 | PLANET-2661: Saved passages 新增私密 note；`bookmarks.note` 挂在 user-bookmark relationship，Bookmarks 可 inline save/clear，Daily/Themed Review 与 Recall Cards resurfacing 时显示 note snippet；新增 `check:bookmark-notes`. | Engineer Pod |
 | 2026-06-10 | PLANET-2641: Bookmarks 新增 saved-passage Recall Cards；due saved passages 先隐藏正文并提示 “What idea did this page contain?”，Reveal 后可 Remembered / Review later / Skip，继续复用 `passage_reviews`，无新表。 | Engineer Pod |
 | 2026-06-09 | PLANET-2615: Added reusable Web Speech Listen controls for Discover current passages, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards; v1 stays browser-only with graceful unsupported/no-voice fallback and `check:listen-control`. | Engineer Pod |
 | 2026-06-08 | PLANET-2594: Settings Personalization 新增 “Avoid for now” real passage-tag controls；保存为既有 `user_preferences` 的 `avoid:<tag>` negative rows；Discover random、daily queue、push selection 对 avoided moods/topics soft down-rank/优先避开，同时保留无合适替代时的 graceful fallback；新增 `check:avoid-tags`. | Engineer Pod |

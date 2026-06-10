@@ -44,6 +44,7 @@ interface DailyReviewItem {
   passageId: string;
   reviewPosition: number;
   lastReviewedAt: string | null;
+  note?: string | null;
   passage: Passage;
 }
 
@@ -518,6 +519,12 @@ export default function Discover() {
                           <span className="badge badge-sm badge-secondary">{item.reviewPosition}</span>
                           <span className="line-clamp-1 text-sm font-semibold">{item.passage.bookTitle}</span>
                         </div>
+                        {item.note && (
+                          <div className="mt-2 rounded-xl border border-warning/20 bg-warning/10 p-2 text-xs">
+                            <p className="font-semibold uppercase tracking-[0.16em] opacity-60">Your private note</p>
+                            <p className="mt-1 line-clamp-2 opacity-80">{item.note}</p>
+                          </div>
+                        )}
                         <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70">{shortExcerpt(item.passage.text)}</p>
                         <p className="mt-1 text-xs opacity-50">{item.passage.author}</p>
                       </button>
