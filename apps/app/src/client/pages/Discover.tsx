@@ -4,6 +4,7 @@ import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
 import { isOfflineError, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
+import SharePassageButton from '../components/SharePassageButton';
 
 interface Passage {
   id: string;
@@ -63,7 +64,6 @@ interface UnreadPushSummary {
 }
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
-const SHARE_EXCERPT_LENGTH = 220;
 
 function parsePassageTags(raw: string | string[] | null | undefined): string[] {
   if (!raw) return [];
@@ -88,8 +88,8 @@ function parsePassageTags(raw: string | string[] | null | undefined): string[] {
 
 function shortExcerpt(text: string) {
   const normalized = text.replace(/\s+/g, ' ').trim();
-  return normalized.length > SHARE_EXCERPT_LENGTH
-    ? `${normalized.slice(0, SHARE_EXCERPT_LENGTH).trim()}…`
+  return normalized.length > 220
+    ? `${normalized.slice(0, 220).trim()}…`
     : normalized;
 }
 
@@ -119,7 +119,6 @@ export default function Discover() {
   const [dailyReview, setDailyReview] = useState<DailyReview | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
-  const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const online = useOnlineStatus();
   const [topTags, setTopTags] = useState<string[]>([]);
@@ -238,7 +237,6 @@ export default function Discover() {
     setLoading(true);
     setBookmarked(false);
     setWhyPersonalized(null);
-    setShareStatus(null);
     setLoadError(null);
     try {
       const isAuth = await logtoClient.isAuthenticated();
@@ -297,7 +295,6 @@ export default function Discover() {
     setLoading(true);
     setBookmarked(false);
     setWhyPersonalized(null);
-    setShareStatus(null);
     setLoadError(null);
     try {
       const isAuth = await logtoClient.isAuthenticated();
@@ -371,28 +368,6 @@ export default function Discover() {
       setBookmarked(true);
     } catch (e) {
       console.error(e);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!passage) return;
-    const url = `${window.location.origin}/discover?passageId=${encodeURIComponent(passage.id)}`;
-    const excerpt = shortExcerpt(passage.text);
-    const title = `${passage.bookTitle} — ${passage.author}`;
-    const text = `“${excerpt}”\n\n— ${passage.bookTitle}, ${passage.author}\nRead it on RandomPage: ${url}`;
-
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url });
-        setShareStatus('Shared');
-        return;
-      }
-      await navigator.clipboard.writeText(text);
-      setShareStatus('Copied passage + link');
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') return;
-      console.error(e);
-      setShareStatus('Share failed');
     }
   };
 
@@ -528,9 +503,12 @@ export default function Discover() {
                         <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70">{shortExcerpt(item.passage.text)}</p>
                         <p className="mt-1 text-xs opacity-50">{item.passage.author}</p>
                       </button>
-                      <div className="mt-3 grid grid-cols-2 gap-2">
-                        <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'reviewed')}>Reviewed</button>
-                        <button className="btn btn-ghost btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'skip')}>Skip today</button>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <SharePassageButton passage={item.passage} compact />
+                        <div className="grid flex-1 grid-cols-2 gap-2">
+                          <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'reviewed')}>Reviewed</button>
+                          <button className="btn btn-ghost btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'skip')}>Skip today</button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -627,14 +605,6 @@ export default function Discover() {
                     </div>
                   )}
 
-                  {shareStatus && (
-                    <div className="toast toast-top toast-center z-20">
-                      <div className={`alert ${shareStatus === 'Share failed' ? 'alert-error' : 'alert-success'} py-2 text-sm`}>
-                        <span>{shareStatus}</span>
-                      </div>
-                    </div>
-                  )}
-
                   <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
                     <button
                       className="btn btn-primary btn-lg rounded-2xl"
@@ -643,9 +613,7 @@ export default function Discover() {
                       Next passage →
                     </button>
                     <ListenControl text={passage.text} title={`${passage.bookTitle} passage`} />
-                    <button className="btn btn-outline rounded-2xl" onClick={handleShare}>
-                      Share
-                    </button>
+                    <SharePassageButton passage={passage} />
                     {authed ? (
                       <button
                         className={`btn rounded-2xl ${bookmarked ? 'btn-success' : 'btn-ghost'}`}

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-10 — PLANET-2661 private notes on saved passages
+> 最后更新: 2026-06-11 — PLANET-2685 share actions on rendered passage cards
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -177,6 +177,13 @@ exisz/randompage (GitHub)
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regression: `pnpm --filter @randompage/app check:listen-control`.
 
+## Passage Sharing
+
+- `apps/app/src/client/components/SharePassageButton.tsx` uses the Web Share API when available and falls back to copying a formatted passage snippet to clipboard.
+- Shared text includes a short excerpt, book title, author, and canonical app URL (`/discover?passageId=...`) so the exact rendered passage can be opened later instead of replacing it with a random card.
+- Discover current card + Daily Review cards, Bookmarks saved/Recall/Themed Review cards, and History browsing/push-inbox cards render the reusable Share action beside existing read/listen controls.
+- Static regression: `pnpm --filter @randompage/app check:share-passage`.
+
 ## 数据维护脚本 (`apps/app/scripts/`)
 
 | 脚本 | Ticket | 用途 |
@@ -191,6 +198,7 @@ exisz/randompage (GitHub)
 | `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
 | `check-avoid-tags-policy.mjs` | PLANET-2594 | 静态回归检查 Settings “Avoid for now”、`POST /api/preferences/avoid-tags`、Discover/daily queue/push soft down-rank 路径 |
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
+| `check-share-passage-policy.mjs` | PLANET-2685 | 静态回归检查 Web Share / clipboard fallback 与 Discover/Bookmarks/History passage card Share action |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
@@ -205,6 +213,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-11 | PLANET-2685: Added reusable SharePassageButton across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; Web Share API opens native share where available and clipboard fallback copies excerpt/title/author/canonical passage URL; added `check:share-passage`. | Engineer Pod |
 | 2026-06-10 | PLANET-2661: Saved passages 新增私密 note；`bookmarks.note` 挂在 user-bookmark relationship，Bookmarks 可 inline save/clear，Daily/Themed Review 与 Recall Cards resurfacing 时显示 note snippet；新增 `check:bookmark-notes`. | Engineer Pod |
 | 2026-06-10 | PLANET-2641: Bookmarks 新增 saved-passage Recall Cards；due saved passages 先隐藏正文并提示 “What idea did this page contain?”，Reveal 后可 Remembered / Review later / Skip，继续复用 `passage_reviews`，无新表。 | Engineer Pod |
 | 2026-06-09 | PLANET-2615: Added reusable Web Speech Listen controls for Discover current passages, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards; v1 stays browser-only with graceful unsupported/no-voice fallback and `check:listen-control`. | Engineer Pod |
