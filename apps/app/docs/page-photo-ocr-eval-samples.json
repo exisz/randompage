@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-06-11T18:14:37.251Z",
+  "command": "pnpm --filter @randompage/app eval:page-ocr -- --image docs/page-photo-ocr-fixture.png",
+  "image": "/Users/c/repos/randompage/apps/app/docs/page-photo-ocr-fixture.png",
+  "ocr": {
+    "engine": "tesseract:eng:psm-6",
+    "rawChars": 1173,
+    "cleanedChars": 1172,
+    "candidateCount": 3
+  },
+  "metadata": {
+    "title": "Meditations",
+    "author": "Marcus Aurelius",
+    "source": "local clear page-photo fixture for PLANET-2708",
+    "captureMode": "local-page-photo-ocr-evaluation",
+    "visibility": "private/import-candidate"
+  },
+  "candidates": [
+    {
+      "index": 1,
+      "id": "ocr-candidate-01",
+      "text": "MEDITATIONS Marcus Aurelius Begin the morning by saying to yourself: I shall meet with the busybody, the ungrateful, arrogant, deceitful, envious, and unsocial. All these things happen to them by reason of their ignorance of what is good and evil. But I who have seen the nature of the good that it is beautiful, and of the bad that it is ugly, and the nature of him who does wrong, that it is akin to me, not of the same blood or seed, but that it participates in the same intelligence and the same portion of divinity, I can neither be injured by any of them, for no one can fix on me what is ugly, nor can I be angry with my kinsman, nor hate him.",
+      "charCount": 650,
+      "title": "Meditations",
+      "author": "Marcus Aurelius",
+      "source": "local clear page-photo fixture for PLANET-2708",
+      "visibility": "private/import-candidate",
+      "suggestedTags": [
+        "private",
+        "import-candidate",
+        "ocr-candidate",
+        "book-page",
+        "philosophy"
+      ]
+    },
+    {
+      "index": 2,
+      "id": "ocr-candidate-02",
+      "text": "For we are made for cooperation, like feet, like hands, like eyelids, like the rows of the upper and lower teeth. To act against one another then is contrary to nature; and it is acting against one another to be vexed and to turn away. Whatever this is that I am, it is a little flesh and breath and the ruling part.",
+      "charCount": 316,
+      "title": "Meditations",
+      "author": "Marcus Aurelius",
+      "source": "local clear page-photo fixture for PLANET-2708",
+      "visibility": "private/import-candidate",
+      "suggestedTags": [
+        "private",
+        "import-candidate",
+        "ocr-candidate",
+        "book-page"
+      ]
+    },
+    {
+      "index": 3,
+      "id": "ocr-candidate-03",
+      "text": "Throw away thy books; no longer distract thyself, it is not allowed; but as if thou wast now dying, despise the flesh; it is blood and bones and a network, a contexture of nerves, veins, and arteries.",
+      "charCount": 200,
+      "title": "Meditations",
+      "author": "Marcus Aurelius",
+      "source": "local clear page-photo fixture for PLANET-2708",
+      "visibility": "private/import-candidate",
+      "suggestedTags": [
+        "private",
+        "import-candidate",
+        "ocr-candidate",
+        "book-page"
+      ]
+    }
+  ],
+  "remainingWork": [
+    "Camera/file-picker UI in Settings or Bookmarks for signed-in users.",
+    "Server-side OCR worker or reviewed client-side OCR path before mobile production use.",
+    "Explicit user confirmation before saving candidates into Bookmarks or private library.",
+    "Safety guardrails for copyrighted full-book expansion: one page/candidate at a time, private by default."
+  ]
+}

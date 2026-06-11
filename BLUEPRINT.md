@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-11 — PLANET-2685 share actions on rendered passage cards
+> 最后更新: 2026-06-12 — PLANET-2708 page photo OCR evaluation prototype
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -203,6 +203,7 @@ exisz/randompage (GitHub)
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
 | `ia-ocr-ingest.mjs` | PLANET-2508 | Reviewed tiny-batch IA OCR ingestion path; dry-run report by default, `--apply --ack-reviewed` required for Turso inserts with `tags='[]'` |
+| `page-photo-ocr-eval.mjs` | PLANET-2708 | Local single-image Tesseract OCR evaluation for user-provided physical book pages; outputs private/import-candidate passage samples and report, no production writes |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
@@ -213,6 +214,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-12 | PLANET-2708: Added `page-photo-ocr-eval.mjs` local Tesseract prototype for one user-provided physical book page image; outputs 1–3 private/import-candidate RandomPage passage candidates with title/source metadata plus report/sample JSON; no Turso or production writes. | Engineer Pod |
 | 2026-06-11 | PLANET-2685: Added reusable SharePassageButton across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; Web Share API opens native share where available and clipboard fallback copies excerpt/title/author/canonical passage URL; added `check:share-passage`. | Engineer Pod |
 | 2026-06-10 | PLANET-2661: Saved passages 新增私密 note；`bookmarks.note` 挂在 user-bookmark relationship，Bookmarks 可 inline save/clear，Daily/Themed Review 与 Recall Cards resurfacing 时显示 note snippet；新增 `check:bookmark-notes`. | Engineer Pod |
 | 2026-06-10 | PLANET-2641: Bookmarks 新增 saved-passage Recall Cards；due saved passages 先隐藏正文并提示 “What idea did this page contain?”，Reveal 后可 Remembered / Review later / Skip，继续复用 `passage_reviews`，无新表。 | Engineer Pod |

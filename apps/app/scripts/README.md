@@ -65,6 +65,33 @@ Safety/rate limits:
 - Passage checks reject out-of-bounds rows, standalone reference/footnote
   fragments, non-terminal endings, and low-letter-ratio OCR noise before insert.
 
+## page-photo-ocr-eval.mjs — PLANET-2708
+
+Local evaluation prototype for one user-provided physical book page photo. It
+runs the local Tesseract CLI against a single image, cleans OCR text, slices it
+into 1–3 RandomPage-sized passage candidates, attaches user-supplied
+book/title/source metadata, and writes report/sample JSON files. It never writes
+to Turso or production tables; candidates are marked `private/import-candidate`.
+
+```bash
+pnpm --filter @randompage/app eval:page-ocr -- \
+  --image /path/to/clear-book-page.jpg \
+  --title "Meditations" \
+  --author "Marcus Aurelius" \
+  --source "user-provided page photo"
+```
+
+Outputs:
+- `apps/app/docs/page-photo-ocr-eval-report.md`
+- `apps/app/docs/page-photo-ocr-eval-samples.json`
+
+Notes:
+- Requires the `tesseract` binary on the developer machine; pass
+  `--tesseract /path/to/tesseract` if it is not on PATH.
+- This is an evaluation path, not a production camera/import feature. A product
+  version still needs a signed-in UI, explicit user confirmation, and private
+  save/import handling.
+
 ## tag-passages.mjs — PLANET-1173
 
 Backfill `tags` for any passage where `tags IS NULL OR '' OR '[]'`.
