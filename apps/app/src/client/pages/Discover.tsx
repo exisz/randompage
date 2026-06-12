@@ -39,6 +39,34 @@ interface DailyQueue {
   freshOnly: boolean;
 }
 
+interface ReadingPathGoal {
+  id: string;
+  label: string;
+  tags: string[];
+}
+
+interface ReadingPathEntry {
+  day: number;
+  passage: Passage;
+  reason: string;
+}
+
+interface ReadingPath {
+  id: string;
+  topic: string;
+  goalId: string | null;
+  currentDay: number;
+  totalDays: number;
+  current: ReadingPathEntry | null;
+  upcoming: ReadingPathEntry[];
+  queue: ReadingPathEntry[];
+}
+
+interface ReadingPathResponse {
+  path: ReadingPath | null;
+  goals: ReadingPathGoal[];
+}
+
 interface DailyReviewItem {
   id: string;
   bookmarkId: string;
@@ -116,6 +144,10 @@ export default function Discover() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
+  const [readingPath, setReadingPath] = useState<ReadingPath | null>(null);
+  const [readingPathGoals, setReadingPathGoals] = useState<ReadingPathGoal[]>([]);
+  const [pathLoading, setPathLoading] = useState(false);
+  const [pathStatus, setPathStatus] = useState<string | null>(null);
   const [dailyReview, setDailyReview] = useState<DailyReview | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
@@ -174,6 +206,47 @@ export default function Discover() {
       setDailyQueue(null);
     }
   }, []);
+
+  const fetchReadingPath = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setReadingPath(null);
+        setReadingPathGoals([]);
+        return;
+      }
+      const res = await apiFetch('/reading-path');
+      if (!res.ok) throw new Error(`Reading path returned ${res.status}`);
+      const data = await res.json() as ReadingPathResponse;
+      setReadingPath(data.path ?? null);
+      setReadingPathGoals(Array.isArray(data.goals) ? data.goals : []);
+    } catch (e) {
+      console.error(e);
+      setReadingPath(null);
+      setPathStatus('Could not load your reading path yet.');
+    }
+  }, []);
+
+  const startReadingPath = useCallback(async (goalId: string) => {
+    setPathLoading(true);
+    setPathStatus(null);
+    try {
+      const res = await apiFetch('/reading-path/start', {
+        method: 'POST',
+        body: JSON.stringify({ goalId }),
+      });
+      const data = await res.json() as ReadingPathResponse & { error?: string };
+      if (!res.ok) throw new Error(data.error || `Reading path returned ${res.status}`);
+      setReadingPath(data.path ?? null);
+      setReadingPathGoals(Array.isArray(data.goals) ? data.goals : readingPathGoals);
+      setPathStatus('7-day path started from existing RandomPage passages.');
+    } catch (e) {
+      console.error(e);
+      setPathStatus(e instanceof Error ? e.message : 'Could not start reading path.');
+    } finally {
+      setPathLoading(false);
+    }
+  }, [readingPathGoals]);
 
   const fetchDailyReview = useCallback(async () => {
     try {
@@ -277,6 +350,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchReadingPath();
         void fetchDailyReview();
         void fetchUnreadPush();
       }
@@ -289,7 +363,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -312,6 +386,7 @@ export default function Discover() {
       if (isAuth) {
         void fetchStats();
         void fetchDailyQueue();
+        void fetchReadingPath();
         void fetchDailyReview();
         void fetchUnreadPush();
       }
@@ -327,7 +402,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   useEffect(() => {
     void fetchTopTags();
@@ -515,6 +590,63 @@ export default function Discover() {
                 </div>
               </div>
             ) : null}
+
+            {authed && (
+              <div className="rounded-[2rem] border border-accent/30 bg-accent/10 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-accent">7-day reading path</p>
+                    <p className="mt-1 text-sm opacity-70">A goal-based sequence of existing book passages — no summaries, no courses.</p>
+                  </div>
+                  {readingPath ? <span className="badge badge-accent badge-outline">Day {readingPath.currentDay}/{readingPath.totalDays}</span> : null}
+                </div>
+                {readingPath?.current ? (
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-base-100/50 p-3">
+                    <button className="w-full text-left" onClick={() => fetchPassageById(readingPath.current!.passage.id, 'discover')}>
+                      <div className="flex items-center gap-2">
+                        <span className="badge badge-accent">Day {readingPath.current.day}/7</span>
+                        <span className="line-clamp-1 text-sm font-semibold">{readingPath.current.passage.bookTitle}</span>
+                      </div>
+                      <p className="mt-1 text-xs opacity-60">{readingPath.current.passage.author} · {readingPath.topic}</p>
+                      <p className="mt-2 line-clamp-2 text-sm leading-relaxed opacity-75">{shortExcerpt(readingPath.current.passage.text)}</p>
+                      <p className="mt-2 text-xs text-accent/80">{readingPath.current.reason}</p>
+                    </button>
+                    {readingPath.upcoming.length > 0 && (
+                      <div className="mt-3 grid gap-2">
+                        {readingPath.upcoming.slice(0, 6).map((item) => (
+                          <div key={`${readingPath.id}-${item.day}`} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-base-200/40 px-3 py-2">
+                            <span className="badge badge-sm badge-outline">Day {item.day}/7</span>
+                            <span className="min-w-0 flex-1 line-clamp-1 text-xs opacity-75">{item.passage.bookTitle} · {item.passage.author}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-3 grid gap-2">
+                    {(readingPathGoals.length ? readingPathGoals : [
+                      { id: 'reflective-philosophy', label: 'Reflective philosophy', tags: ['philosophy', 'morality'] },
+                      { id: 'inner-life-psychology', label: 'Inner life & psychology', tags: ['psychology', 'relationships'] },
+                      { id: 'history-society', label: 'History & society', tags: ['history', 'power'] },
+                    ]).slice(0, 3).map((goal) => (
+                      <button
+                        key={goal.id}
+                        type="button"
+                        className="btn btn-outline h-auto min-h-0 justify-start rounded-2xl border-accent/30 py-3 text-left"
+                        onClick={() => startReadingPath(goal.id)}
+                        disabled={pathLoading}
+                      >
+                        <span>
+                          <span className="block font-semibold">Start {goal.label}</span>
+                          <span className="block text-xs opacity-70">7 days · {goal.tags.slice(0, 3).join(' · ')}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {pathStatus ? <p className="mt-2 text-xs opacity-70">{pathStatus}</p> : null}
+              </div>
+            )}
 
             {authed && (
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">

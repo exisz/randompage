@@ -13,6 +13,30 @@ const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip']);
 const VALID_INTERACTION_SOURCES = new Set(['discover', 'push_inbox']);
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
 const DAILY_QUEUE_MAX_LIMIT = 5;
+const READING_PATH_DAYS = 7;
+
+type ReadingPathGoal = {
+  id: string;
+  label: string;
+  tags: string[];
+};
+
+const READING_PATH_GOALS: ReadingPathGoal[] = [
+  { id: 'reflective-philosophy', label: 'Reflective philosophy', tags: ['philosophy', 'philosophical-fiction', 'morality', 'human-nature', 'contemplative'] },
+  { id: 'inner-life-psychology', label: 'Inner life & psychology', tags: ['psychology', 'self-cultivation', 'relationships', 'love', 'suffering'] },
+  { id: 'history-society', label: 'History & society', tags: ['history', 'power', 'critique', 'social-interaction', 'freedom'] },
+  { id: 'literary-classics', label: 'Literary classics', tags: ['literature', 'fiction', 'symbolism', 'adventure', 'nature'] },
+  { id: 'mystery-tension', label: 'Mystery & tension', tags: ['mystery', 'investigation', 'tense', 'dark', 'deception'] },
+];
+
+type ReadingPathRow = {
+  id: string;
+  user_id: string;
+  topic: string;
+  goal_id: string | null;
+  passage_ids: string;
+  started_at: number | string;
+};
 
 
 function boundedDailyQueueLimit(raw: unknown) {
@@ -298,6 +322,176 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
 });
 
 
+
+
+async function ensureReadingPathsTable(prisma: ReturnType<typeof getPrisma>) {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS reading_paths (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      topic TEXT NOT NULL,
+      goal_id TEXT,
+      passage_ids TEXT NOT NULL,
+      started_at INTEGER NOT NULL,
+      completed_days TEXT NOT NULL DEFAULT '[]',
+      skipped_days TEXT NOT NULL DEFAULT '[]',
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS reading_paths_user_started_idx ON reading_paths(user_id, started_at)');
+}
+
+function normalizePathTopic(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return value.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
+}
+
+function startedAtMs(value: number | string) {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) && numeric < 10_000_000_000 ? numeric * 1000 : Date.parse(String(value));
+}
+
+function currentReadingPathDay(startedAt: number | string, now = new Date()) {
+  const started = startedAtMs(startedAt);
+  if (!Number.isFinite(started)) return 1;
+  const elapsed = Math.floor((startOfUtcDay(now).getTime() - startOfUtcDay(new Date(started)).getTime()) / 86_400_000);
+  return Math.min(READING_PATH_DAYS, Math.max(1, elapsed + 1));
+}
+
+function scoreReadingPathCandidate(
+  passage: { id: string; bookTitle: string; author: string; tags: string },
+  goal: ReadingPathGoal | null,
+  topic: string,
+  prefMap: Record<string, number>,
+  seed: string,
+) {
+  const tags = parsePassageTags(passage.tags).map((tag) => tag.toLowerCase());
+  const haystack = `${passage.bookTitle} ${passage.author} ${tags.join(' ')}`.toLowerCase();
+  const topicTerms = topic.split(/\s+/).filter((term) => term.length > 2);
+  const topicScore = topicTerms.reduce((sum, term) => sum + (haystack.includes(term) ? 4 : 0), 0);
+  const goalScore = goal ? goal.tags.reduce((sum, tag) => sum + (tags.includes(tag) ? 5 : 0), 0) : 0;
+  const prefScore = scorePassageTagsWithAvoidance(passage.tags, prefMap, []);
+  return topicScore + goalScore + prefScore + hashUnit(`${seed}:${passage.id}`);
+}
+
+async function buildReadingPathPayload(
+  prisma: ReturnType<typeof getPrisma>,
+  userId: string,
+  row: ReadingPathRow,
+  now = new Date(),
+) {
+  const passageIds = JSON.parse(row.passage_ids) as string[];
+  const passages = await prisma.passage.findMany({ where: { id: { in: passageIds } } });
+  const byId = new Map(passages.map((passage) => [passage.id, passage]));
+  const queue = passageIds
+    .map((id, index) => {
+      const passage = byId.get(id);
+      if (!passage) return null;
+      const tags = parsePassageTags(passage.tags).map((tag) => tag.toLowerCase());
+      const topicTerms = row.topic.split(/\s+/).filter((term) => term.length > 2);
+      const matched = topicTerms.filter((term) => `${passage.bookTitle} ${passage.author} ${tags.join(' ')}`.toLowerCase().includes(term));
+      return {
+        day: index + 1,
+        passage,
+        reason: matched.length > 0 ? `Matched ${matched.slice(0, 2).join(' + ')} for ${row.topic}.` : `Sequenced from existing RandomPage passages for ${row.topic}.`,
+      };
+    })
+    .filter(Boolean);
+  const currentDay = currentReadingPathDay(row.started_at, now);
+  const current = queue.find((item) => item?.day === currentDay) ?? queue[0] ?? null;
+  if (current?.passage?.id) {
+    await recordInteraction(prisma, userId, current.passage.id, 'view', 'discover');
+  }
+  return {
+    id: row.id,
+    topic: row.topic,
+    goalId: row.goal_id,
+    startedAt: row.started_at,
+    currentDay,
+    totalDays: READING_PATH_DAYS,
+    current,
+    upcoming: queue.filter((item) => item && item.day > currentDay),
+    queue,
+  };
+}
+
+// GET /api/reading-path — active 7-day goal path for the signed-in reader.
+passagesRouter.get('/reading-path', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    const userId = claims.sub as string;
+    await ensureReadingPathsTable(prisma);
+    const rows = await prisma.$queryRaw<ReadingPathRow[]>`
+      SELECT id, user_id, topic, goal_id, passage_ids, started_at
+      FROM reading_paths
+      WHERE user_id = ${userId}
+      ORDER BY started_at DESC
+      LIMIT 1
+    `;
+    if (!rows[0]) {
+      res.json({ path: null, goals: READING_PATH_GOALS });
+      return;
+    }
+    res.json({ path: await buildReadingPathPayload(prisma, userId, rows[0]), goals: READING_PATH_GOALS });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/reading-path/start — generate a lightweight Headway-parity path from existing book passages.
+passagesRouter.post('/reading-path/start', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const userId = claims.sub as string;
+    const goalId = typeof req.body?.goalId === 'string' ? req.body.goalId : undefined;
+    const goal = READING_PATH_GOALS.find((candidate) => candidate.id === goalId) ?? null;
+    const topic = normalizePathTopic(req.body?.topic) || goal?.label.toLowerCase() || '';
+    if (!goal && !topic) {
+      res.status(400).json({ error: 'Choose a reading goal or topic.' });
+      return;
+    }
+
+    const prisma = getPrisma();
+    const now = new Date();
+    await ensureReadingPathsTable(prisma);
+    await ensureBrowsingEventsTable(prisma);
+    await upsertReader(prisma, userId, now);
+
+    const [allPassages, prefs] = await Promise.all([
+      prisma.passage.findMany(),
+      prisma.userPreference.findMany({ where: { userId } }),
+    ]);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
+    const pool = filterReadablePassages(allPassages);
+    const passageIds = pool
+      .map((passage) => ({ passage, score: scoreReadingPathCandidate(passage, goal, topic, prefMap, `${userId}:${topic}`) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, READING_PATH_DAYS)
+      .map(({ passage }) => passage.id);
+
+    if (passageIds.length < READING_PATH_DAYS) {
+      res.status(404).json({ error: 'Not enough existing RandomPage passages to build a 7-day path.' });
+      return;
+    }
+
+    const row: ReadingPathRow = {
+      id: nanoid(),
+      user_id: userId,
+      topic,
+      goal_id: goal?.id ?? null,
+      passage_ids: JSON.stringify(passageIds),
+      started_at: epochSeconds(now),
+    };
+    await prisma.$executeRaw`
+      INSERT INTO reading_paths (id, user_id, topic, goal_id, passage_ids, started_at, completed_days, skipped_days)
+      VALUES (${row.id}, ${row.user_id}, ${row.topic}, ${row.goal_id}, ${row.passage_ids}, ${row.started_at}, ${'[]'}, ${'[]'})
+    `;
+    res.json({ path: await buildReadingPathPayload(prisma, userId, row), goals: READING_PATH_GOALS });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
 
 // GET /api/passages/daily-queue?limit=5
 // Returns a small deterministic-per-day recommendation stack for the signed-in reader.

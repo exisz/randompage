@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-12 — PLANET-2708 page photo OCR evaluation prototype
+> 最后更新: 2026-06-13 — PLANET-2739 7-day goal-based reading paths
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -40,6 +40,7 @@
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览       │ │
+│    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
@@ -63,7 +64,7 @@
 │  Tables: users, passages(561), bookmarks, bookmark_collections, │
 │          bookmark_collection_items, passage_reviews,             │
 │          push_subscriptions, push_history, browsing_events,      │
-│          user_preferences,                                      │
+│          user_preferences, reading_paths,                       │
 │          credentials, sessions, ingest_runs, passage_tag_failures│
 │  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
 └──────────────────────────────────────────────────────────────────┘
@@ -103,6 +104,7 @@ exisz/randompage (GitHub)
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制） |
+| reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
 
@@ -199,6 +201,7 @@ exisz/randompage (GitHub)
 | `check-avoid-tags-policy.mjs` | PLANET-2594 | 静态回归检查 Settings “Avoid for now”、`POST /api/preferences/avoid-tags`、Discover/daily queue/push soft down-rank 路径 |
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-share-passage-policy.mjs` | PLANET-2685 | 静态回归检查 Web Share / clipboard fallback 与 Discover/Bookmarks/History passage card Share action |
+| `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
@@ -214,6 +217,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-13 | PLANET-2739: Added 7-day goal-based reading paths in Discover; signed-in readers can start a path from existing reading goals/topics, persisted in `reading_paths` with 7 existing passage IDs, Day N/7 current card, upcoming teasers, and `check:reading-path`; no generated summaries/courses or new content sources. | Engineer Pod |
 | 2026-06-12 | PLANET-2708: Added `page-photo-ocr-eval.mjs` local Tesseract prototype for one user-provided physical book page image; outputs 1–3 private/import-candidate RandomPage passage candidates with title/source metadata plus report/sample JSON; no Turso or production writes. | Engineer Pod |
 | 2026-06-11 | PLANET-2685: Added reusable SharePassageButton across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; Web Share API opens native share where available and clipboard fallback copies excerpt/title/author/canonical passage URL; added `check:share-passage`. | Engineer Pod |
 | 2026-06-10 | PLANET-2661: Saved passages 新增私密 note；`bookmarks.note` 挂在 user-bookmark relationship，Bookmarks 可 inline save/clear，Daily/Themed Review 与 Recall Cards resurfacing 时显示 note snippet；新增 `check:bookmark-notes`. | Engineer Pod |
