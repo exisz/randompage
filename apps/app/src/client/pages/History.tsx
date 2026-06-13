@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
+import SharePassageImageButton from '../components/SharePassageImageButton';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
@@ -178,6 +179,7 @@ export default function History() {
                     <div className="flex flex-wrap items-center gap-2">
                       <ListenControl text={h.passage.text} title={`${h.passage.bookTitle} ${h.kind === 'push' ? 'pushed' : 'history'} passage`} compact />
                       <SharePassageButton passage={h.passage} compact />
+                      <SharePassageImageButton passage={h.passage} compact />
                     </div>
                     <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}

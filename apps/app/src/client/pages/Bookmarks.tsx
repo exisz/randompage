@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 import { isOfflineError, readBookmarksOfflineCache, saveBookmarksOfflineCache, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
+import SharePassageImageButton from '../components/SharePassageImageButton';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -383,6 +384,7 @@ export default function Bookmarks() {
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} recall card`} compact />
                             <SharePassageButton passage={bookmark.passage} compact />
+                            <SharePassageImageButton passage={bookmark.passage} compact />
                           </div>
                         </div>
                       )}
@@ -451,6 +453,7 @@ export default function Bookmarks() {
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} saved passage`} compact />
                         <SharePassageButton passage={bookmark.passage} compact />
+                            <SharePassageImageButton passage={bookmark.passage} compact />
                       </div>
                       <div className="text-right opacity-60 text-sm mt-2">{bookmark.passage.bookTitle} — {bookmark.passage.author}</div>
                       {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
@@ -489,6 +492,7 @@ export default function Bookmarks() {
                     <div className="flex flex-wrap items-center gap-2">
                       <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                       <SharePassageButton passage={bm.passage} compact />
+                      <SharePassageImageButton passage={bm.passage} compact />
                     </div>
                     <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}

@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/api';
 import { isOfflineError, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
+import SharePassageImageButton from '../components/SharePassageImageButton';
 
 interface Passage {
   id: string;
@@ -580,6 +581,7 @@ export default function Discover() {
                       </button>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <SharePassageButton passage={item.passage} compact />
+                        <SharePassageImageButton passage={item.passage} compact />
                         <div className="grid flex-1 grid-cols-2 gap-2">
                           <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'reviewed')}>Reviewed</button>
                           <button className="btn btn-ghost btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'skip')}>Skip today</button>
@@ -746,6 +748,7 @@ export default function Discover() {
                     </button>
                     <ListenControl text={passage.text} title={`${passage.bookTitle} passage`} />
                     <SharePassageButton passage={passage} />
+                    <SharePassageImageButton passage={passage} />
                     {authed ? (
                       <button
                         className={`btn rounded-2xl ${bookmarked ? 'btn-success' : 'btn-ghost'}`}
