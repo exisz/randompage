@@ -38,6 +38,9 @@ interface DailyQueue {
   queue: DailyQueueItem[];
   generatedFor: string;
   freshOnly: boolean;
+  fallbackUsed: boolean;
+  strategy: string;
+  emptyReason: string | null;
 }
 
 interface ReadingPathGoal {
@@ -219,10 +222,20 @@ export default function Discover() {
         queue: Array.isArray(data.queue) ? data.queue : [],
         generatedFor: data.generatedFor ?? '',
         freshOnly: Boolean(data.freshOnly),
+        fallbackUsed: Boolean(data.fallbackUsed),
+        strategy: typeof data.strategy === 'string' ? data.strategy : '',
+        emptyReason: typeof data.emptyReason === 'string' ? data.emptyReason : null,
       });
     } catch (e) {
       console.error(e);
-      setDailyQueue(null);
+      setDailyQueue({
+        queue: [],
+        generatedFor: '',
+        freshOnly: false,
+        fallbackUsed: false,
+        strategy: 'load_error',
+        emptyReason: 'Could not load your daily queue. Check your connection and try Refresh queue.',
+      });
     }
   }, []);
 
@@ -758,6 +771,9 @@ export default function Discover() {
                   <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
                     <p className="mt-1 text-sm opacity-70">3–5 personalized unread picks, refreshed daily.</p>
+                    {dailyQueue?.fallbackUsed ? (
+                      <p className="mt-1 text-xs text-primary/80">Fresh unread pool is low, so today includes personalized pages you have not seen recently.</p>
+                    ) : null}
                   </div>
                   <span className="badge badge-primary badge-outline">{dailyQueue?.queue.length ?? 0}/5</span>
                 </div>
@@ -806,7 +822,10 @@ export default function Discover() {
                       )}
                     </button>
                   )) : (
-                    <div className="rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-60">Your daily queue appears after sign-in sync.</div>
+                    <div className="rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-70">
+                      <p>{dailyQueue?.emptyReason ?? 'No daily pages are available yet.'}</p>
+                      <button type="button" className="btn btn-outline btn-xs mt-3 rounded-xl" onClick={fetchDailyQueue}>Refresh queue</button>
+                    </div>
                   )}
                 </div>
               </div>

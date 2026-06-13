@@ -39,7 +39,7 @@
 │  │    /api/health    → API health check                      │ │
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
-│  │    /api/passages/daily-queue → 每日个性化未读队列预览       │ │
+│  │    /api/passages/daily-queue → 每日个性化未读队列预览；unread exhausted 时 fallback 到 not-recent/readable existing passages，并返回 emptyReason/counts │ │
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
@@ -177,7 +177,8 @@ exisz/randompage (GitHub)
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
 - Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, opens each active passage through `/api/passages/:id?source=discover`, and therefore records the existing Discover view interaction instead of introducing a new audio/content model.
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
-- Static regression: `pnpm --filter @randompage/app check:listen-control`.
+- Static regressions: `pnpm --filter @randompage/app check:listen-control` and `pnpm --filter @randompage/app check:daily-queue`.
+- Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
 
 ## Passage Sharing
 
@@ -203,6 +204,7 @@ exisz/randompage (GitHub)
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-share-passage-policy.mjs` | PLANET-2685/2748 | 静态回归检查 Web Share / clipboard fallback、client-side PNG visual card export、Discover/Bookmarks/History passage Share/Card actions |
 | `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
+| `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
@@ -218,6 +220,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-14 | PLANET-2780: Hardened `/api/passages/daily-queue` so signed-in readers get 3–5 existing readable RandomPage passages when possible: unread/avoid-free first, then unread, then read-but-not-recent fallback, then any readable fallback; API now returns fallback/emptyReason/count metadata and Discover shows precise retryable empty states instead of generic sign-in-sync copy; added `check:daily-queue`. | Engineer Pod |
 | 2026-06-13 | PLANET-2764: Added hands-free daily listening queue on Discover Today’s fresh pages; signed-in users can start browser speech playback across the personalized 3–5 existing passages with pause/resume/next/stop, active passage highlighting, and existing Discover view recording via `fetchPassageById(..., source=discover)`; expanded `check:listen-control`. | Engineer Pod |
 | 2026-06-13 | PLANET-2748: Added client-side visual passage card export across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; canvas PNG contains existing passage excerpt, title/author, RandomPage branding, canonical passage URL, and shares via native file share/image clipboard/download fallback; expanded `check:share-passage`. | Engineer Pod |
 | 2026-06-13 | PLANET-2739: Added 7-day goal-based reading paths in Discover; signed-in readers can start a path from existing reading goals/topics, persisted in `reading_paths` with 7 existing passage IDs, Day N/7 current card, upcoming teasers, and `check:reading-path`; no generated summaries/courses or new content sources. | Engineer Pod |

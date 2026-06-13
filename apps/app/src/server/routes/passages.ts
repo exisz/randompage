@@ -38,6 +38,12 @@ type ReadingPathRow = {
   started_at: number | string;
 };
 
+type DailyQueueStrategy =
+  | 'fresh_unread_avoid_free'
+  | 'fresh_unread_with_avoids'
+  | 'fallback_read_but_not_recent'
+  | 'fallback_any_readable'
+  | 'empty_no_readable_passages';
 
 function boundedDailyQueueLimit(raw: unknown) {
   if (typeof raw !== 'string') return DAILY_QUEUE_DEFAULT_LIMIT;
@@ -64,6 +70,67 @@ function scoreDailyQueueCandidate(
   const preferenceScore = scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags);
   const dailyJitter = hashUnit(`${seed}:${passage.id}`);
   return preferenceScore * (1 + dailyJitter * 0.35);
+}
+
+function avoidsExcludedPassage(passage: { tags: string }, prefMap: Record<string, number>, avoidTags: string[]) {
+  return scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags) !== scorePassageTagsWithAvoidance(passage.tags, prefMap, []);
+}
+
+function uniqueByPassageId<T extends { id: string }>(passages: T[]) {
+  const seen = new Set<string>();
+  return passages.filter((passage) => {
+    if (seen.has(passage.id)) return false;
+    seen.add(passage.id);
+    return true;
+  });
+}
+
+function chooseDailyQueuePool<T extends { id: string; tags: string }>(options: {
+  readablePassages: T[];
+  seenIds: Set<string>;
+  recentIds: Set<string>;
+  prefMap: Record<string, number>;
+  avoidTags: string[];
+  limit: number;
+}): { pool: T[]; strategy: DailyQueueStrategy; freshOnly: boolean; fallbackUsed: boolean; emptyReason: string | null } {
+  const { readablePassages, seenIds, recentIds, prefMap, avoidTags, limit } = options;
+  if (readablePassages.length === 0) {
+    return {
+      pool: [],
+      strategy: 'empty_no_readable_passages',
+      freshOnly: false,
+      fallbackUsed: false,
+      emptyReason: 'No readable RandomPage book passages are currently available after content safety filters.',
+    };
+  }
+
+  const freshCandidates = readablePassages.filter((passage) => !seenIds.has(passage.id));
+  const freshAvoidFree = freshCandidates.filter((passage) => !avoidsExcludedPassage(passage, prefMap, avoidTags));
+  if (freshAvoidFree.length >= Math.min(limit, readablePassages.length)) {
+    return { pool: freshAvoidFree, strategy: 'fresh_unread_avoid_free', freshOnly: true, fallbackUsed: false, emptyReason: null };
+  }
+  if (freshCandidates.length >= Math.min(limit, readablePassages.length)) {
+    return { pool: freshCandidates, strategy: 'fresh_unread_with_avoids', freshOnly: true, fallbackUsed: false, emptyReason: null };
+  }
+
+  const notRecent = readablePassages.filter((passage) => !recentIds.has(passage.id));
+  if (notRecent.length > 0) {
+    return {
+      pool: uniqueByPassageId([...freshAvoidFree, ...freshCandidates, ...notRecent]),
+      strategy: 'fallback_read_but_not_recent',
+      freshOnly: false,
+      fallbackUsed: true,
+      emptyReason: null,
+    };
+  }
+
+  return {
+    pool: uniqueByPassageId([...freshAvoidFree, ...freshCandidates, ...readablePassages]),
+    strategy: 'fallback_any_readable',
+    freshOnly: false,
+    fallbackUsed: true,
+    emptyReason: null,
+  };
 }
 
 async function ensureBrowsingEventsTable(prisma: ReturnType<typeof getPrisma>) {
@@ -525,36 +592,49 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     ]);
 
     const readablePassages = filterReadablePassages(allPassages);
+    const recentHistoryIds = historyEvents.slice(0, 30).map((event) => event.passageId);
+    const recentPushIds = pushHistory.slice(0, 30).map((delivery) => delivery.passageId);
     const seenIds = new Set([
       ...historyEvents.map((event) => event.passageId),
       ...pushHistory.map((delivery) => delivery.passageId),
     ]);
+    const recentIds = new Set([...recentHistoryIds, ...recentPushIds]);
     const { avoidTags } = splitPreferenceControls(prefs);
     const prefMap = preferenceMapWithoutAvoids(prefs);
-    const freshCandidates = readablePassages.filter((passage) => !seenIds.has(passage.id));
-    const basePool = freshCandidates.length >= limit ? freshCandidates : readablePassages;
-    const avoidFreePool = basePool.filter((passage) => scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags) === scorePassageTagsWithAvoidance(passage.tags, prefMap, []));
-    const pool = avoidFreePool.length >= limit ? avoidFreePool : basePool;
+    const poolChoice = chooseDailyQueuePool({ readablePassages, seenIds, recentIds, prefMap, avoidTags, limit });
 
-    const queue = pool
+    const queue = poolChoice.pool
       .map((passage) => ({
         passage,
         queueScore: scoreDailyQueueCandidate(passage, prefMap, avoidTags, seed),
       }))
       .sort((a, b) => b.queueScore - a.queueScore)
-      .slice(0, limit)
+      .slice(0, Math.min(limit, readablePassages.length))
       .map(({ passage }, index) => ({
         ...passage,
         queuePosition: index + 1,
         whyPersonalized: explainRecommendation(passage, prefMap),
       }));
 
+    const emptyReason = queue.length === 0
+      ? poolChoice.emptyReason ?? 'No usable daily queue passages could be selected from the existing RandomPage library.'
+      : null;
+
     res.json({
       queue,
       generatedFor: today,
       requested: limit,
-      freshOnly: freshCandidates.length >= limit,
-      strategy: 'daily_user_preference_unread_weighted',
+      freshOnly: poolChoice.freshOnly,
+      fallbackUsed: poolChoice.fallbackUsed,
+      strategy: poolChoice.strategy,
+      emptyReason,
+      counts: {
+        totalPassages: allPassages.length,
+        readablePassages: readablePassages.length,
+        seenPassages: seenIds.size,
+        recentPassages: recentIds.size,
+        poolPassages: poolChoice.pool.length,
+      },
     });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });

@@ -37,7 +37,8 @@
     "check:bookmark-notes": "node scripts/check-bookmark-notes-policy.mjs",
     "check:share-passage": "node scripts/check-share-passage-policy.mjs",
     "eval:page-ocr": "node scripts/page-photo-ocr-eval.mjs",
-    "check:reading-path": "node scripts/check-reading-path-policy.mjs"
+    "check:reading-path": "node scripts/check-reading-path-policy.mjs",
+    "check:daily-queue": "node scripts/check-daily-queue-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
