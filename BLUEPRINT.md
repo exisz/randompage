@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-13 — PLANET-2748 visual passage card sharing
+> 最后更新: 2026-06-13 — PLANET-2764 hands-free daily passage queue playback
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -30,7 +30,7 @@
 │  │    Push: Web Push (VAPID)                                 │ │
 │  │  Routes:                                                  │ │
 │  │    /              → Landing (→ /discover if authed)       │ │
-│  │    /discover      → 发现页 (随机片段)                      │ │
+│  │    /discover      → 发现页 (随机片段 + Today fresh pages hands-free listening queue)                      │ │
 │  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
 │  │    /history       → 浏览历史 + 推送收件箱（saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
@@ -175,7 +175,7 @@ exisz/randompage (GitHub)
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
-- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present.
+- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, opens each active passage through `/api/passages/:id?source=discover`, and therefore records the existing Discover view interaction instead of introducing a new audio/content model.
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regression: `pnpm --filter @randompage/app check:listen-control`.
 
@@ -218,6 +218,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-13 | PLANET-2764: Added hands-free daily listening queue on Discover Today’s fresh pages; signed-in users can start browser speech playback across the personalized 3–5 existing passages with pause/resume/next/stop, active passage highlighting, and existing Discover view recording via `fetchPassageById(..., source=discover)`; expanded `check:listen-control`. | Engineer Pod |
 | 2026-06-13 | PLANET-2748: Added client-side visual passage card export across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; canvas PNG contains existing passage excerpt, title/author, RandomPage branding, canonical passage URL, and shares via native file share/image clipboard/download fallback; expanded `check:share-passage`. | Engineer Pod |
 | 2026-06-13 | PLANET-2739: Added 7-day goal-based reading paths in Discover; signed-in readers can start a path from existing reading goals/topics, persisted in `reading_paths` with 7 existing passage IDs, Day N/7 current card, upcoming teasers, and `check:reading-path`; no generated summaries/courses or new content sources. | Engineer Pod |
 | 2026-06-12 | PLANET-2708: Added `page-photo-ocr-eval.mjs` local Tesseract prototype for one user-provided physical book page image; outputs 1–3 private/import-candidate RandomPage passage candidates with title/source metadata plus report/sample JSON; no Turso or production writes. | Engineer Pod |

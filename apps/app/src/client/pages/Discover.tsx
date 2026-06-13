@@ -92,6 +92,8 @@ interface UnreadPushSummary {
   } | null;
 }
 
+type QueuePlaybackState = 'idle' | 'playing' | 'paused';
+
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 
 function parsePassageTags(raw: string | string[] | null | undefined): string[] {
@@ -137,6 +139,12 @@ function passageAccent(tags: string[]) {
   return 'from-primary/25 via-base-300 to-base-200';
 }
 
+function speechQueueAvailable() {
+  return typeof window !== 'undefined'
+    && 'speechSynthesis' in window
+    && 'SpeechSynthesisUtterance' in window;
+}
+
 export default function Discover() {
   const [passage, setPassage] = useState<Passage | null>(null);
   const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
@@ -151,6 +159,9 @@ export default function Discover() {
   const [pathStatus, setPathStatus] = useState<string | null>(null);
   const [dailyReview, setDailyReview] = useState<DailyReview | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
+  const [queuePlayback, setQueuePlayback] = useState<QueuePlaybackState>('idle');
+  const [queueActiveIndex, setQueueActiveIndex] = useState<number | null>(null);
+  const [queueNotice, setQueueNotice] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
   const [loadError, setLoadError] = useState<string | null>(null);
   const online = useOnlineStatus();
@@ -159,8 +170,15 @@ export default function Discover() {
     try { return localStorage.getItem('discover_tag_filter') || null; } catch { return null; }
   });
   const selectedTagRef = useRef<string | null>(null);
+  const dailyQueueUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   // Keep ref in sync with state for use inside useCallback closures
   useEffect(() => { selectedTagRef.current = selectedTag; }, [selectedTag]);
+
+  useEffect(() => () => {
+    if (dailyQueueUtteranceRef.current && speechQueueAvailable()) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
 
   const setSelectedTag = useCallback((tag: string | null) => {
     selectedTagRef.current = tag;
@@ -447,6 +465,90 @@ export default function Discover() {
     }
   };
 
+  const stopDailyQueue = useCallback(() => {
+    if (speechQueueAvailable()) window.speechSynthesis.cancel();
+    dailyQueueUtteranceRef.current = null;
+    setQueuePlayback('idle');
+    setQueueActiveIndex(null);
+  }, []);
+
+  const speakDailyQueueItem = useCallback((index: number) => {
+    const queue = dailyQueue?.queue ?? [];
+    const item = queue[index];
+    if (!item) {
+      stopDailyQueue();
+      return;
+    }
+
+    if (!speechQueueAvailable()) {
+      setQueueNotice('Daily listening is not available in this browser. You can still open and read each fresh page.');
+      setQueuePlayback('idle');
+      return;
+    }
+
+    dailyQueueUtteranceRef.current = null;
+    window.speechSynthesis.cancel();
+    setQueueActiveIndex(index);
+    setQueuePlayback('playing');
+    setQueueNotice(null);
+    void fetchPassageById(item.id, 'discover');
+
+    const textToRead = `${item.bookTitle}. ${item.author}. ${item.text}`.replace(/\s+/g, ' ').trim();
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    utterance.lang = /[\u3400-\u9fff]/.test(textToRead) ? 'zh-CN' : 'en-US';
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(utterance.lang.toLowerCase().slice(0, 2)));
+    if (preferredVoice) utterance.voice = preferredVoice;
+
+    utterance.onend = () => {
+      if (dailyQueueUtteranceRef.current !== utterance) return;
+      dailyQueueUtteranceRef.current = null;
+      const nextIndex = index + 1;
+      if (nextIndex < queue.length) {
+        window.setTimeout(() => speakDailyQueueItem(nextIndex), 250);
+      } else {
+        setQueuePlayback('idle');
+        setQueueActiveIndex(null);
+        setQueueNotice('Daily listening queue complete.');
+      }
+    };
+    utterance.onerror = () => {
+      if (dailyQueueUtteranceRef.current !== utterance) return;
+      dailyQueueUtteranceRef.current = null;
+      setQueuePlayback('idle');
+      setQueueNotice('Could not play this daily queue on this device. Reading mode is still available.');
+    };
+
+    dailyQueueUtteranceRef.current = utterance;
+    if (voices.length === 0) setQueueNotice('Using your browser default voice. If you hear nothing, this device may not have a speech voice installed.');
+    window.speechSynthesis.speak(utterance);
+  }, [dailyQueue?.queue, fetchPassageById, stopDailyQueue]);
+
+  const startDailyQueue = useCallback(() => {
+    if (!dailyQueue?.queue.length) return;
+    speakDailyQueueItem(queueActiveIndex ?? 0);
+  }, [dailyQueue?.queue.length, queueActiveIndex, speakDailyQueueItem]);
+
+  const pauseDailyQueue = useCallback(() => {
+    if (!speechQueueAvailable()) return;
+    window.speechSynthesis.pause();
+    setQueuePlayback('paused');
+  }, []);
+
+  const resumeDailyQueue = useCallback(() => {
+    if (!speechQueueAvailable()) return;
+    window.speechSynthesis.resume();
+    setQueuePlayback('playing');
+  }, []);
+
+  const nextDailyQueue = useCallback(() => {
+    const queue = dailyQueue?.queue ?? [];
+    const nextIndex = Math.min((queueActiveIndex ?? -1) + 1, queue.length - 1);
+    if (nextIndex >= 0) speakDailyQueueItem(nextIndex);
+  }, [dailyQueue?.queue, queueActiveIndex, speakDailyQueueItem]);
+
   const tags = parsePassageTags(passage?.tags);
   const accent = passageAccent(tags);
 
@@ -652,18 +754,46 @@ export default function Discover() {
 
             {authed && (
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
                     <p className="mt-1 text-sm opacity-70">3–5 personalized unread picks, refreshed daily.</p>
                   </div>
                   <span className="badge badge-primary badge-outline">{dailyQueue?.queue.length ?? 0}/5</span>
                 </div>
+                {dailyQueue?.queue.length ? (
+                  <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/10 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {queuePlayback === 'playing' ? (
+                        <button type="button" className="btn btn-secondary btn-sm rounded-xl" onClick={pauseDailyQueue}>⏸ Pause queue</button>
+                      ) : queuePlayback === 'paused' ? (
+                        <button type="button" className="btn btn-secondary btn-sm rounded-xl" onClick={resumeDailyQueue}>▶ Resume queue</button>
+                      ) : (
+                        <button type="button" className="btn btn-primary btn-sm rounded-xl" onClick={startDailyQueue}>🔊 Start daily listening</button>
+                      )}
+                      {queuePlayback !== 'idle' && (
+                        <>
+                          <button type="button" className="btn btn-outline btn-sm rounded-xl" onClick={nextDailyQueue} disabled={(queueActiveIndex ?? 0) >= dailyQueue.queue.length - 1}>Next</button>
+                          <button type="button" className="btn btn-ghost btn-sm rounded-xl" onClick={stopDailyQueue}>Stop</button>
+                        </>
+                      )}
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed opacity-70">
+                      Plays today&apos;s personalized book passages in sequence using your browser voice. Each active passage opens here so the listen counts as your own Discover interaction.
+                    </p>
+                    {queueActiveIndex !== null && dailyQueue.queue[queueActiveIndex] && (
+                      <p className="mt-2 text-xs text-primary/80" role="status">
+                        Now playing {queueActiveIndex + 1}/{dailyQueue.queue.length}: {dailyQueue.queue[queueActiveIndex].bookTitle} — {dailyQueue.queue[queueActiveIndex].author}
+                      </p>
+                    )}
+                    {queueNotice && <p className="mt-2 text-xs opacity-60" role="status">{queueNotice}</p>}
+                  </div>
+                ) : null}
                 <div className="mt-3 space-y-2">
                   {dailyQueue?.queue.length ? dailyQueue.queue.map((item) => (
                     <button
                       key={item.id}
-                      className={`w-full rounded-2xl border px-3 py-2 text-left transition hover:border-primary/50 hover:bg-primary/10 ${passage?.id === item.id ? 'border-primary/60 bg-primary/15' : 'border-white/10 bg-base-100/40'}`}
+                      className={`w-full rounded-2xl border px-3 py-2 text-left transition hover:border-primary/50 hover:bg-primary/10 ${passage?.id === item.id || dailyQueue.queue[queueActiveIndex ?? -1]?.id === item.id ? 'border-primary/60 bg-primary/15' : 'border-white/10 bg-base-100/40'}`}
                       onClick={() => fetchPassageById(item.id, 'discover')}
                     >
                       <div className="flex items-center gap-2">
