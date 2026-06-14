@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-14 — PLANET-2795 lightweight reading challenges
+> 最后更新: 2026-06-15 — PLANET-2816 user-curated passage playlists
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -180,6 +180,14 @@ exisz/randompage (GitHub)
 - Rewards are textual/visual badges and progress bars only; completion updates when existing actions occur (view/listen passage, review saved passage, open pushed passage, read current path/favorite-topic passage).
 - Static regression: `pnpm --filter @randompage/app check:reading-challenges`.
 
+
+## User-Curated Reading Queue
+
+- Discover current passage cards and Bookmarks saved passage cards expose “Add to queue” for existing RandomPage book passages only.
+- The MVP queue is a device-local user-curated playlist stored in `localStorage` (`randompage_my_reading_queue_v1`) with ordered `addedAt` entries; no new backend table, content source, summaries, social feed, or payment/offline packaging is introduced.
+- Bookmarks renders the “My Queue” section with queued passage title/author/excerpt/tags, per-item Listen/Share/Card controls, remove-one, and clear-queue actions. Removing a queued item never deletes bookmarks/history records.
+- Static regression: `pnpm --filter @randompage/app check:reading-queue`.
+
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
@@ -228,6 +236,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-15 | PLANET-2816: Added user-curated “My Queue” passage playlist; Discover and Bookmarks can add existing passages to a device-local ordered queue, Bookmarks shows queued passages with Listen/Share/Card controls plus remove/clear actions, and `check:reading-queue` guards the MVP. | Engineer Pod |
 | 2026-06-14 | PLANET-2795: Added lightweight reading challenges on Discover plus `GET /api/reading/challenges`; progress is derived from existing browsing/review/path/push/preference tables for Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic; added `check:reading-challenges` with no social/course/monetization layer. | Engineer Pod |
 | 2026-06-14 | PLANET-2780: Hardened `/api/passages/daily-queue` so signed-in readers get 3–5 existing readable RandomPage passages when possible: unread/avoid-free first, then unread, then read-but-not-recent fallback, then any readable fallback; API now returns fallback/emptyReason/count metadata and Discover shows precise retryable empty states instead of generic sign-in-sync copy; added `check:daily-queue`. | Engineer Pod |
 | 2026-06-13 | PLANET-2764: Added hands-free daily listening queue on Discover Today’s fresh pages; signed-in users can start browser speech playback across the personalized 3–5 existing passages with pause/resume/next/stop, active passage highlighting, and existing Discover view recording via `fetchPassageById(..., source=discover)`; expanded `check:listen-control`. | Engineer Pod |

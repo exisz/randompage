@@ -6,6 +6,7 @@ import { isOfflineError, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
 
 interface Passage {
   id: string;
@@ -178,6 +179,7 @@ export default function Discover() {
   const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
@@ -389,6 +391,7 @@ export default function Discover() {
   const fetchPassage = useCallback(async (preferUnread = false, skippedPassageId?: string) => {
     setLoading(true);
     setBookmarked(false);
+    setQueued(false);
     setWhyPersonalized(null);
     setLoadError(null);
     try {
@@ -426,6 +429,7 @@ export default function Discover() {
 
       const data = await res.json();
       setPassage(data.passage ?? null);
+      setQueued(data.passage?.id ? isPassageQueued(data.passage.id) : false);
       setWhyPersonalized(data.whyPersonalized ?? null);
       if (isAuth) {
         void fetchStats();
@@ -449,6 +453,7 @@ export default function Discover() {
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
     setBookmarked(false);
+    setQueued(false);
     setWhyPersonalized(null);
     setLoadError(null);
     try {
@@ -463,6 +468,7 @@ export default function Discover() {
       if (!res.ok) throw new Error(`Passage ${passageId} returned ${res.status}`);
       const data = await res.json();
       setPassage(data.passage);
+      setQueued(data.passage?.id ? isPassageQueued(data.passage.id) : false);
       setWhyPersonalized(data.whyPersonalized ?? null);
       if (isAuth) {
         void fetchStats();
@@ -527,6 +533,12 @@ export default function Discover() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const handleAddToQueue = () => {
+    if (!passage) return;
+    addPassageToReadingQueue(passage);
+    setQueued(true);
   };
 
   const stopDailyQueue = useCallback(() => {
@@ -978,7 +990,7 @@ export default function Discover() {
                     </div>
                   )}
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto]">
+                  <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto]">
                     <button
                       className="btn btn-primary btn-lg rounded-2xl"
                       onClick={() => fetchPassage(false, passage.id)}
@@ -988,6 +1000,14 @@ export default function Discover() {
                     <ListenControl text={passage.text} title={`${passage.bookTitle} passage`} />
                     <SharePassageButton passage={passage} />
                     <SharePassageImageButton passage={passage} />
+                    <button
+                      type="button"
+                      className={`btn rounded-2xl ${queued ? 'btn-accent' : 'btn-outline'}`}
+                      onClick={handleAddToQueue}
+                      disabled={queued}
+                    >
+                      {queued ? '✓ Queued' : 'Add to queue'}
+                    </button>
                     {authed ? (
                       <button
                         className={`btn rounded-2xl ${bookmarked ? 'btn-success' : 'btn-ghost'}`}

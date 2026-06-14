@@ -6,6 +6,7 @@ import { isOfflineError, readBookmarksOfflineCache, saveBookmarksOfflineCache, u
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -59,6 +60,8 @@ export default function Bookmarks() {
   const [revealedRecallIds, setRevealedRecallIds] = useState<Set<string>>(() => new Set());
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
+  const [readingQueue, setReadingQueue] = useState<QueuedPassage[]>(() => readReadingQueue());
+  const [queueStatus, setQueueStatus] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -172,6 +175,22 @@ export default function Bookmarks() {
       })
       .slice(0, 5);
   }, [bookmarks]);
+
+  const addBookmarkToQueue = (bookmark: Bookmark) => {
+    const next = addPassageToReadingQueue(bookmark.passage);
+    setReadingQueue(next);
+    setQueueStatus(`Queued “${bookmark.passage.bookTitle}”.`);
+    window.setTimeout(() => setQueueStatus(null), 2500);
+  };
+
+  const removeQueuedPassage = (passageId: string) => {
+    setReadingQueue(removePassageFromReadingQueue(passageId));
+  };
+
+  const clearQueuedPassages = () => {
+    if (!window.confirm('Clear your reading queue? Bookmarks and history will stay saved.')) return;
+    setReadingQueue(clearReadingQueue());
+  };
 
   const removeBookmark = async (id: string) => {
     if (offlineMode) return;
@@ -304,6 +323,57 @@ export default function Bookmarks() {
             </div>
             {(query || activeTag !== 'all' || activeCollection !== 'all') && (
               <button className="btn btn-link btn-xs self-start" onClick={() => { setQuery(''); setActiveTag('all'); setActiveCollection('all'); }}>Clear filters</button>
+            )}
+          </div>
+        </div>
+
+
+        <div className="card bg-gradient-to-br from-primary/10 via-base-200 to-accent/10 shadow mb-4" id="my-queue">
+          <div className="card-body gap-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] opacity-50">My Queue</p>
+                <h3 className="font-serif text-lg">Curated passage playlist</h3>
+                <p className="text-sm opacity-70">Passages you add from Discover or Bookmarks stay here on this device in the order you queued them.</p>
+              </div>
+              <span className="badge badge-primary badge-outline shrink-0">{readingQueue.length}</span>
+            </div>
+            {queueStatus && <div className="alert alert-success py-2 text-sm"><span>{queueStatus}</span></div>}
+            {readingQueue.length === 0 ? (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">Your queue is empty.</p>
+                <p className="opacity-70 mt-1">Use “Add to queue” on Discover cards or saved bookmarks to build a short reading/listening run.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <button className="btn btn-ghost btn-xs text-error" onClick={clearQueuedPassages}>Clear queue</button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {readingQueue.map((item, index) => {
+                    const qTags = parseTags(item.passage.tags).slice(0, 4);
+                    return (
+                      <div key={`${item.id}-${item.addedAt}`} className="rounded-box bg-base-100/80 p-3 shadow-sm border border-primary/15">
+                        <div className="flex items-center justify-between gap-2 text-xs opacity-60">
+                          <span>Queue {index + 1} of {readingQueue.length}</span>
+                          <span>added {new Date(item.addedAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="font-serif leading-relaxed mt-2">{item.passage.text.slice(0, 240)}{item.passage.text.length > 240 ? '…' : ''}</p>
+                        <div className="text-right opacity-60 text-sm mt-2">{item.passage.bookTitle} — {item.passage.author}</div>
+                        {qTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{qTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <ListenControl text={item.passage.text} title={`${item.passage.bookTitle} queued passage`} compact />
+                            <SharePassageButton passage={item.passage} compact />
+                            <SharePassageImageButton passage={item.passage} compact />
+                          </div>
+                          <button className="btn btn-ghost btn-xs text-error" onClick={() => removeQueuedPassage(item.passage.id)}>Remove from queue</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -493,6 +563,11 @@ export default function Bookmarks() {
                       <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                       <SharePassageButton passage={bm.passage} compact />
                       <SharePassageImageButton passage={bm.passage} compact />
+                      <button
+                        className="btn btn-outline btn-xs"
+                        onClick={() => addBookmarkToQueue(bm)}
+                        disabled={readingQueue.some(item => item.passage.id === bm.passage.id)}
+                      >{readingQueue.some(item => item.passage.id === bm.passage.id) ? '✓ Queued' : 'Add to queue'}</button>
                     </div>
                     <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}

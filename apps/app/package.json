@@ -39,7 +39,8 @@
     "eval:page-ocr": "node scripts/page-photo-ocr-eval.mjs",
     "check:reading-path": "node scripts/check-reading-path-policy.mjs",
     "check:daily-queue": "node scripts/check-daily-queue-policy.mjs",
-    "check:reading-challenges": "node scripts/check-reading-challenges-policy.mjs"
+    "check:reading-challenges": "node scripts/check-reading-challenges-policy.mjs",
+    "check:reading-queue": "node scripts/check-reading-queue-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
