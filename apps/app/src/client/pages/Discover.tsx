@@ -95,6 +95,31 @@ interface UnreadPushSummary {
   } | null;
 }
 
+
+interface ReadingChallenge {
+  id: string;
+  label: string;
+  description: string;
+  count: number;
+  target: number;
+  unit: string;
+  complete: boolean;
+  percent: number;
+  href?: string;
+  emptyHint: string;
+}
+
+interface ReadingChallengesResponse {
+  challenges: ReadingChallenge[];
+  generatedFor: string;
+  summary: {
+    complete: number;
+    total: number;
+    unreadPushCount: number;
+    favoriteTag: string | null;
+  };
+}
+
 type QueuePlaybackState = 'idle' | 'playing' | 'paused';
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
@@ -166,6 +191,7 @@ export default function Discover() {
   const [queueActiveIndex, setQueueActiveIndex] = useState<number | null>(null);
   const [queueNotice, setQueueNotice] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
+  const [readingChallenges, setReadingChallenges] = useState<ReadingChallengesResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const online = useOnlineStatus();
   const [topTags, setTopTags] = useState<string[]>([]);
@@ -259,6 +285,27 @@ export default function Discover() {
     }
   }, []);
 
+  const fetchReadingChallenges = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setReadingChallenges(null);
+        return;
+      }
+      const res = await apiFetch('/reading/challenges');
+      if (!res.ok) throw new Error(`Reading challenges returned ${res.status}`);
+      const data = await res.json() as ReadingChallengesResponse;
+      setReadingChallenges({
+        challenges: Array.isArray(data.challenges) ? data.challenges : [],
+        generatedFor: data.generatedFor ?? '',
+        summary: data.summary ?? { complete: 0, total: 0, unreadPushCount: 0, favoriteTag: null },
+      });
+    } catch (e) {
+      console.error(e);
+      setReadingChallenges(null);
+    }
+  }, []);
+
   const startReadingPath = useCallback(async (goalId: string) => {
     setPathLoading(true);
     setPathStatus(null);
@@ -271,6 +318,7 @@ export default function Discover() {
       if (!res.ok) throw new Error(data.error || `Reading path returned ${res.status}`);
       setReadingPath(data.path ?? null);
       setReadingPathGoals(Array.isArray(data.goals) ? data.goals : readingPathGoals);
+      void fetchReadingChallenges();
       setPathStatus('7-day path started from existing RandomPage passages.');
     } catch (e) {
       console.error(e);
@@ -278,7 +326,7 @@ export default function Discover() {
     } finally {
       setPathLoading(false);
     }
-  }, [readingPathGoals]);
+  }, [fetchReadingChallenges, readingPathGoals]);
 
   const fetchDailyReview = useCallback(async () => {
     try {
@@ -385,6 +433,7 @@ export default function Discover() {
         void fetchReadingPath();
         void fetchDailyReview();
         void fetchUnreadPush();
+        void fetchReadingChallenges();
       }
     } catch (e) {
       console.error(e);
@@ -395,7 +444,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchReadingPath, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -421,6 +470,7 @@ export default function Discover() {
         void fetchReadingPath();
         void fetchDailyReview();
         void fetchUnreadPush();
+        void fetchReadingChallenges();
       }
     } catch (e) {
       console.error(e);
@@ -434,7 +484,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchReadingPath, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   useEffect(() => {
     void fetchTopTags();
@@ -458,6 +508,7 @@ export default function Discover() {
       setDailyReview((current) => current
         ? { ...current, items: current.items.filter((candidate) => candidate.bookmarkId !== item.bookmarkId) }
         : current);
+      void fetchReadingChallenges();
       window.setTimeout(() => setReviewStatus(null), 2500);
     } catch (e) {
       console.error(e);
@@ -646,6 +697,45 @@ export default function Discover() {
                 </div>
               )}
             </div>
+
+
+            {authed && readingChallenges?.challenges.length ? (
+              <div className="rounded-[2rem] border border-warning/30 bg-warning/10 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-warning">Reading challenges</p>
+                    <p className="mt-1 text-sm opacity-70">Lightweight badges from your existing reading, review, path, and push history.</p>
+                  </div>
+                  <span className="badge badge-warning badge-outline shrink-0">
+                    {readingChallenges.summary.complete}/{readingChallenges.summary.total} earned
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2">
+                  {readingChallenges.challenges.slice(0, 5).map((challenge) => (
+                    <Link
+                      key={challenge.id}
+                      to={challenge.href ?? '/discover'}
+                      className="rounded-2xl border border-white/10 bg-base-100/45 p-3 transition hover:border-warning/50 hover:bg-warning/10"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`badge badge-sm ${challenge.complete ? 'badge-success' : 'badge-warning badge-outline'}`}>
+                              {challenge.complete ? '✓ earned' : `${challenge.count}/${challenge.target}`}
+                            </span>
+                            <span className="line-clamp-1 text-sm font-semibold">{challenge.label}</span>
+                          </div>
+                          <p className="mt-1 line-clamp-2 text-xs opacity-70">{challenge.description}</p>
+                          {challenge.count === 0 && <p className="mt-1 text-xs opacity-55">{challenge.emptyHint}</p>}
+                        </div>
+                        <span className="text-xs font-semibold opacity-70">{challenge.percent}%</span>
+                      </div>
+                      <progress className="progress progress-warning mt-3 h-2" value={challenge.percent} max="100" aria-label={`${challenge.label} progress`} />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
 
             {authed && unreadPush.count > 0 && unreadPush.latest && (

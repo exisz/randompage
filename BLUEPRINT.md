@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-13 — PLANET-2764 hands-free daily passage queue playback
+> 最后更新: 2026-06-14 — PLANET-2795 lightweight reading challenges
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -47,6 +47,7 @@
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
+│    /api/reading/challenges → lightweight challenge/achievement progress derived from browsing_events, passage_reviews, reading_paths, push_history, user_preferences │ │
 │  │    /api/preferences → 读取偏好权重 + goals/avoid tags 控制     │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
@@ -102,7 +103,7 @@ exisz/randompage (GitHub)
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；每日队列打开卡片时记录 discover view |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
@@ -172,6 +173,13 @@ exisz/randompage (GitHub)
 - Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls.
 - Static regression: `pnpm --filter @randompage/app check:recall-cards`.
 
+## Lightweight Reading Challenges
+
+- Discover renders a signed-in “Reading challenges” panel with 5 fixed personal progress loops: Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic.
+- `GET /api/reading/challenges` derives progress from existing source-of-truth tables only: `browsing_events`, `passage_reviews`, raw `reading_paths`, `push_history`, and `user_preferences`. No social leaderboard, monetization, summaries, or duplicate achievement event table is introduced.
+- Rewards are textual/visual badges and progress bars only; completion updates when existing actions occur (view/listen passage, review saved passage, open pushed passage, read current path/favorite-topic passage).
+- Static regression: `pnpm --filter @randompage/app check:reading-challenges`.
+
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
@@ -220,6 +228,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-14 | PLANET-2795: Added lightweight reading challenges on Discover plus `GET /api/reading/challenges`; progress is derived from existing browsing/review/path/push/preference tables for Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic; added `check:reading-challenges` with no social/course/monetization layer. | Engineer Pod |
 | 2026-06-14 | PLANET-2780: Hardened `/api/passages/daily-queue` so signed-in readers get 3–5 existing readable RandomPage passages when possible: unread/avoid-free first, then unread, then read-but-not-recent fallback, then any readable fallback; API now returns fallback/emptyReason/count metadata and Discover shows precise retryable empty states instead of generic sign-in-sync copy; added `check:daily-queue`. | Engineer Pod |
 | 2026-06-13 | PLANET-2764: Added hands-free daily listening queue on Discover Today’s fresh pages; signed-in users can start browser speech playback across the personalized 3–5 existing passages with pause/resume/next/stop, active passage highlighting, and existing Discover view recording via `fetchPassageById(..., source=discover)`; expanded `check:listen-control`. | Engineer Pod |
 | 2026-06-13 | PLANET-2748: Added client-side visual passage card export across Discover current/Daily Review, Bookmarks saved/Recall/Themed Review, and History browsing/push-inbox cards; canvas PNG contains existing passage excerpt, title/author, RandomPage branding, canonical passage URL, and shares via native file share/image clipboard/download fallback; expanded `check:share-passage`. | Engineer Pod |

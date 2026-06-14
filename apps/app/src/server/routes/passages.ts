@@ -238,6 +238,43 @@ function calculateCurrentStreak(viewDates: Date[], today: Date) {
   return streak;
 }
 
+
+type ReadingChallenge = {
+  id: string;
+  label: string;
+  description: string;
+  count: number;
+  target: number;
+  unit: string;
+  complete: boolean;
+  href?: string;
+  emptyHint: string;
+};
+
+function clampProgress(count: number, target: number) {
+  return Math.min(target, Math.max(0, count));
+}
+
+function challengeProgress(count: number, target: number) {
+  return Math.round((clampProgress(count, target) / target) * 100);
+}
+
+function parseJsonArray(value: string | null | undefined): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function topPositivePreferenceTag(prefs: Array<{ tag: string; weight: number }>) {
+  return prefs
+    .filter((pref) => !pref.tag.startsWith('avoid:') && pref.weight > 0)
+    .sort((a, b) => b.weight - a.weight)[0]?.tag ?? null;
+}
+
 async function recordInteraction(
   prisma: ReturnType<typeof getPrisma>,
   userId: string,
@@ -634,6 +671,130 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
         seenPassages: seenIds.size,
         recentPassages: recentIds.size,
         poolPassages: poolChoice.pool.length,
+      },
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/reading/challenges
+// Lightweight achievements are derived from existing RandomPage event tables.
+passagesRouter.get('/reading/challenges', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureBrowsingEventsTable(prisma);
+    await ensureReadingPathsTable(prisma);
+
+    const userId = claims.sub as string;
+    const now = new Date();
+    const todayStart = startOfUtcDay(now);
+    const weekStart = addUtcDays(todayStart, -6);
+
+    const [todayViews, weeklyReviews, pushInboxToday, unreadPushCount, latestPathRows, prefs] = await Promise.all([
+      prisma.browsingEvent.findMany({
+        where: { userId, action: 'view', createdAt: { gte: todayStart } },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.passageReview.count({
+        where: { userId, action: 'reviewed', reviewedAt: { gte: weekStart } },
+      }),
+      prisma.browsingEvent.count({
+        where: { userId, action: 'view', source: 'push_inbox', createdAt: { gte: todayStart } },
+      }),
+      prisma.pushHistory.count({ where: { userId, readAt: null } }),
+      prisma.$queryRaw<ReadingPathRow[]>`
+        SELECT id, user_id, topic, goal_id, passage_ids, started_at
+        FROM reading_paths
+        WHERE user_id = ${userId}
+        ORDER BY started_at DESC
+        LIMIT 1
+      `,
+      prisma.userPreference.findMany({ where: { userId }, select: { tag: true, weight: true } }),
+    ]);
+
+    const latestPath = latestPathRows[0] ?? null;
+    const pathPassageIds = latestPath ? parseJsonArray(latestPath.passage_ids) : [];
+    const viewedPathIds = new Set(todayViews
+      .filter((event) => pathPassageIds.includes(event.passageId))
+      .map((event) => event.passageId));
+    const favoriteTag = topPositivePreferenceTag(prefs);
+    const favoriteTopicViews = favoriteTag
+      ? todayViews.filter((event) => parsePassageTags(event.passage.tags).some((tag) => tag.toLowerCase() === favoriteTag.toLowerCase())).length
+      : 0;
+
+    const challenges: ReadingChallenge[] = [
+      {
+        id: 'daily-3-pages',
+        label: 'Daily 3 pages',
+        description: 'Read three existing RandomPage book passages today.',
+        count: clampProgress(todayViews.length, 3),
+        target: 3,
+        unit: 'pages',
+        complete: todayViews.length >= 3,
+        href: '/discover',
+        emptyHint: 'Open Discover and read or listen to a passage to start today’s count.',
+      },
+      {
+        id: 'weekly-saved-review',
+        label: 'Weekly saved review',
+        description: 'Review three saved passages this week.',
+        count: clampProgress(weeklyReviews, 3),
+        target: 3,
+        unit: 'reviews',
+        complete: weeklyReviews >= 3,
+        href: '/bookmarks',
+        emptyHint: 'Save passages, then use Daily Review or Recall Cards from your shelf.',
+      },
+      {
+        id: 'path-progress',
+        label: '7-day path progress',
+        description: latestPath ? `Read pages from your ${latestPath.topic} path.` : 'Start a goal-based 7-day path from existing passages.',
+        count: clampProgress(viewedPathIds.size, 7),
+        target: 7,
+        unit: 'path pages',
+        complete: viewedPathIds.size >= 7,
+        href: '/discover',
+        emptyHint: 'Start a 7-day reading path on Discover to unlock path progress.',
+      },
+      {
+        id: 'push-inbox-read',
+        label: 'Open pushed page',
+        description: unreadPushCount > 0 ? 'Read one waiting pushed passage from your inbox today.' : 'Read a pushed passage when your daily inbox has one waiting.',
+        count: clampProgress(pushInboxToday, 1),
+        target: 1,
+        unit: 'push read',
+        complete: pushInboxToday >= 1,
+        href: '/history?tab=push',
+        emptyHint: unreadPushCount > 0 ? `${unreadPushCount} unread pushed passage${unreadPushCount === 1 ? '' : 's'} waiting in History.` : 'No unread pushed pages right now; tomorrow’s push will count here.',
+      },
+      {
+        id: 'favorite-topic',
+        label: favoriteTag ? `Explore ${favoriteTag}` : 'Explore a favorite topic',
+        description: favoriteTag ? `Read one passage matching your ${favoriteTag} preference today.` : 'Build preferences by reading, saving, or choosing reading goals.',
+        count: clampProgress(favoriteTopicViews, 1),
+        target: 1,
+        unit: 'topic page',
+        complete: favoriteTopicViews >= 1,
+        href: favoriteTag ? `/discover?tag=${encodeURIComponent(favoriteTag)}` : '/settings',
+        emptyHint: favoriteTag ? `Use the ${favoriteTag} Discover chip or personalized queue.` : 'Choose reading goals in Settings to seed a favorite-topic challenge.',
+      },
+    ];
+
+    res.json({
+      generatedFor: utcDayKey(now),
+      timezone: 'UTC',
+      challenges: challenges.map((challenge) => ({
+        ...challenge,
+        percent: challengeProgress(challenge.count, challenge.target),
+      })),
+      summary: {
+        complete: challenges.filter((challenge) => challenge.complete).length,
+        total: challenges.length,
+        unreadPushCount,
+        favoriteTag,
       },
     });
   } catch (e: unknown) {
