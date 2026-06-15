@@ -35,6 +35,36 @@ function parseTags(tags?: string) {
   }
 }
 
+
+function historyItemDate(item: HistoryItem) {
+  if (item.kind === 'browsing') return item.createdAt;
+  return item.readAt || item.sentAt;
+}
+
+function localDayKey(dateValue: string) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function dayHeading(dayKey: string) {
+  if (dayKey === 'Unknown date') return dayKey;
+  const todayKey = localDayKey(new Date().toISOString());
+  const yesterdayKey = localDayKey(addDays(new Date(), -1).toISOString());
+  if (dayKey === todayKey) return 'Today';
+  if (dayKey === yesterdayKey) return 'Yesterday';
+  return dayKey;
+}
+
 function itemSearchText(item: HistoryItem) {
   const tags = parseTags(item.passage.tags).join(' ');
   return [item.passage.text, item.passage.bookTitle, item.passage.author, tags]
@@ -107,6 +137,17 @@ export default function History() {
     });
   }, [currentItems, query, activeTag]);
 
+  const groupedItems = useMemo(() => {
+    const groups: { dayKey: string; items: HistoryItem[] }[] = [];
+    for (const item of filteredItems) {
+      const dayKey = localDayKey(historyItemDate(item));
+      const existing = groups.find(group => group.dayKey === dayKey);
+      if (existing) existing.items.push(item);
+      else groups.push({ dayKey, items: [item] });
+    }
+    return groups;
+  }, [filteredItems]);
+
   const clearFilters = () => { setQuery(''); setActiveTag('all'); };
 
   return (
@@ -160,20 +201,27 @@ export default function History() {
             <button className="btn btn-primary btn-sm mt-4" onClick={clearFilters}>Clear search</button>
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
-            {filteredItems.map(h => {
-              const isBrowsing = h.kind === 'browsing';
-              const isSkip = isBrowsing && h.action === 'skip';
-              const isUnreadPush = h.kind === 'push' && !h.readAt;
-              const tagsForItem = parseTags(h.passage.tags).slice(0, 4);
-              return (
-                <div key={`${h.kind}-${h.id}`} className={`card shadow ${isSkip ? 'bg-base-200 opacity-70' : isUnreadPush ? 'bg-base-300 border border-primary' : 'bg-base-300'}`}>
+          <div className="flex flex-col gap-5">
+            {groupedItems.map(group => (
+              <section key={group.dayKey} className="flex flex-col gap-3" aria-labelledby={`history-day-${group.dayKey}`}>
+                <div className="sticky top-2 z-10 flex items-center gap-3 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 shadow-sm backdrop-blur">
+                  <h3 id={`history-day-${group.dayKey}`} className="font-serif text-lg">{dayHeading(group.dayKey)}</h3>
+                  <span className="badge badge-ghost badge-sm">{group.items.length} {group.items.length === 1 ? 'page' : 'pages'}</span>
+                </div>
+                {group.items.map(h => {
+                  const isBrowsing = h.kind === 'browsing';
+                  const isSkip = isBrowsing && h.action === 'skip';
+                  const isUnreadPush = h.kind === 'push' && !h.readAt;
+                  const itemDate = historyItemDate(h);
+                  const tagsForItem = parseTags(h.passage.tags).slice(0, 4);
+                  return (
+                    <div key={`${h.kind}-${h.id}`} className={`card shadow ${isSkip ? 'bg-base-200 opacity-70' : isUnreadPush ? 'bg-base-300 border border-primary' : 'bg-base-300'}`}>
                   <div className="card-body py-3 gap-2">
                     <div className="flex items-center gap-2">
                       {isBrowsing ? (
                         <span className={`badge badge-xs ${isSkip ? 'badge-ghost' : 'badge-primary'}`}>{isSkip ? 'Skipped' : h.source === 'push_inbox' ? 'Read from push' : 'Viewed'}</span>
                       ) : !h.readAt ? <span className="badge badge-primary badge-xs">Unread</span> : <span className="badge badge-ghost badge-xs">Delivered</span>}
-                      <span className="text-xs opacity-40">{new Date(isBrowsing ? h.createdAt : h.sentAt).toLocaleString()}</span>
+                      <span className="text-xs opacity-40">{new Date(itemDate).toLocaleString()}</span>
                     </div>
                     <p className="font-serif text-sm leading-relaxed">{h.passage.text.slice(0, 170)}{h.passage.text.length > 170 ? '…' : ''}</p>
                     <div className="flex flex-wrap items-center gap-2">
@@ -198,9 +246,11 @@ export default function History() {
                       </Link>
                     )}
                   </div>
-                </div>
-              );
-            })}
+                    </div>
+                  );
+                })}
+              </section>
+            ))}
           </div>
         )}
       </div>

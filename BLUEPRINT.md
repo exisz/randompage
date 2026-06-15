@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-15 — PLANET-2816 user-curated passage playlists
+> 最后更新: 2026-06-16 — PLANET-2844 History day-grouped reading timeline
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -32,7 +32,7 @@
 │  │    /              → Landing (→ /discover if authed)       │ │
 │  │    /discover      → 发现页 (随机片段 + Today fresh pages hands-free listening queue)                      │ │
 │  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
-│  │    /history       → 浏览历史 + 推送收件箱（saved/push cards support Listen） │ │
+│  │    /history       → 浏览历史 + 推送收件箱（日分组 timeline + saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
 │  │    /callback      → Logto SSO 回调                        │ │
@@ -188,6 +188,12 @@ exisz/randompage (GitHub)
 - Bookmarks renders the “My Queue” section with queued passage title/author/excerpt/tags, per-item Listen/Share/Card controls, remove-one, and clear-queue actions. Removing a queued item never deletes bookmarks/history records.
 - Static regression: `pnpm --filter @randompage/app check:reading-queue`.
 
+## History Day-Grouped Timeline
+
+- `apps/app/src/client/pages/History.tsx` groups the currently filtered History tab rows by the user’s local calendar day: Today, Yesterday, then `YYYY-MM-DD`.
+- Browsing rows use `browsing_events.createdAt`; Push inbox rows use `readAt` when a pushed passage has been opened and fall back to `sentAt` for unread deliveries, preserving the existing source badges, search/tag filters, empty states, and offline cached History behavior.
+- Static regression: `pnpm --filter @randompage/app check:history-day-grouping`.
+
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
@@ -220,6 +226,7 @@ exisz/randompage (GitHub)
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-share-passage-policy.mjs` | PLANET-2685/2748 | 静态回归检查 Web Share / clipboard fallback、client-side PNG visual card export、Discover/Bookmarks/History passage Share/Card actions |
 | `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
+| `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -236,6 +243,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-16 | PLANET-2844: History tab now renders the current browsing or push-inbox results as a local-day timeline (Today, Yesterday, then YYYY-MM-DD), keeps existing search/tag/offline states, and uses push `readAt` before `sentAt` for read deliveries; added `check:history-day-grouping`. | Engineer Pod |
 | 2026-06-15 | PLANET-2816: Added user-curated “My Queue” passage playlist; Discover and Bookmarks can add existing passages to a device-local ordered queue, Bookmarks shows queued passages with Listen/Share/Card controls plus remove/clear actions, and `check:reading-queue` guards the MVP. | Engineer Pod |
 | 2026-06-14 | PLANET-2795: Added lightweight reading challenges on Discover plus `GET /api/reading/challenges`; progress is derived from existing browsing/review/path/push/preference tables for Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic; added `check:reading-challenges` with no social/course/monetization layer. | Engineer Pod |
 | 2026-06-14 | PLANET-2780: Hardened `/api/passages/daily-queue` so signed-in readers get 3–5 existing readable RandomPage passages when possible: unread/avoid-free first, then unread, then read-but-not-recent fallback, then any readable fallback; API now returns fallback/emptyReason/count metadata and Discover shows precise retryable empty states instead of generic sign-in-sync copy; added `check:daily-queue`. | Engineer Pod |
