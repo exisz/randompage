@@ -269,6 +269,10 @@ function parseJsonArray(value: string | null | undefined): string[] {
   }
 }
 
+function normalizeBookSourceQuery(value: unknown) {
+  return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 180) : '';
+}
+
 function topPositivePreferenceTag(prefs: Array<{ tag: string; weight: number }>) {
   return prefs
     .filter((pref) => !pref.tag.startsWith('avoid:') && pref.weight > 0)
@@ -870,6 +874,62 @@ passagesRouter.get('/browsing/history', async (req: Request, res: Response) => {
     });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/book-source?title=<bookTitle>&author=<author>
+// Lists existing RandomPage passages from the same book/source. Auth is optional:
+// signed-in readers get unread-first ordering plus saved/read flags.
+passagesRouter.get('/book-source', async (req: Request, res: Response) => {
+  try {
+    const title = normalizeBookSourceQuery(req.query.title);
+    const author = normalizeBookSourceQuery(req.query.author);
+    if (!title) {
+      res.status(400).json({ error: 'title required' });
+      return;
+    }
+
+    const prisma = getPrisma();
+    let userId: string | null = null;
+    try {
+      const claims = await verifyBearer(req.header('authorization'));
+      userId = claims.sub as string;
+      await ensureBrowsingEventsTable(prisma);
+    } catch {
+      // Public book-source browsing is allowed; personalization flags require auth.
+    }
+
+    const sourceWhere = author ? { bookTitle: title, author } : { bookTitle: title };
+    const allPassages = await prisma.passage.findMany({ where: sourceWhere });
+    const readablePassages = filterReadablePassages(allPassages);
+    const passageIds = readablePassages.map((passage) => passage.id);
+
+    const [bookmarkRows, viewedRows] = userId ? await Promise.all([
+      prisma.bookmark.findMany({ where: { userId, passageId: { in: passageIds } }, select: { passageId: true } }),
+      prisma.browsingEvent.findMany({ where: { userId, action: 'view', passageId: { in: passageIds } }, select: { passageId: true } }),
+    ]) : [[], []] as [Array<{ passageId: string }>, Array<{ passageId: string }>];
+
+    const savedIds = new Set(bookmarkRows.map((row) => row.passageId));
+    const readIds = new Set(viewedRows.map((row) => row.passageId));
+    const passages = readablePassages
+      .map((passage) => ({
+        ...passage,
+        isSaved: savedIds.has(passage.id),
+        isRead: readIds.has(passage.id),
+      }))
+      .sort((a, b) => Number(a.isRead) - Number(b.isRead) || a.id.localeCompare(b.id));
+
+    res.json({
+      source: {
+        title,
+        author: author || readablePassages[0]?.author || '',
+        passageCount: passages.length,
+        savedCount: userId ? savedIds.size : null,
+      },
+      passages,
+    });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 

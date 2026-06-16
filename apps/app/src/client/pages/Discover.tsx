@@ -7,6 +7,7 @@ import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
+import BookSourceLink from '../components/BookSourceLink';
 
 interface Passage {
   id: string;
@@ -956,8 +957,12 @@ export default function Discover() {
                   <div className="mb-5 flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.3em] text-primary/80">Today's card</p>
-                      <h2 className="mt-2 font-serif text-2xl leading-tight sm:text-3xl">{passage.bookTitle}</h2>
-                      <p className="mt-1 text-sm opacity-70">{passage.author}{passage.chapter ? ` · ${passage.chapter}` : ''}</p>
+                      <BookSourceLink
+                        bookTitle={passage.bookTitle}
+                        author={passage.author}
+                        chapter={passage.chapter}
+                        className="mt-2 text-2xl leading-tight sm:text-3xl"
+                      />
                     </div>
                     <div className="rounded-full border border-white/10 bg-base-100/60 px-3 py-1 text-xs opacity-80">
                       {Math.max(1, Math.round(passage.text.length / 220))} min

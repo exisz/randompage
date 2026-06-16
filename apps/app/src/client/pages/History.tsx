@@ -6,6 +6,7 @@ import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOn
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import BookSourceLink from '../components/BookSourceLink';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
@@ -229,7 +230,7 @@ export default function History() {
                       <SharePassageButton passage={h.passage} compact />
                       <SharePassageImageButton passage={h.passage} compact />
                     </div>
-                    <div className="text-right opacity-50 text-xs">{h.passage.bookTitle} — {h.passage.author}</div>
+                    <div className="text-right text-xs"><BookSourceLink bookTitle={h.passage.bookTitle} author={h.passage.author} compact className="items-end opacity-50 hover:opacity-100" /></div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
                     {h.whyPersonalized && (
                       <div className="rounded-2xl border border-primary/20 bg-primary/10 p-2 text-xs">

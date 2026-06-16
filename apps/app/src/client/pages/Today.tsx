@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import { logtoClient } from '../lib/logto';
+import BookSourceLink from '../components/BookSourceLink';
 
 type Passage = {
   id: string;
@@ -208,8 +209,7 @@ export default function Today() {
                       <p className="text-xs uppercase tracking-[0.3em] text-primary/80">
                         {today.source === 'latest_push' ? 'Latest pushed page' : 'Today\'s personalized page'}
                       </p>
-                      <h2 className="mt-2 font-serif text-3xl leading-tight sm:text-4xl">{today.passage.bookTitle}</h2>
-                      <p className="mt-1 text-sm opacity-70">{today.passage.author}{today.passage.chapter ? ` · ${today.passage.chapter}` : ''}</p>
+                      <BookSourceLink bookTitle={today.passage.bookTitle} author={today.passage.author} chapter={today.passage.chapter} className="mt-2 text-3xl leading-tight sm:text-4xl" />
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <span className="badge badge-primary badge-outline">{Math.max(1, Math.round(today.passage.text.length / 220))} min</span>

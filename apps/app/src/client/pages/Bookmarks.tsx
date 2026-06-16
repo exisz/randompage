@@ -6,6 +6,7 @@ import { isOfflineError, readBookmarksOfflineCache, saveBookmarksOfflineCache, u
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
 
 interface Passage {
@@ -359,7 +360,7 @@ export default function Bookmarks() {
                           <span>added {new Date(item.addedAt).toLocaleDateString()}</span>
                         </div>
                         <p className="font-serif leading-relaxed mt-2">{item.passage.text.slice(0, 240)}{item.passage.text.length > 240 ? '…' : ''}</p>
-                        <div className="text-right opacity-60 text-sm mt-2">{item.passage.bookTitle} — {item.passage.author}</div>
+                        <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={item.passage.bookTitle} author={item.passage.author} compact className="items-end opacity-60 hover:opacity-100" /></div>
                         {qTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{qTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                         <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                           <div className="flex flex-wrap items-center gap-2">
@@ -436,8 +437,7 @@ export default function Bookmarks() {
                       <p className="text-xs uppercase tracking-[0.22em] text-accent mt-3">Before revealing</p>
                       <h4 className="font-serif text-lg mt-1">What idea did this page contain?</h4>
                       <div className="rounded-box bg-base-200/80 p-3 mt-2 text-sm">
-                        <p className="font-medium">{bookmark.passage.bookTitle}</p>
-                        <p className="opacity-70">{bookmark.passage.author}{bookmark.passage.chapter ? ` · ${bookmark.passage.chapter}` : ''}</p>
+                        <BookSourceLink bookTitle={bookmark.passage.bookTitle} author={bookmark.passage.author} chapter={bookmark.passage.chapter} compact />
                       </div>
                       {bookmark.note && (
                         <div className="rounded-box bg-warning/10 border border-warning/20 p-3 mt-2 text-sm">
@@ -525,7 +525,7 @@ export default function Bookmarks() {
                         <SharePassageButton passage={bookmark.passage} compact />
                             <SharePassageImageButton passage={bookmark.passage} compact />
                       </div>
-                      <div className="text-right opacity-60 text-sm mt-2">{bookmark.passage.bookTitle} — {bookmark.passage.author}</div>
+                      <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={bookmark.passage.bookTitle} author={bookmark.passage.author} compact className="items-end opacity-60 hover:opacity-100" /></div>
                       {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                       <div className="flex gap-2 justify-end mt-3">
                         <button className="btn btn-ghost btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'skip')}>Skip today</button>
@@ -569,7 +569,7 @@ export default function Bookmarks() {
                         disabled={readingQueue.some(item => item.passage.id === bm.passage.id)}
                       >{readingQueue.some(item => item.passage.id === bm.passage.id) ? '✓ Queued' : 'Add to queue'}</button>
                     </div>
-                    <div className="text-right opacity-60 text-sm">{bm.passage.bookTitle} — {bm.passage.author}</div>
+                    <div className="text-right text-sm"><BookSourceLink bookTitle={bm.passage.bookTitle} author={bm.passage.author} compact className="items-end opacity-60 hover:opacity-100" /></div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                     <div className="rounded-box bg-base-100/70 border border-base-content/10 p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">

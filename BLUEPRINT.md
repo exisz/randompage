@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-16 — PLANET-2844 History day-grouped reading timeline
+> 最后更新: 2026-06-17 — PLANET-2874 book/source detail pages
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -34,6 +34,7 @@
 │  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
 │  │    /history       → 浏览历史 + 推送收件箱（日分组 timeline + saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
+│  │    /source?title=...&author=... → book/source detail view with same-book passages │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
 │  │    /callback      → Logto SSO 回调                        │ │
 │  │    /api/health    → API health check                      │ │
@@ -43,6 +44,7 @@
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
+│  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
@@ -243,6 +245,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-17 | PLANET-2874: Added book/source detail deep links (`/source?title=...&author=...`) reachable from passage title/author metadata across Discover/Today, Bookmarks, and History/Push inbox surfaces; new `/api/book-source` lists existing readable RandomPage passages from the same book, with signed-in unread-first ordering plus saved/read flags and existing save/listen/share/card/queue actions. | Engineer Pod |
 | 2026-06-16 | PLANET-2844: History tab now renders the current browsing or push-inbox results as a local-day timeline (Today, Yesterday, then YYYY-MM-DD), keeps existing search/tag/offline states, and uses push `readAt` before `sentAt` for read deliveries; added `check:history-day-grouping`. | Engineer Pod |
 | 2026-06-15 | PLANET-2816: Added user-curated “My Queue” passage playlist; Discover and Bookmarks can add existing passages to a device-local ordered queue, Bookmarks shows queued passages with Listen/Share/Card controls plus remove/clear actions, and `check:reading-queue` guards the MVP. | Engineer Pod |
 | 2026-06-14 | PLANET-2795: Added lightweight reading challenges on Discover plus `GET /api/reading/challenges`; progress is derived from existing browsing/review/path/push/preference tables for Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic; added `check:reading-challenges` with no social/course/monetization layer. | Engineer Pod |
