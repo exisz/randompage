@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-17 — PLANET-2874 book/source detail pages
+> 最后更新: 2026-06-18 — PLANET-2904 user-configurable daily passage delivery time
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -50,7 +50,7 @@
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
 │    /api/reading/challenges → lightweight challenge/achievement progress derived from browsing_events, passage_reviews, reading_paths, push_history, user_preferences │ │
-│  │    /api/preferences → 读取偏好权重 + goals/avoid tags 控制     │ │
+│  │    /api/preferences → 读取偏好权重 + goals/avoid tags + daily push schedule 控制     │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
@@ -106,7 +106,7 @@ exisz/randompage (GitHub)
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制） |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone，不参与推荐打分） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -153,6 +153,13 @@ exisz/randompage (GitHub)
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
 - Push subscription timestamp guard (PLANET-2517): `push_subscriptions.created_at` is a legacy INTEGER unix-seconds column in production. `/api/push/subscribe`, `/api/push/send`, and `/api/cron/daily-push` normalize accidental ISO text rows before Prisma reads and write new subscription rows via raw SQL with unix seconds; `pnpm check:push-policy` guards this path.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
+
+## Daily Push Schedule
+
+- Settings → Push Notifications exposes a mobile-first “Daily passage time” control for signed-in users. It stores a one-hour local delivery window as `control:daily-push:hour` and `control:daily-push:tz:<timezone>` rows in `user_preferences`, so no new table/migration is required.
+- `splitPreferenceControls()` excludes `control:*` rows from recommendation preference maps; schedule controls never weight passage selection.
+- `/api/push/send` and `/api/cron/daily-push` respect configured user windows by default. Users without a schedule remain due, preserving the legacy fixed-cron behavior. QA/Product smoke tests may pass `?override_schedule=1` or header `x-push-override-schedule: 1` to exercise delivery outside the configured window.
+- Push history is unchanged: a sent scheduled passage still writes one per-user `push_history` record and opens to the delivered passage.
 
 ## PWA / Offline
 
@@ -245,6 +252,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-18 | PLANET-2904: Added user-configurable daily passage delivery time in Settings; schedule persists in `user_preferences` control rows, push send/cron respect each user’s local hour by default, and QA can use `override_schedule=1`/`x-push-override-schedule: 1` to smoke-test outside the window while preserving per-user push_history. | Engineer Pod |
 | 2026-06-17 | PLANET-2874: Added book/source detail deep links (`/source?title=...&author=...`) reachable from passage title/author metadata across Discover/Today, Bookmarks, and History/Push inbox surfaces; new `/api/book-source` lists existing readable RandomPage passages from the same book, with signed-in unread-first ordering plus saved/read flags and existing save/listen/share/card/queue actions. | Engineer Pod |
 | 2026-06-16 | PLANET-2844: History tab now renders the current browsing or push-inbox results as a local-day timeline (Today, Yesterday, then YYYY-MM-DD), keeps existing search/tag/offline states, and uses push `readAt` before `sentAt` for read deliveries; added `check:history-day-grouping`. | Engineer Pod |
 | 2026-06-15 | PLANET-2816: Added user-curated “My Queue” passage playlist; Discover and Bookmarks can add existing passages to a device-local ordered queue, Bookmarks shows queued passages with Listen/Share/Card controls plus remove/clear actions, and `check:reading-queue` guards the MVP. | Engineer Pod |

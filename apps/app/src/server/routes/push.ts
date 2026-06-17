@@ -36,9 +36,13 @@ type PushDeliveryStats = {
   sent: number;
   failed: number;
   removed: number;
+  skippedSchedule: number;
   personalized: { userId: string; passageId: string }[];
   failures: PushFailure[];
 };
+
+const DAILY_PUSH_HOUR_TAG = 'control:daily-push:hour';
+const DAILY_PUSH_TZ_PREFIX = 'control:daily-push:tz:';
 
 async function normalizePushSubscriptionCreatedAt(prisma: PrismaClient) {
   // Production legacy schema stores push_subscriptions.created_at as INTEGER unix seconds.
@@ -90,6 +94,40 @@ function groupSubscriptionsByUser(subscriptions: PushSubscription[]) {
   }
   return subsByUser;
 }
+
+function localHourInTimeZone(date: Date, timeZone: string) {
+  try {
+    return Number(new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).format(date));
+  } catch {
+    return null;
+  }
+}
+
+async function isDailyPushDueForUser(prisma: PrismaClient, userId: string, now = new Date()) {
+  const rows = await prisma.userPreference.findMany({
+    where: {
+      userId,
+      OR: [
+        { tag: DAILY_PUSH_HOUR_TAG },
+        { tag: { startsWith: DAILY_PUSH_TZ_PREFIX } },
+      ],
+    },
+    select: { tag: true, weight: true },
+  });
+  const hourRow = rows.find((row) => row.tag === DAILY_PUSH_HOUR_TAG);
+  const tzRow = rows.find((row) => row.tag.startsWith(DAILY_PUSH_TZ_PREFIX));
+  if (!hourRow || !tzRow) return true; // Default stays compatible with the existing fixed cron.
+  const preferredHour = Number(hourRow.weight);
+  const timeZone = decodeURIComponent(tzRow.tag.slice(DAILY_PUSH_TZ_PREFIX.length));
+  const localHour = localHourInTimeZone(now, timeZone);
+  if (!Number.isInteger(preferredHour) || preferredHour < 0 || preferredHour > 23 || localHour === null) return true;
+  return localHour === preferredHour;
+}
+
 
 // Shared L1 policy for both manual sends and cron sends:
 // per-user preferences + recent pushHistory exclusion + weighted sampling.
@@ -156,15 +194,21 @@ async function sendPersonalizedPushes(
   passages: Passage[],
   forceClean: boolean,
   logPrefix: string,
+  respectSchedule = false,
 ): Promise<PushDeliveryStats> {
   const failures: PushFailure[] = [];
   let sent = 0;
   let failed = 0;
   let removed = 0;
+  let skippedSchedule = 0;
   const personalized: { userId: string; passageId: string }[] = [];
 
   for (const [userId, userSubs] of groupSubscriptionsByUser(subscriptions).entries()) {
     try {
+      if (respectSchedule && !(await isDailyPushDueForUser(prisma, userId))) {
+        skippedSchedule += userSubs.length;
+        continue;
+      }
       const chosen = await selectPersonalizedPassageForUser(prisma, userId, passages);
       let userSent = 0;
       for (const sub of userSubs) {
@@ -218,7 +262,7 @@ async function sendPersonalizedPushes(
     }
   }
 
-  return { sent, failed, removed, personalized, failures };
+  return { sent, failed, removed, skippedSchedule, personalized, failures };
 }
 
 // POST /api/push/subscribe
@@ -304,11 +348,12 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
     // Pre-load all passages once (small dataset, ~636 rows); selection filters to readable fragments.
     const passages = await prisma.passage.findMany();
     if (passages.length === 0) {
-      res.json({ ok: true, sent: 0, failed: 0, removed: 0, personalized: [], failures: [] });
+      res.json({ ok: true, sent: 0, failed: 0, removed: 0, skippedSchedule: 0, personalized: [], failures: [] });
       return;
     }
 
-    const result = await sendPersonalizedPushes(prisma, subscriptions, passages, forceClean, 'push/send');
+    const overrideSchedule = req.query.override_schedule === '1' || req.query.override_schedule === 'true' || req.header('x-push-override-schedule') === '1';
+    const result = await sendPersonalizedPushes(prisma, subscriptions, passages, forceClean, 'push/send', !overrideSchedule);
     res.json({ ok: true, ...result });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
@@ -331,11 +376,12 @@ async function dailyPushHandler(req: Request, res: Response) {
     const subscriptions = await getAllPushSubscriptions(prisma);
     const passages = await prisma.passage.findMany();
     if (passages.length === 0) {
-      res.json({ ok: true, sent: 0, failed: 0, removed: 0, personalized: [], failures: [] });
+      res.json({ ok: true, sent: 0, failed: 0, removed: 0, skippedSchedule: 0, personalized: [], failures: [] });
       return;
     }
 
-    const result = await sendPersonalizedPushes(prisma, subscriptions, passages, false, 'cron/daily-push');
+    const overrideSchedule = req.query.override_schedule === '1' || req.query.override_schedule === 'true' || req.header('x-push-override-schedule') === '1';
+    const result = await sendPersonalizedPushes(prisma, subscriptions, passages, false, 'cron/daily-push', !overrideSchedule);
     res.json({ ok: true, ...result });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });

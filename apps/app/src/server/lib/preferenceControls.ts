@@ -2,6 +2,7 @@ import type { UserPreference } from '../generated/prisma/index.js';
 import { parsePassageTags, scorePassageTags } from './passageTags.js';
 
 export const AVOID_TAG_PREFIX = 'avoid:';
+export const CONTROL_TAG_PREFIX = 'control:';
 export const AVOID_TAG_WEIGHT = -8;
 
 export type PreferenceLike = Pick<UserPreference, 'tag' | 'weight'>;
@@ -15,7 +16,7 @@ export function avoidPreferenceTag(tag: string) {
 }
 
 export function splitPreferenceControls(preferences: PreferenceLike[]) {
-  const positivePreferences = preferences.filter((pref) => !pref.tag.startsWith(AVOID_TAG_PREFIX));
+  const positivePreferences = preferences.filter((pref) => !pref.tag.startsWith(AVOID_TAG_PREFIX) && !pref.tag.startsWith(CONTROL_TAG_PREFIX));
   const avoidTags = preferences
     .filter((pref) => pref.tag.startsWith(AVOID_TAG_PREFIX) && Number(pref.weight) < 0)
     .map((pref) => normalizeAvoidTag(pref.tag))

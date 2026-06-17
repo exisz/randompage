@@ -20,6 +20,13 @@ type AvoidTagOption = {
   count?: number;
 };
 
+type DailyPushSchedule = {
+  hour: number;
+  timeZone: string;
+  windowHours: number;
+  label: string;
+};
+
 const FALLBACK_READING_GOALS: ReadingGoal[] = [
   {
     id: 'reflective-philosophy',
@@ -60,8 +67,13 @@ export default function Settings() {
   const [selectedAvoidTags, setSelectedAvoidTags] = useState<string[]>([]);
   const [goalsLoading, setGoalsLoading] = useState(false);
   const [avoidLoading, setAvoidLoading] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [dailyPushSchedule, setDailyPushSchedule] = useState<DailyPushSchedule | null>(null);
+  const [dailyPushHour, setDailyPushHour] = useState(() => new Date().getHours());
+  const [dailyPushTimeZone, setDailyPushTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [goalsStatus, setGoalsStatus] = useState('');
   const [avoidStatus, setAvoidStatus] = useState('');
+  const [scheduleStatus, setScheduleStatus] = useState('');
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -86,6 +98,11 @@ export default function Settings() {
           setPreferences(nextPrefs);
           setAvoidTags(Array.isArray(d.avoidTags) ? d.avoidTags : []);
           setSelectedAvoidTags(Array.isArray(d.selectedAvoidTags) ? d.selectedAvoidTags : []);
+          if (d.dailyPushSchedule && typeof d.dailyPushSchedule.hour === 'number') {
+            setDailyPushSchedule(d.dailyPushSchedule);
+            setDailyPushHour(d.dailyPushSchedule.hour);
+            setDailyPushTimeZone(d.dailyPushSchedule.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+          }
           const prefTags = new Set(nextPrefs.filter((pref: UserPreference) => Number(pref.weight) >= 7).map((pref: UserPreference) => pref.tag));
           const inferredGoals = nextGoals
             .filter((goal: ReadingGoal) => goal.tags.some((tag) => prefTags.has(tag)))
@@ -104,6 +121,25 @@ export default function Settings() {
     () => preferences.slice(0, 10).map(pref => `${pref.tag} ${pref.weight}`),
     [preferences],
   );
+
+
+  const nextDailyPushLabel = useMemo(() => {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(dailyPushHour, 0, 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        timeZone: dailyPushTimeZone,
+        weekday: 'short',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short',
+      }).format(next);
+    } catch {
+      return `${String(dailyPushHour).padStart(2, '0')}:00 ${dailyPushTimeZone}`;
+    }
+  }, [dailyPushHour, dailyPushTimeZone]);
 
   const signOut = async () => {
     await logtoClient.signOut(postSignOutRedirectUri);
@@ -178,6 +214,27 @@ export default function Settings() {
       setAvoidStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setAvoidLoading(false);
+    }
+  };
+
+
+  const saveDailyPushSchedule = async () => {
+    setScheduleLoading(true);
+    setScheduleStatus('');
+    try {
+      const response = await apiFetch('/preferences/daily-push-schedule', {
+        method: 'POST',
+        body: JSON.stringify({ hour: dailyPushHour, timeZone: dailyPushTimeZone }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setDailyPushSchedule(data.dailyPushSchedule || null);
+      setScheduleStatus('Saved — daily push will only send during this local hour unless QA uses override_schedule=1.');
+    } catch (e) {
+      console.error(e);
+      setScheduleStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -350,6 +407,35 @@ export default function Settings() {
             <div className="card-body gap-3">
               <h3 className="card-title text-base">Push Notifications</h3>
               <p className="text-sm opacity-70">Get a personalized passage delivered daily.</p>
+              <div className="rounded-box border border-base-300 bg-base-100 p-3">
+                <label className="label py-1"><span className="label-text text-sm font-semibold">Daily passage time</span></label>
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <input
+                    type="time"
+                    className="input input-bordered input-sm"
+                    value={`${String(dailyPushHour).padStart(2, '0')}:00`}
+                    onChange={(event) => { setDailyPushSchedule(null); setScheduleStatus(''); setDailyPushHour(Number(event.target.value.slice(0, 2))); }}
+                  />
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={saveDailyPushSchedule}
+                    disabled={scheduleLoading}
+                  >
+                    {scheduleLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                    Save time
+                  </button>
+                </div>
+                <input
+                  className="input input-bordered input-xs mt-2 w-full"
+                  value={dailyPushTimeZone}
+                  onChange={(event) => { setDailyPushSchedule(null); setScheduleStatus(''); setDailyPushTimeZone(event.target.value); }}
+                  aria-label="Daily push time zone"
+                />
+                <p className="mt-2 text-xs opacity-70">
+                  Next daily page: {dailyPushSchedule ? dailyPushSchedule.label : nextDailyPushLabel}.
+                </p>
+                {scheduleStatus ? <p className="mt-1 text-xs opacity-70">{scheduleStatus}</p> : null}
+              </div>
               <button
                 className={`btn btn-sm ${pushEnabled ? 'btn-warning' : 'btn-primary'}`}
                 onClick={togglePush}

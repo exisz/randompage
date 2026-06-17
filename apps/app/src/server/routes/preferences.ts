@@ -3,13 +3,15 @@ import { nanoid } from 'nanoid';
 import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { parsePassageTags } from '../lib/passageTags.js';
-import { AVOID_TAG_WEIGHT, avoidPreferenceTag, normalizeAvoidTag, splitPreferenceControls } from '../lib/preferenceControls.js';
+import { AVOID_TAG_WEIGHT, CONTROL_TAG_PREFIX, avoidPreferenceTag, normalizeAvoidTag, splitPreferenceControls } from '../lib/preferenceControls.js';
 
 export const preferencesRouter = Router();
 
 const GOAL_SEED_WEIGHT = 7;
 const DEFAULT_AVOID_TAGS = ['dark', 'tense', 'deception', 'suffering', 'violence'];
 const MAX_AVOID_TAGS = 5;
+const DAILY_PUSH_HOUR_TAG = `${CONTROL_TAG_PREFIX}daily-push:hour`;
+const DAILY_PUSH_TZ_PREFIX = `${CONTROL_TAG_PREFIX}daily-push:tz:`;
 
 const READING_GOALS = [
   {
@@ -93,6 +95,46 @@ function normalizeAvoidTags(value: unknown) {
     .filter(Boolean)));
 }
 
+function normalizeDailyPushHour(value: unknown) {
+  const hour = typeof value === 'number' ? value : Number(value);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
+  return hour;
+}
+
+function normalizeTimeZone(value: unknown) {
+  const timeZone = typeof value === 'string' && value.trim() ? value.trim() : 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+    return timeZone;
+  } catch {
+    return null;
+  }
+}
+
+function dailyPushTimeLabel(hour: number, timeZone: string) {
+  const date = new Date(Date.UTC(2026, 0, 1, hour, 0, 0));
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'UTC',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date) + ` ${timeZone}`;
+}
+
+function dailyPushScheduleFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
+  const hourRow = preferences.find((pref) => pref.tag === DAILY_PUSH_HOUR_TAG);
+  const tzRow = preferences.find((pref) => pref.tag.startsWith(DAILY_PUSH_TZ_PREFIX));
+  const hour = hourRow ? normalizeDailyPushHour(hourRow.weight) : null;
+  const timeZone = tzRow ? decodeURIComponent(tzRow.tag.slice(DAILY_PUSH_TZ_PREFIX.length)) : null;
+  if (hour === null || !timeZone) return null;
+  return {
+    hour,
+    timeZone,
+    windowHours: 1,
+    label: dailyPushTimeLabel(hour, timeZone),
+  };
+}
+
+
 // GET /api/preferences
 preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
   try {
@@ -101,7 +143,8 @@ preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
     const prefs = await fetchPreferences(prisma, claims.sub as string);
     const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
     const avoidTags = await fetchAvoidTagOptions(prisma);
-    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags });
+    const dailyPushSchedule = dailyPushScheduleFromPreferences(prefs);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -200,3 +243,43 @@ preferencesRouter.post('/preferences/avoid-tags', async (req: Request, res: Resp
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
+
+// POST /api/preferences/daily-push-schedule
+// Stores the user's preferred daily delivery hour in existing user_preferences control rows.
+preferencesRouter.post('/preferences/daily-push-schedule', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const hour = normalizeDailyPushHour(req.body?.hour);
+    const timeZone = normalizeTimeZone(req.body?.timeZone);
+    if (hour === null || !timeZone) {
+      res.status(400).json({ error: 'Choose a valid daily passage hour and time zone.' });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId}
+        AND (tag = ${DAILY_PUSH_HOUR_TAG} OR tag LIKE ${`${DAILY_PUSH_TZ_PREFIX}%`})
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+      VALUES (${nanoid()}, ${userId}, ${DAILY_PUSH_HOUR_TAG}, ${hour}, ${updatedAt})
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+      VALUES (${nanoid()}, ${userId}, ${`${DAILY_PUSH_TZ_PREFIX}${encodeURIComponent(timeZone)}`}, ${1}, ${updatedAt})
+    `;
+
+    const prefs = await fetchPreferences(prisma, userId);
+    res.json({ dailyPushSchedule: dailyPushScheduleFromPreferences(prefs) });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
