@@ -6,6 +6,7 @@ import { isOfflineError, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import PassageFeedbackChips from '../components/PassageFeedbackChips';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
 import BookSourceLink from '../components/BookSourceLink';
 
@@ -994,6 +995,18 @@ export default function Discover() {
                       </div>
                     </div>
                   )}
+
+                  <PassageFeedbackChips
+                    passageId={passage.id}
+                    source={pushSource === 'push' || pushSource === 'push_inbox' ? 'push_inbox' : 'discover'}
+                    authed={authed}
+                    disabled={!online}
+                    className="mt-4"
+                    onFeedback={() => {
+                      void fetchDailyQueue();
+                      void fetchReadingChallenges();
+                    }}
+                  />
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-[1fr_auto_auto_auto_auto]">
                     <button

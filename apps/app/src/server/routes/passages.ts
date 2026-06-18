@@ -9,8 +9,16 @@ import { filterReadablePassages, isReadablePassage } from '../lib/passageLengthP
 
 export const passagesRouter = Router();
 
-const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip']);
+const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip', 'more_like_this', 'less_like_this', 'too_dense', 'different_topic']);
 const VALID_INTERACTION_SOURCES = new Set(['discover', 'push_inbox']);
+const FEEDBACK_DELTAS: Record<string, number> = {
+  more_like_this: 2,
+  less_like_this: -2,
+  too_dense: 0,
+  different_topic: -1,
+};
+const MIN_PREFERENCE_WEIGHT = 1;
+const MAX_PREFERENCE_WEIGHT = 12;
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
 const DAILY_QUEUE_MAX_LIMIT = 5;
 const READING_PATH_DAYS = 7;
@@ -180,15 +188,16 @@ async function updatePreferencesForPassage(
       SELECT id, weight FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag} LIMIT 1
     `;
     if (existing[0]) {
+      const nextWeight = Math.min(MAX_PREFERENCE_WEIGHT, Math.max(MIN_PREFERENCE_WEIGHT, Number(existing[0].weight) + delta));
       await prisma.$executeRaw`
         UPDATE user_preferences
-        SET weight = ${Math.max(1, Number(existing[0].weight) + delta)}, updated_at = ${updatedAt}
+        SET weight = ${nextWeight}, updated_at = ${updatedAt}
         WHERE id = ${existing[0].id}
       `;
     } else if (delta > 0) {
       await prisma.$executeRaw`
         INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
-        VALUES (${nanoid()}, ${userId}, ${tag}, ${1 + delta}, ${updatedAt})
+        VALUES (${nanoid()}, ${userId}, ${tag}, ${Math.min(MAX_PREFERENCE_WEIGHT, MIN_PREFERENCE_WEIGHT + delta)}, ${updatedAt})
       `;
     }
   }
@@ -294,7 +303,15 @@ async function recordInteraction(
   await prisma.browsingEvent.create({
     data: { id: nanoid(), userId, passageId, action, source: safeSource, createdAt: now },
   });
-  await updatePreferencesForPassage(prisma, userId, passageId, action === 'skip' ? -1 : 1, now);
+  const feedbackDelta = FEEDBACK_DELTAS[action];
+  const delta = typeof feedbackDelta === 'number' ? feedbackDelta : action === 'skip' ? -1 : 1;
+  if (delta !== 0) await updatePreferencesForPassage(prisma, userId, passageId, delta, now);
+}
+
+function normalizeFeedbackAction(value: unknown) {
+  return typeof value === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK_DELTAS, value)
+    ? value
+    : null;
 }
 
 // GET /api/passages/tags?limit=12 — top tags for the Discover chip-strip (no auth required)
@@ -429,8 +446,39 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
   }
 });
 
+// POST /api/passages/:id/feedback — explicit per-passage preference chips from Discover / Push inbox.
+passagesRouter.post('/passages/:id/feedback', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const userId = claims.sub as string;
+    const action = normalizeFeedbackAction(req.body?.action);
+    if (!action) {
+      res.status(400).json({ error: 'Invalid feedback action' });
+      return;
+    }
 
+    const source = typeof req.body?.source === 'string' ? req.body.source : 'discover';
+    const prisma = getPrisma();
+    const passage = await prisma.passage.findUnique({ where: { id: req.params.id }, select: { id: true, tags: true } });
+    if (!passage) {
+      res.status(404).json({ error: 'Passage not found' });
+      return;
+    }
 
+    await recordInteraction(prisma, userId, passage.id, action, source);
+    const prefs = await prisma.userPreference.findMany({ where: { userId }, select: { tag: true, weight: true } });
+    res.json({
+      ok: true,
+      action,
+      source: VALID_INTERACTION_SOURCES.has(source) ? source : 'discover',
+      passageId: passage.id,
+      touchedTags: action === 'too_dense' ? [] : parsePassageTags(passage.tags),
+      preferences: preferenceMapWithoutAvoids(prefs),
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
 
 async function ensureReadingPathsTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe(`

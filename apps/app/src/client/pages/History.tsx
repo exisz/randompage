@@ -6,6 +6,7 @@ import { isOfflineError, readHistoryOfflineCache, saveHistoryOfflineCache, useOn
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
+import PassageFeedbackChips from '../components/PassageFeedbackChips';
 import BookSourceLink from '../components/BookSourceLink';
 
 interface Passage {
@@ -230,6 +231,12 @@ export default function History() {
                       <SharePassageButton passage={h.passage} compact />
                       <SharePassageImageButton passage={h.passage} compact />
                     </div>
+                    <PassageFeedbackChips
+                      passageId={h.passage.id}
+                      source={h.kind === 'push' || h.source === 'push_inbox' ? 'push_inbox' : 'discover'}
+                      disabled={offlineMode || !online}
+                      compact
+                    />
                     <div className="text-right text-xs"><BookSourceLink bookTitle={h.passage.bookTitle} author={h.passage.author} compact className="items-end opacity-50 hover:opacity-100" /></div>
                     {tagsForItem.length > 0 && <div className="flex flex-wrap gap-1">{tagsForItem.map(tag => <span key={tag} className="badge badge-ghost badge-xs">#{tag}</span>)}</div>}
                     {h.whyPersonalized && (

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-18 — PLANET-2904 user-configurable daily passage delivery time
+> 最后更新: 2026-06-18 — PLANET-2934 explicit passage feedback chips for personalization
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -44,6 +44,7 @@
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
+│  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences │ │
 │  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
@@ -105,8 +106,8 @@ exisz/randompage (GitHub)
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏与浏览提高 tag 权重，skip 降低 tag 权重下限到 1；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone，不参与推荐打分） |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different topic 以 1–12 bounded weight 调整；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone，不参与推荐打分） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -236,6 +237,7 @@ exisz/randompage (GitHub)
 | `check-share-passage-policy.mjs` | PLANET-2685/2748 | 静态回归检查 Web Share / clipboard fallback、client-side PNG visual card export、Discover/Bookmarks/History passage Share/Card actions |
 | `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
 | `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
+| `check-passage-feedback-policy.mjs` | PLANET-2934 | 静态回归检查 Discover + Push inbox feedback chips、`POST /api/passages/:id/feedback`、bounded preference updates 与 double-submit guard。 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -252,6 +254,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-18 | PLANET-2934: Added explicit passage feedback chips on Discover and History/Push inbox cards plus `POST /api/passages/:id/feedback`; signed-in taps record chip-specific `browsing_events` and update bounded tag weights for More/Less/Different-topic while Too dense records signal only; added `check:passage-feedback`. | Engineer Pod |
 | 2026-06-18 | PLANET-2904: Added user-configurable daily passage delivery time in Settings; schedule persists in `user_preferences` control rows, push send/cron respect each user’s local hour by default, and QA can use `override_schedule=1`/`x-push-override-schedule: 1` to smoke-test outside the window while preserving per-user push_history. | Engineer Pod |
 | 2026-06-17 | PLANET-2874: Added book/source detail deep links (`/source?title=...&author=...`) reachable from passage title/author metadata across Discover/Today, Bookmarks, and History/Push inbox surfaces; new `/api/book-source` lists existing readable RandomPage passages from the same book, with signed-in unread-first ordering plus saved/read flags and existing save/listen/share/card/queue actions. | Engineer Pod |
 | 2026-06-16 | PLANET-2844: History tab now renders the current browsing or push-inbox results as a local-day timeline (Today, Yesterday, then YYYY-MM-DD), keeps existing search/tag/offline states, and uses push `readAt` before `sentAt` for read deliveries; added `check:history-day-grouping`. | Engineer Pod |
