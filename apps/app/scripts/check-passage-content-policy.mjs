@@ -9,6 +9,12 @@
  * Usage:
  *   pnpm check:passage-content
  *   pnpm check:passage-content -- --json --sample 5
+ *   pnpm check:passage-content -- --apply
+ *
+ * --apply deletes only unreadable candidate passages that have no user-owned
+ * references (bookmarks, push_history, browsing_events, or passage_reviews).
+ * Referenced rows are intentionally kept so delivered/saved content remains in
+ * the user's personal record.
  *
  * Env (read from env or apps/app/.env.local):
  *   TURSO_DATABASE_URL, TURSO_AUTH_TOKEN
@@ -113,6 +119,39 @@ if (!TURSO_URL || !TURSO_TOKEN) {
 }
 
 const client = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN });
+
+async function referenceCountsByPassage(ids) {
+  const counts = new Map(ids.map((id) => [id, { bookmarks: 0, push_history: 0, browsing_events: 0, passage_reviews: 0, total: 0 }]));
+  if (!ids.length) return counts;
+  const placeholders = ids.map(() => '?').join(',');
+  for (const table of ['bookmarks', 'push_history', 'browsing_events', 'passage_reviews']) {
+    const res = await client.execute({
+      sql: `SELECT passage_id, count(*) AS c FROM ${table} WHERE passage_id IN (${placeholders}) GROUP BY passage_id`,
+      args: ids,
+    });
+    for (const row of res.rows) {
+      const id = String(row.passage_id);
+      const entry = counts.get(id);
+      if (!entry) continue;
+      entry[table] = Number(row.c);
+      entry.total += Number(row.c);
+    }
+  }
+  return counts;
+}
+
+async function deleteUnreferencedPassages(ids) {
+  if (!ids.length) return 0;
+  let deleted = 0;
+  const chunkSize = 100;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => '?').join(',');
+    const res = await client.execute({ sql: `DELETE FROM passages WHERE id IN (${placeholders})`, args: chunk });
+    deleted += Number(res.rowsAffected || 0);
+  }
+  return deleted;
+}
 const rowsRes = await client.execute(`
   SELECT id, book_title, author, chapter, text, length(text) AS len
   FROM passages
@@ -129,6 +168,14 @@ const rows = rowsRes.rows.map((row) => ({
 const matches = rows
   .map((row) => ({ ...row, reason: detectUnreadablePassageContent(row.text) }))
   .filter((row) => row.reason);
+const referenceCounts = await referenceCountsByPassage(matches.map((row) => row.id));
+const unreferencedMatches = matches.filter((row) => (referenceCounts.get(row.id)?.total || 0) === 0);
+const referencedMatches = matches.filter((row) => (referenceCounts.get(row.id)?.total || 0) > 0);
+let applyDeletedUnreferenced = 0;
+
+if (args.apply) {
+  applyDeletedUnreferenced = await deleteUnreferencedPassages(unreferencedMatches.map((row) => row.id));
+}
 
 const byReason = matches.reduce((acc, row) => {
   acc[row.reason] = (acc[row.reason] || 0) + 1;
@@ -143,13 +190,29 @@ const report = {
   reference_note_candidates: matches.filter((row) => row.reason !== 'non-terminal-ending' && row.reason !== 'chapter-list-fragment').length,
   chapter_list_candidates: matches.filter((row) => row.reason === 'chapter-list-fragment').length,
   non_terminal_ending_candidates: matches.filter((row) => row.reason === 'non-terminal-ending').length,
+  referenced_candidate_rows: referencedMatches.length,
+  unreferenced_candidate_rows: unreferencedMatches.length,
+  apply_deleted_unreferenced: applyDeletedUnreferenced,
   by_reason: byReason,
+  referenced_by_reason: referencedMatches.reduce((acc, row) => {
+    acc[row.reason] = (acc[row.reason] || 0) + 1;
+    return acc;
+  }, {}),
   samples: matches.slice(0, sampleLimit).map((row) => ({
     id: row.id,
     len: row.len,
     title: row.book_title,
     author: row.author,
     reason: row.reason,
+    preview: preview(row.text),
+  })),
+  referenced_samples: referencedMatches.slice(0, sampleLimit).map((row) => ({
+    id: row.id,
+    len: row.len,
+    title: row.book_title,
+    author: row.author,
+    reason: row.reason,
+    references: referenceCounts.get(row.id),
     preview: preview(row.text),
   })),
   samples_by_reason: Object.fromEntries(Object.keys(byReason).sort().map((reason) => [
@@ -169,12 +232,20 @@ if (args.json) {
 } else {
   console.log('passage content policy: reject standalone reference-note / footnote fragments, chapter-list fragments, and non-terminal endings');
   console.log(`total=${report.total} unreadable_content_candidates=${report.unreadable_content_candidates} reference_note_candidates=${report.reference_note_candidates} chapter_list_candidates=${report.chapter_list_candidates} non_terminal_ending_candidates=${report.non_terminal_ending_candidates}`);
+  console.log(`referenced_candidate_rows=${report.referenced_candidate_rows} unreferenced_candidate_rows=${report.unreferenced_candidate_rows} apply_deleted_unreferenced=${report.apply_deleted_unreferenced}`);
   for (const [reason, count] of Object.entries(byReason)) console.log(`${reason}=${count}`);
+  if (Object.keys(report.referenced_by_reason).length) {
+    console.log('referenced_by_reason=' + JSON.stringify(report.referenced_by_reason));
+  }
   console.log('\nsamples:');
   for (const row of report.samples) console.log(`- ${row.id} len=${row.len} ${row.title} — ${row.author} [${row.reason}]: ${row.preview}`);
   console.log('\nsamples_by_reason:');
   for (const [reason, rows] of Object.entries(report.samples_by_reason)) {
     for (const row of rows) console.log(`- ${reason}: ${row.id} len=${row.len} ${row.title} — ${row.author}: ${row.preview}`);
+  }
+  if (report.referenced_samples.length) {
+    console.log('\nreferenced_samples:');
+    for (const row of report.referenced_samples) console.log(`- ${row.id} len=${row.len} ${row.title} — ${row.author} [${row.reason}] refs=${row.references.total}: ${row.preview}`);
   }
 }
 
