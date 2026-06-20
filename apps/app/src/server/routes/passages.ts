@@ -953,17 +953,19 @@ passagesRouter.get('/book-source', async (req: Request, res: Response) => {
     const passageIds = readablePassages.map((passage) => passage.id);
 
     const [bookmarkRows, viewedRows] = userId ? await Promise.all([
-      prisma.bookmark.findMany({ where: { userId, passageId: { in: passageIds } }, select: { passageId: true } }),
+      prisma.bookmark.findMany({ where: { userId, passageId: { in: passageIds } }, select: { passageId: true, note: true } }),
       prisma.browsingEvent.findMany({ where: { userId, action: 'view', passageId: { in: passageIds } }, select: { passageId: true } }),
-    ]) : [[], []] as [Array<{ passageId: string }>, Array<{ passageId: string }>];
+    ]) : [[], []] as [Array<{ passageId: string; note: string | null }>, Array<{ passageId: string }>];
 
     const savedIds = new Set(bookmarkRows.map((row) => row.passageId));
+    const noteByPassageId = new Map(bookmarkRows.map((row) => [row.passageId, row.note]));
     const readIds = new Set(viewedRows.map((row) => row.passageId));
     const passages = readablePassages
       .map((passage) => ({
         ...passage,
         isSaved: savedIds.has(passage.id),
         isRead: readIds.has(passage.id),
+        note: noteByPassageId.get(passage.id) ?? null,
       }))
       .sort((a, b) => Number(a.isRead) - Number(b.isRead) || a.id.localeCompare(b.id));
 

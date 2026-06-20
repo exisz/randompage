@@ -6,6 +6,7 @@ import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
+import { copyPassageExport, downloadPassageExport } from '../lib/passageExport';
 
 interface Passage {
   id: string;
@@ -17,6 +18,7 @@ interface Passage {
   language: string;
   isSaved?: boolean;
   isRead?: boolean;
+  note?: string | null;
 }
 
 interface BookSourcePayload {
@@ -60,6 +62,7 @@ export default function BookSource() {
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({});
   const [queuedIds, setQueuedIds] = useState<Set<string>>(() => new Set());
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ title });
@@ -115,6 +118,29 @@ export default function BookSource() {
     setQueuedIds((prev) => new Set(prev).add(passage.id));
   };
 
+  const exportSavedSourcePassages = async (format: 'html' | 'txt' | 'copy') => {
+    if (!payload) return;
+    const savedPassages = payload.passages.filter((passage) => passage.isSaved);
+    if (savedPassages.length === 0) return;
+    const options = {
+      title: `RandomPage saved passages — ${payload.source.title}`,
+      description: `Saved passages from ${payload.source.title}${payload.source.author ? ` by ${payload.source.author}` : ''}, ordered the same way as this source detail page.`,
+      passages: savedPassages,
+    };
+    try {
+      if (format === 'copy') {
+        await copyPassageExport(options);
+        setExportStatus(`Copied ${savedPassages.length} saved source passages.`);
+      } else {
+        downloadPassageExport({ ...options, format });
+        setExportStatus(`Downloaded ${savedPassages.length} saved source passages as ${format.toUpperCase()}.`);
+      }
+    } catch (e) {
+      setExportStatus(e instanceof Error ? e.message : String(e));
+    }
+    window.setTimeout(() => setExportStatus(null), 3500);
+  };
+
   if (loading) {
     return <main className="min-h-screen bg-base-100 p-6"><span className="loading loading-spinner loading-lg" /><p className="mt-3 opacity-60">Opening this book…</p></main>;
   }
@@ -146,6 +172,22 @@ export default function BookSource() {
           <p className="mt-4 max-w-2xl text-sm leading-relaxed opacity-70">
             Continue from one good passage into more existing RandomPage pages from the same book. This stays inside your personal book-passage discovery graph — no new summaries, feeds, or social layer.
           </p>
+          {payload.source.savedCount !== null && (
+            <div className="mt-5 rounded-box border border-base-content/10 bg-base-100/70 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] opacity-60">Kindle / read-later export</p>
+                  <p className="text-sm opacity-75">Export only your saved passages from this source, with canonical URLs, tags, and private note snippets.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-primary btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('html')}>Export saved HTML</button>
+                  <button className="btn btn-outline btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('txt')}>TXT</button>
+                  <button className="btn btn-ghost btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('copy')}>Copy</button>
+                </div>
+              </div>
+              {exportStatus && <p className="mt-2 text-xs opacity-70" role="status">{exportStatus}</p>}
+            </div>
+          )}
         </div>
       </section>
 
@@ -171,6 +213,12 @@ export default function BookSource() {
                 {passage.chapter && <p className="text-xs uppercase tracking-[0.2em] text-primary/70">{passage.chapter}</p>}
                 <p className="font-serif text-base leading-7 sm:text-lg">{excerpt(passage.text)}</p>
                 {tags.length > 0 && <div className="flex flex-wrap gap-1">{tags.map((tag) => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                {passage.note && (
+                  <div className="rounded-box border border-warning/20 bg-warning/10 p-3 text-sm">
+                    <p className="text-xs uppercase tracking-[0.18em] opacity-60">Your private note</p>
+                    <p className="mt-1">{passage.note.length > 180 ? `${passage.note.slice(0, 180)}…` : passage.note}</p>
+                  </div>
+                )}
                 <div className="flex flex-wrap items-center gap-2">
                   <Link className="btn btn-primary btn-sm rounded-xl" to={`/discover?passageId=${encodeURIComponent(passage.id)}&source=discover`}>Open passage</Link>
                   <ListenControl text={passage.text} title={`${passage.bookTitle} passage`} compact />

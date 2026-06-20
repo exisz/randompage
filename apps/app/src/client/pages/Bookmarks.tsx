@@ -8,6 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
+import { copyPassageExport, downloadPassageExport } from '../lib/passageExport';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -63,6 +64,7 @@ export default function Bookmarks() {
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
   const [readingQueue, setReadingQueue] = useState<QueuedPassage[]>(() => readReadingQueue());
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
+  const [exportStatus, setExportStatus] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -121,6 +123,48 @@ export default function Bookmarks() {
       return true;
     });
   }, [bookmarks, query, activeTag, activeCollection]);
+
+  const exportTitle = useMemo(() => {
+    if (activeCollection !== 'all' && activeCollection !== 'unfiled') {
+      const collection = collections.find(item => item.id === activeCollection);
+      if (collection) return `RandomPage saved passages — ${collection.name}`;
+    }
+    if (activeCollection === 'unfiled') return 'RandomPage saved passages — Unfiled';
+    if (activeTag !== 'all') return `RandomPage saved passages — #${activeTag}`;
+    if (query.trim()) return `RandomPage saved passages — ${query.trim()}`;
+    return 'RandomPage saved passages';
+  }, [activeCollection, activeTag, collections, query]);
+
+  const exportDescription = useMemo(() => {
+    const filters = [
+      query.trim() ? `search “${query.trim()}”` : '',
+      activeTag !== 'all' ? `tag #${activeTag}` : '',
+      activeCollection === 'unfiled' ? 'unfiled bookmarks' : '',
+      activeCollection !== 'all' && activeCollection !== 'unfiled' ? `collection ${collections.find(item => item.id === activeCollection)?.name ?? activeCollection}` : '',
+    ].filter(Boolean);
+    return filters.length ? `Filtered export: ${filters.join(', ')}.` : 'All saved RandomPage passages in your Bookmarks.';
+  }, [activeCollection, activeTag, collections, query]);
+
+  const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy') => {
+    if (filteredBookmarks.length === 0) return;
+    const options = {
+      title: exportTitle,
+      description: exportDescription,
+      passages: filteredBookmarks.map(bookmark => ({ ...bookmark.passage, note: bookmark.note })),
+    };
+    try {
+      if (format === 'copy') {
+        await copyPassageExport(options);
+        setExportStatus(`Copied ${filteredBookmarks.length} saved passages for Kindle/read-later.`);
+      } else {
+        downloadPassageExport({ ...options, format });
+        setExportStatus(`Downloaded ${filteredBookmarks.length} saved passages as ${format.toUpperCase()}.`);
+      }
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : String(error));
+    }
+    window.setTimeout(() => setExportStatus(null), 3500);
+  };
 
   const reviewThemes = useMemo(() => {
     const options = [
@@ -325,6 +369,20 @@ export default function Bookmarks() {
             {(query || activeTag !== 'all' || activeCollection !== 'all') && (
               <button className="btn btn-link btn-xs self-start" onClick={() => { setQuery(''); setActiveTag('all'); setActiveCollection('all'); }}>Clear filters</button>
             )}
+            <div className="rounded-box border border-base-content/10 bg-base-100/70 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] opacity-60">Kindle / read-later export</p>
+                  <p className="text-sm opacity-75">Download or copy the current saved-passage view with title, author, excerpt, canonical URL, tags, and private note snippets.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className="btn btn-primary btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('html')}>Export HTML</button>
+                  <button className="btn btn-outline btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('txt')}>TXT</button>
+                  <button className="btn btn-ghost btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('copy')}>Copy</button>
+                </div>
+              </div>
+              {exportStatus && <p className="mt-2 text-xs opacity-70" role="status">{exportStatus}</p>}
+            </div>
           </div>
         </div>
 

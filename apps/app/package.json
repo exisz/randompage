@@ -42,7 +42,8 @@
     "check:reading-challenges": "node scripts/check-reading-challenges-policy.mjs",
     "check:reading-queue": "node scripts/check-reading-queue-policy.mjs",
     "check:history-day-grouping": "node scripts/check-history-day-grouping-policy.mjs",
-    "check:passage-feedback": "node scripts/check-passage-feedback-policy.mjs"
+    "check:passage-feedback": "node scripts/check-passage-feedback-policy.mjs",
+    "check:kindle-export": "node scripts/check-kindle-export-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
