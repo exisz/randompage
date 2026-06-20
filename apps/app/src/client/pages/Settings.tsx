@@ -27,6 +27,13 @@ type DailyPushSchedule = {
   label: string;
 };
 
+type ReadLaterDestination = {
+  email: string;
+  active: boolean;
+  verified: boolean;
+  configured: boolean;
+};
+
 const FALLBACK_READING_GOALS: ReadingGoal[] = [
   {
     id: 'reflective-philosophy',
@@ -68,12 +75,18 @@ export default function Settings() {
   const [goalsLoading, setGoalsLoading] = useState(false);
   const [avoidLoading, setAvoidLoading] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [readLaterLoading, setReadLaterLoading] = useState(false);
   const [dailyPushSchedule, setDailyPushSchedule] = useState<DailyPushSchedule | null>(null);
+  const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
   const [dailyPushHour, setDailyPushHour] = useState(() => new Date().getHours());
   const [dailyPushTimeZone, setDailyPushTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  const [readLaterEmail, setReadLaterEmail] = useState('');
+  const [readLaterActive, setReadLaterActive] = useState(true);
+  const [readLaterVerified, setReadLaterVerified] = useState(false);
   const [goalsStatus, setGoalsStatus] = useState('');
   const [avoidStatus, setAvoidStatus] = useState('');
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const [readLaterStatus, setReadLaterStatus] = useState('');
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -102,6 +115,12 @@ export default function Settings() {
             setDailyPushSchedule(d.dailyPushSchedule);
             setDailyPushHour(d.dailyPushSchedule.hour);
             setDailyPushTimeZone(d.dailyPushSchedule.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+          }
+          if (d.readLaterDestination) {
+            setReadLaterDestination(d.readLaterDestination);
+            setReadLaterEmail(d.readLaterDestination.email || '');
+            setReadLaterActive(d.readLaterDestination.configured ? Boolean(d.readLaterDestination.active) : true);
+            setReadLaterVerified(Boolean(d.readLaterDestination.verified));
           }
           const prefTags = new Set(nextPrefs.filter((pref: UserPreference) => Number(pref.weight) >= 7).map((pref: UserPreference) => pref.tag));
           const inferredGoals = nextGoals
@@ -217,6 +236,36 @@ export default function Settings() {
     }
   };
 
+
+  const saveReadLaterDestination = async (clear = false) => {
+    setReadLaterLoading(true);
+    setReadLaterStatus('');
+    try {
+      const response = await apiFetch('/preferences/read-later-destination', {
+        method: 'POST',
+        body: JSON.stringify(clear ? { clear: true } : { email: readLaterEmail, active: readLaterActive, verified: readLaterVerified }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setReadLaterDestination(data.readLaterDestination || null);
+      if (clear) {
+        setReadLaterEmail('');
+        setReadLaterActive(true);
+        setReadLaterVerified(false);
+        setReadLaterStatus('Cleared — Email export is hidden until you save a destination again.');
+      } else {
+        setReadLaterEmail(data.readLaterDestination?.email || readLaterEmail);
+        setReadLaterActive(Boolean(data.readLaterDestination?.active));
+        setReadLaterVerified(Boolean(data.readLaterDestination?.verified));
+        setReadLaterStatus('Saved — Bookmarks and source detail can prepare an email-ready saved-passage bundle.');
+      }
+    } catch (e) {
+      console.error(e);
+      setReadLaterStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReadLaterLoading(false);
+    }
+  };
 
   const saveDailyPushSchedule = async () => {
     setScheduleLoading(true);
@@ -402,6 +451,54 @@ export default function Settings() {
             )}
           </div>
         </div>
+        {authed && (
+          <div className="card bg-base-200 shadow mb-4">
+            <div className="card-body gap-3">
+              <div>
+                <h3 className="card-title text-base">Kindle / read-later destination</h3>
+                <p className="text-sm opacity-70">Save a private destination email once, then prepare saved-passage bundles from Bookmarks or source detail with one tap.</p>
+              </div>
+              <input
+                className="input input-bordered input-sm"
+                type="email"
+                placeholder="your-kindle-name@kindle.com"
+                value={readLaterEmail}
+                onChange={(event) => { setReadLaterEmail(event.target.value); setReadLaterStatus(''); }}
+              />
+              <label className="label cursor-pointer justify-start gap-3 py-0">
+                <input
+                  type="checkbox"
+                  className="toggle toggle-sm toggle-primary"
+                  checked={readLaterActive}
+                  onChange={(event) => { setReadLaterActive(event.target.checked); setReadLaterStatus(''); }}
+                />
+                <span className="label-text text-sm">Show Email export actions when this destination is active</span>
+              </label>
+              <label className="label cursor-pointer justify-start gap-3 py-0">
+                <input
+                  type="checkbox"
+                  className="checkbox checkbox-sm"
+                  checked={readLaterVerified}
+                  onChange={(event) => { setReadLaterVerified(event.target.checked); setReadLaterStatus(''); }}
+                />
+                <span className="label-text text-sm">I’ve approved this address in Kindle/read-later settings</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn btn-primary btn-sm" onClick={() => saveReadLaterDestination(false)} disabled={readLaterLoading || !readLaterEmail.trim()}>
+                  {readLaterLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Save destination
+                </button>
+                <button className="btn btn-ghost btn-sm text-error" onClick={() => saveReadLaterDestination(true)} disabled={readLaterLoading || !(readLaterDestination?.configured || readLaterEmail.trim())}>Clear</button>
+              </div>
+              {readLaterDestination?.configured ? (
+                <p className="text-xs opacity-70">Configured: {readLaterDestination.email} · {readLaterDestination.active ? 'active' : 'inactive'} · {readLaterDestination.verified ? 'approved' : 'approval not marked'}</p>
+              ) : (
+                <p className="text-xs opacity-60">No destination saved yet. Existing HTML/TXT/Copy export still works.</p>
+              )}
+              {readLaterStatus ? <p className="text-xs opacity-70">{readLaterStatus}</p> : null}
+            </div>
+          </div>
+        )}
         {authed && (
           <div className="card bg-base-200 shadow mb-4">
             <div className="card-body gap-3">

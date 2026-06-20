@@ -10,6 +10,7 @@ const checks = [
     patterns: [
       'buildPassageExportHtml',
       'buildPassageExportText',
+      'emailPassageExport',
       'canonicalUrl',
       'Private note',
       'No summaries or generated content',
@@ -19,8 +20,10 @@ const checks = [
     file: 'src/client/pages/Bookmarks.tsx',
     patterns: [
       'Kindle / read-later export',
+      'readLaterDestination',
       'exportFilteredBookmarks',
       'filteredBookmarks.map(bookmark => ({ ...bookmark.passage, note: bookmark.note }))',
+      "exportFilteredBookmarks('email')",
       "exportFilteredBookmarks('html')",
       "exportFilteredBookmarks('copy')",
     ],
@@ -28,10 +31,29 @@ const checks = [
   {
     file: 'src/client/pages/BookSource.tsx',
     patterns: [
+      'readLaterDestination',
       'exportSavedSourcePassages',
       'payload.passages.filter((passage) => passage.isSaved)',
-      'Export only your saved passages from this source',
+      "exportSavedSourcePassages('email')",
+      'Export or email only your saved passages from this source',
       'Your private note',
+    ],
+  },
+  {
+    file: 'src/server/routes/preferences.ts',
+    patterns: [
+      'READ_LATER_EMAIL_PREFIX',
+      "preferencesRouter.post('/preferences/read-later-destination'",
+      'readLaterDestinationFromPreferences',
+    ],
+  },
+  {
+    file: 'src/client/pages/Settings.tsx',
+    patterns: [
+      'Kindle / read-later destination',
+      'saveReadLaterDestination',
+      'readLaterVerified',
+      'Clear',
     ],
   },
   {
@@ -58,4 +80,4 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log('[check:kindle-export] PASS — saved-passage Kindle/read-later export is wired for Bookmarks + source detail, notes, canonical URLs, and no-summary boundary.');
+console.log('[check:kindle-export] PASS — saved-passage Kindle/read-later export and email-ready delivery fallback are wired for Settings, Bookmarks, source detail, notes, canonical URLs, and no-summary boundary.');

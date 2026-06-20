@@ -15,6 +15,10 @@ export interface ExportBundleOptions {
   format?: 'html' | 'txt';
 }
 
+export interface EmailPassageExportResult {
+  mode: 'mailto' | 'download-fallback';
+}
+
 function parseTags(raw: string | null | undefined) {
   if (!raw) return [];
   try {
@@ -138,4 +142,24 @@ export function downloadPassageExport(options: ExportBundleOptions) {
 export async function copyPassageExport(options: ExportBundleOptions) {
   const text = buildPassageExportText(options);
   await navigator.clipboard.writeText(text);
+}
+
+export async function emailPassageExport(options: ExportBundleOptions, destinationEmail: string): Promise<EmailPassageExportResult> {
+  const email = destinationEmail.trim();
+  const subject = `${options.title} — RandomPage saved passages`;
+  const body = buildPassageExportText(options);
+  const href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+  if (href.length > 1800) {
+    try {
+      await copyPassageExport(options);
+    } catch {
+      // Clipboard can fail on some browsers; the TXT download is still the explicit email-ready fallback.
+    }
+    downloadPassageExport({ ...options, format: 'txt' });
+    return { mode: 'download-fallback' };
+  }
+
+  window.location.href = href;
+  return { mode: 'mailto' };
 }

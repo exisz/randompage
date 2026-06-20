@@ -8,7 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
-import { copyPassageExport, downloadPassageExport } from '../lib/passageExport';
+import { copyPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -25,6 +25,7 @@ interface Bookmark {
 interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
 }
+interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
 
 function parseTags(tags: string) {
   try {
@@ -65,6 +66,7 @@ export default function Bookmarks() {
   const [readingQueue, setReadingQueue] = useState<QueuedPassage[]>(() => readReadingQueue());
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -81,17 +83,20 @@ export default function Bookmarks() {
 
   const refresh = async () => {
     try {
-      const [bookmarksRes, collectionsRes] = await Promise.all([
+      const [bookmarksRes, collectionsRes, preferencesRes] = await Promise.all([
         apiFetch('/bookmarks'),
         apiFetch('/bookmark-collections'),
+        apiFetch('/preferences'),
       ]);
       const bookmarksData = await bookmarksRes.json();
       const collectionsData = await collectionsRes.json();
+      const preferencesData = await preferencesRes.json();
       const nextBookmarks = bookmarksData.bookmarks || [];
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
       setNoteDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, bookmark.note ?? ''])));
       setCollections(nextCollections);
+      setReadLaterDestination(preferencesData.readLaterDestination || null);
       setOfflineMode(false);
       setOfflineCachedAt(null);
       saveBookmarksOfflineCache({ bookmarks: nextBookmarks, collections: nextCollections });
@@ -145,7 +150,7 @@ export default function Bookmarks() {
     return filters.length ? `Filtered export: ${filters.join(', ')}.` : 'All saved RandomPage passages in your Bookmarks.';
   }, [activeCollection, activeTag, collections, query]);
 
-  const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy') => {
+  const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy' | 'email') => {
     if (filteredBookmarks.length === 0) return;
     const options = {
       title: exportTitle,
@@ -156,6 +161,13 @@ export default function Bookmarks() {
       if (format === 'copy') {
         await copyPassageExport(options);
         setExportStatus(`Copied ${filteredBookmarks.length} saved passages for Kindle/read-later.`);
+      } else if (format === 'email') {
+        const email = readLaterDestination?.active ? readLaterDestination.email : '';
+        if (!email) throw new Error('Save an active Kindle/read-later destination in Settings first.');
+        const result = await emailPassageExport(options, email);
+        setExportStatus(result.mode === 'mailto'
+          ? `Opened an email draft for ${filteredBookmarks.length} saved passages to ${email}.`
+          : `Bundle was too large for mailto; downloaded TXT and copied text for ${email}.`);
       } else {
         downloadPassageExport({ ...options, format });
         setExportStatus(`Downloaded ${filteredBookmarks.length} saved passages as ${format.toUpperCase()}.`);
@@ -373,9 +385,13 @@ export default function Bookmarks() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] opacity-60">Kindle / read-later export</p>
-                  <p className="text-sm opacity-75">Download or copy the current saved-passage view with title, author, excerpt, canonical URL, tags, and private note snippets.</p>
+                  <p className="text-sm opacity-75">Download, copy, or email the current saved-passage view with title, author, excerpt, canonical URL, tags, and private note snippets.</p>
+                  {readLaterDestination?.configured ? <p className="text-xs opacity-60">Destination: {readLaterDestination.email} · {readLaterDestination.active ? 'active' : 'inactive in Settings'}</p> : <p className="text-xs opacity-60">Save a destination in Settings to show Email export.</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {readLaterDestination?.configured && readLaterDestination.active ? (
+                    <button className="btn btn-secondary btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('email')}>Email export</button>
+                  ) : null}
                   <button className="btn btn-primary btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('html')}>Export HTML</button>
                   <button className="btn btn-outline btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('txt')}>TXT</button>
                   <button className="btn btn-ghost btn-xs" disabled={filteredBookmarks.length === 0} onClick={() => exportFilteredBookmarks('copy')}>Copy</button>

@@ -6,7 +6,7 @@ import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
-import { copyPassageExport, downloadPassageExport } from '../lib/passageExport';
+import { copyPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
 
 interface Passage {
   id: string;
@@ -30,6 +30,8 @@ interface BookSourcePayload {
   };
   passages: Passage[];
 }
+
+interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 
@@ -63,6 +65,7 @@ export default function BookSource() {
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({});
   const [queuedIds, setQueuedIds] = useState<Set<string>>(() => new Set());
   const [exportStatus, setExportStatus] = useState<string | null>(null);
+  const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
 
   const query = useMemo(() => {
     const params = new URLSearchParams({ title });
@@ -80,9 +83,16 @@ export default function BookSource() {
     setError(null);
     try {
       const authed = await logtoClient.isAuthenticated();
-      const res = authed ? await apiFetch(`/book-source?${query}`) : await fetch(`/api/book-source?${query}`);
+      const [res, preferencesRes] = await Promise.all([
+        authed ? apiFetch(`/book-source?${query}`) : fetch(`/api/book-source?${query}`),
+        authed ? apiFetch('/preferences') : Promise.resolve(null),
+      ]);
       if (!res.ok) throw new Error(`Book source returned HTTP ${res.status}`);
       const data = await res.json() as BookSourcePayload;
+      if (preferencesRes) {
+        const preferencesData = await preferencesRes.json();
+        setReadLaterDestination(preferencesData.readLaterDestination || null);
+      }
       setPayload(data);
       setQueuedIds(new Set(data.passages.filter((passage) => isPassageQueued(passage.id)).map((passage) => passage.id)));
     } catch (e) {
@@ -118,7 +128,7 @@ export default function BookSource() {
     setQueuedIds((prev) => new Set(prev).add(passage.id));
   };
 
-  const exportSavedSourcePassages = async (format: 'html' | 'txt' | 'copy') => {
+  const exportSavedSourcePassages = async (format: 'html' | 'txt' | 'copy' | 'email') => {
     if (!payload) return;
     const savedPassages = payload.passages.filter((passage) => passage.isSaved);
     if (savedPassages.length === 0) return;
@@ -131,6 +141,13 @@ export default function BookSource() {
       if (format === 'copy') {
         await copyPassageExport(options);
         setExportStatus(`Copied ${savedPassages.length} saved source passages.`);
+      } else if (format === 'email') {
+        const email = readLaterDestination?.active ? readLaterDestination.email : '';
+        if (!email) throw new Error('Save an active Kindle/read-later destination in Settings first.');
+        const result = await emailPassageExport(options, email);
+        setExportStatus(result.mode === 'mailto'
+          ? `Opened an email draft with ${savedPassages.length} saved source passages to ${email}.`
+          : `Bundle was too large for mailto; downloaded TXT and copied text for ${email}.`);
       } else {
         downloadPassageExport({ ...options, format });
         setExportStatus(`Downloaded ${savedPassages.length} saved source passages as ${format.toUpperCase()}.`);
@@ -177,9 +194,13 @@ export default function BookSource() {
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs uppercase tracking-[0.18em] opacity-60">Kindle / read-later export</p>
-                  <p className="text-sm opacity-75">Export only your saved passages from this source, with canonical URLs, tags, and private note snippets.</p>
+                  <p className="text-sm opacity-75">Export or email only your saved passages from this source, with canonical URLs, tags, and private note snippets.</p>
+                  {readLaterDestination?.configured ? <p className="text-xs opacity-60">Destination: {readLaterDestination.email} · {readLaterDestination.active ? 'active' : 'inactive in Settings'}</p> : <p className="text-xs opacity-60">Save a destination in Settings to show Email export.</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  {readLaterDestination?.configured && readLaterDestination.active ? (
+                    <button className="btn btn-secondary btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('email')}>Email export</button>
+                  ) : null}
                   <button className="btn btn-primary btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('html')}>Export saved HTML</button>
                   <button className="btn btn-outline btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('txt')}>TXT</button>
                   <button className="btn btn-ghost btn-xs" disabled={(payload.source.savedCount ?? 0) === 0} onClick={() => exportSavedSourcePassages('copy')}>Copy</button>

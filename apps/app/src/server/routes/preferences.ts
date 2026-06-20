@@ -12,6 +12,9 @@ const DEFAULT_AVOID_TAGS = ['dark', 'tense', 'deception', 'suffering', 'violence
 const MAX_AVOID_TAGS = 5;
 const DAILY_PUSH_HOUR_TAG = `${CONTROL_TAG_PREFIX}daily-push:hour`;
 const DAILY_PUSH_TZ_PREFIX = `${CONTROL_TAG_PREFIX}daily-push:tz:`;
+const READ_LATER_EMAIL_PREFIX = `${CONTROL_TAG_PREFIX}read-later:email:`;
+const READ_LATER_ACTIVE_TAG = `${CONTROL_TAG_PREFIX}read-later:active`;
+const READ_LATER_VERIFIED_TAG = `${CONTROL_TAG_PREFIX}read-later:verified`;
 
 const READING_GOALS = [
   {
@@ -120,6 +123,22 @@ function dailyPushTimeLabel(hour: number, timeZone: string) {
   }).format(date) + ` ${timeZone}`;
 }
 
+function readLaterDestinationFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
+  const emailRow = preferences.find((pref) => pref.tag.startsWith(READ_LATER_EMAIL_PREFIX));
+  const email = emailRow ? decodeURIComponent(emailRow.tag.slice(READ_LATER_EMAIL_PREFIX.length)) : '';
+  const active = preferences.some((pref) => pref.tag === READ_LATER_ACTIVE_TAG && Number(pref.weight) === 1);
+  const verified = preferences.some((pref) => pref.tag === READ_LATER_VERIFIED_TAG && Number(pref.weight) === 1);
+  if (!email) return { email: '', active: false, verified: false, configured: false };
+  return { email, active, verified, configured: true };
+}
+
+function normalizeReadLaterEmail(value: unknown) {
+  const email = typeof value === 'string' ? value.trim().toLowerCase() : '';
+  if (!email) return '';
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  return email;
+}
+
 function dailyPushScheduleFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
   const hourRow = preferences.find((pref) => pref.tag === DAILY_PUSH_HOUR_TAG);
   const tzRow = preferences.find((pref) => pref.tag.startsWith(DAILY_PUSH_TZ_PREFIX));
@@ -144,7 +163,8 @@ preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
     const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
     const avoidTags = await fetchAvoidTagOptions(prisma);
     const dailyPushSchedule = dailyPushScheduleFromPreferences(prefs);
-    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule });
+    const readLaterDestination = readLaterDestinationFromPreferences(prefs);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -239,6 +259,58 @@ preferencesRouter.post('/preferences/avoid-tags', async (req: Request, res: Resp
     const { positivePreferences, avoidTags: savedAvoidTags } = splitPreferenceControls(prefs);
     const avoidTags = await fetchAvoidTagOptions(prisma);
     res.json({ preferences: positivePreferences, avoidTags, selectedAvoidTags: savedAvoidTags });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/preferences/read-later-destination
+// Stores the user's private Kindle/read-later destination in existing user_preferences control rows.
+preferencesRouter.post('/preferences/read-later-destination', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const clear = Boolean(req.body?.clear);
+    const email = normalizeReadLaterEmail(req.body?.email);
+    const active = req.body?.active !== false;
+    const verified = Boolean(req.body?.verified);
+    if (!clear && !email) {
+      res.status(400).json({ error: 'Enter a valid Kindle/read-later destination email.' });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId}
+        AND (tag LIKE ${`${READ_LATER_EMAIL_PREFIX}%`} OR tag = ${READ_LATER_ACTIVE_TAG} OR tag = ${READ_LATER_VERIFIED_TAG})
+    `;
+
+    if (!clear && email) {
+      await prisma.$executeRaw`
+        INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+        VALUES (${nanoid()}, ${userId}, ${`${READ_LATER_EMAIL_PREFIX}${encodeURIComponent(email)}`}, ${1}, ${updatedAt})
+      `;
+      if (active) {
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${READ_LATER_ACTIVE_TAG}, ${1}, ${updatedAt})
+        `;
+      }
+      if (verified) {
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${READ_LATER_VERIFIED_TAG}, ${1}, ${updatedAt})
+        `;
+      }
+    }
+
+    const prefs = await fetchPreferences(prisma, userId);
+    res.json({ readLaterDestination: readLaterDestinationFromPreferences(prefs) });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

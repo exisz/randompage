@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-20 — PLANET-2984 saved passage Kindle/read-later export
+> 最后更新: 2026-06-21 — PLANET-2994 saved-passage Email export delivery fallback
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -51,7 +51,7 @@
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
 │    /api/reading/challenges → lightweight challenge/achievement progress derived from browsing_events, passage_reviews, reading_paths, push_history, user_preferences │ │
-│  │    /api/preferences → 读取偏好权重 + goals/avoid tags + daily push schedule 控制     │ │
+│  │    /api/preferences → 读取偏好权重 + goals/avoid tags + daily push schedule + read-later email 控制     │ │
 │  │    /api/push/*    → 推送订阅/历史                          │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
@@ -217,8 +217,9 @@ exisz/randompage (GitHub)
 - `apps/app/src/client/components/SharePassageButton.tsx` uses the Web Share API when available and falls back to copying a formatted passage snippet to clipboard.
 - `apps/app/src/client/components/SharePassageImageButton.tsx` renders a mobile-friendly PNG quote card client-side with canvas; the card contains only existing passage text, title/author, subtle RandomPage branding, and canonical `/discover?passageId=...` URL. It uses native file sharing when supported, then image clipboard, then PNG download fallback.
 - Shared text includes a short excerpt, book title, author, and canonical app URL (`/discover?passageId=...`) so the exact rendered passage can be opened later instead of replacing it with a random card.
-- Bookmarks now has a Kindle/read-later export panel for the current saved-passage filter (all/search/tag/collection/unfiled). It downloads HTML/TXT or copies plain text with passage excerpt, title, author, canonical RandomPage URL, tags, and private note snippets.
-- Book/source detail (`/source`) exposes the same export for the signed-in user's saved passages from that source only, preserving the page ordering and user-owned boundary.
+- Bookmarks has a Kindle/read-later export panel for the current saved-passage filter (all/search/tag/collection/unfiled). It downloads HTML/TXT, copies plain text, or opens an Email export action when Settings has an active read-later destination. The bundle includes passage excerpt/text, title, author, canonical RandomPage URL, tags, and private note snippets. If the generated mailto payload is too large, the client falls back to TXT download + clipboard copy.
+- Settings stores the signed-in user's private Kindle/read-later destination email plus active/approval toggles in existing `user_preferences` control rows (`control:read-later:*`); no new table or outbound email provider is introduced in v1.
+- Book/source detail (`/source`) exposes the same download/copy/email export for the signed-in user's saved passages from that source only, preserving the page ordering and user-owned boundary.
 - Discover current card + Daily Review cards, Bookmarks saved/Recall/Themed Review cards, and History browsing/push-inbox cards render reusable text Share and visual Card actions beside existing read/listen controls.
 - Static regressions: `pnpm --filter @randompage/app check:share-passage` and `pnpm --filter @randompage/app check:kindle-export`.
 
@@ -240,7 +241,7 @@ exisz/randompage (GitHub)
 | `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
 | `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
 | `check-passage-feedback-policy.mjs` | PLANET-2934 | 静态回归检查 Discover + Push inbox feedback chips、`POST /api/passages/:id/feedback`、bounded preference updates 与 double-submit guard。 |
-| `check-kindle-export-policy.mjs` | PLANET-2984 | 静态回归检查 Bookmarks + source detail Kindle/read-later HTML/TXT/copy export、canonical URLs、private note snippets、no-summary boundary。 |
+| `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -257,6 +258,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-21 | PLANET-2994: Added saved-passage Email export delivery fallback. Settings stores a private Kindle/read-later destination email with active/approval toggles in existing `user_preferences` control rows; Bookmarks and source detail show Email export when active, opening a mailto bundle or falling back to TXT download + clipboard for large saved-passage bundles; `check:kindle-export` now guards the email path. | Engineer Pod |
 | 2026-06-20 | PLANET-2984: Added saved-passage Kindle/read-later export. Bookmarks can export the current filtered saved passage set as HTML/TXT/copy with title/author/excerpt/canonical URL/tags/private notes; source detail can export the signed-in user's saved passages from that source only, with `/api/book-source` returning note snippets for saved rows and `check:kindle-export` guarding the boundary. | Engineer Pod |
 | 2026-06-19 | PLANET-2948: Hardened `check-passage-content-policy.mjs` with referenced/unreferenced accounting plus `--apply` cleanup; production cleanup removed 190 unreferenced unreadable passage rows, leaving the documented 39 non-terminal rows that are already user-owned via push_history/bookmarks. | Engineer Pod |
 | 2026-06-18 | PLANET-2934: Added explicit passage feedback chips on Discover and History/Push inbox cards plus `POST /api/passages/:id/feedback`; signed-in taps record chip-specific `browsing_events` and update bounded tag weights for More/Less/Different-topic while Too dense records signal only; added `check:passage-feedback`. | Engineer Pod |
