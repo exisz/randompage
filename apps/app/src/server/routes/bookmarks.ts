@@ -3,6 +3,7 @@ import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { nanoid } from 'nanoid';
 import { parsePassageTags } from '../lib/passageTags.js';
+import { computeReviewSchedule, deriveBoxFromHistory, type ReviewAction } from '../lib/spacedReview.js';
 
 export const bookmarksRouter = Router();
 
@@ -59,12 +60,15 @@ async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
   `);
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_user_due_idx ON passage_reviews(user_id, due_after)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_bookmark_reviewed_idx ON passage_reviews(bookmark_id, reviewed_at)');
+  await ensurePassageReviewBoxColumn(prisma);
 }
 
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
+// PLANET-3015: spaced-repetition box/interval index for increasing-interval scheduling.
+async function ensurePassageReviewBoxColumn(prisma: ReturnType<typeof getPrisma>) {
+  const columns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(passage_reviews)');
+  if (!columns.some((column) => column.name === 'box')) {
+    await prisma.$executeRawUnsafe('ALTER TABLE passage_reviews ADD COLUMN box INTEGER');
+  }
 }
 
 function epochSeconds(date: Date) {
@@ -306,18 +310,34 @@ bookmarksRouter.post('/daily-review/:bookmarkId', async (req: Request, res: Resp
     if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
 
     const now = new Date();
-    const dueAfter = action === 'reviewed' ? addDays(now, 7) : addDays(now, 1);
-    const review = await prisma.passageReview.create({
-      data: {
-        id: nanoid(),
-        userId,
-        bookmarkId: bookmark.id,
-        passageId: bookmark.passageId,
-        action,
-        reviewedAt: now,
-        dueAfter,
-      },
+    // PLANET-3015: increasing-interval spaced repetition. Derive the previous box from this
+    // bookmark's most recent review (or its legacy streak) and advance/step the ladder.
+    const priorReviews = await prisma.passageReview.findMany({
+      where: { userId, bookmarkId: bookmark.id },
+      orderBy: { reviewedAt: 'desc' },
+      take: 8,
+      select: { action: true, box: true },
     });
+    const previousBox = deriveBoxFromHistory(priorReviews);
+    const schedule = computeReviewSchedule(previousBox, action as ReviewAction, now);
+    const dueAfter = schedule.dueAfter;
+    const reviewId = nanoid();
+    // Persist box alongside the existing columns; box lives outside the Prisma model, so write raw.
+    await prisma.$executeRaw`
+      INSERT INTO passage_reviews (id, user_id, bookmark_id, passage_id, action, reviewed_at, due_after, box)
+      VALUES (${reviewId}, ${userId}, ${bookmark.id}, ${bookmark.passageId}, ${action}, ${now.toISOString()}, ${dueAfter.toISOString()}, ${schedule.box})
+    `;
+    const review = {
+      id: reviewId,
+      userId,
+      bookmarkId: bookmark.id,
+      passageId: bookmark.passageId,
+      action,
+      reviewedAt: now.toISOString(),
+      dueAfter: dueAfter.toISOString(),
+      box: schedule.box,
+      intervalDays: schedule.intervalDays,
+    };
     res.json({ review });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });

@@ -17,8 +17,7 @@ const requiredBookmarks = [
 
 const requiredRoutes = [
   "requestedAction === 'skip' || requestedAction === 'review_later'",
-  "action === 'reviewed' ? addDays(now, 7) : addDays(now, 1)",
-  'passageReview.create',
+  'INSERT INTO passage_reviews',
 ];
 
 const missing = [];

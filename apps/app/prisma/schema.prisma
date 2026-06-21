@@ -173,6 +173,7 @@ model PassageReview {
   action     String
   reviewedAt DateTime @map("reviewed_at")
   dueAfter   DateTime @map("due_after")
+  box        Int?
 
   user     User     @relation(fields: [userId], references: [id])
   bookmark Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
