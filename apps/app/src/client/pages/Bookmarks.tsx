@@ -27,6 +27,10 @@ interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
 }
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
+interface RecallSearchResult {
+  id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
+  note?: string | null; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
+}
 
 function parseTags(tags: string) {
   try {
@@ -68,6 +72,10 @@ export default function Bookmarks() {
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
+  const [recallQuery, setRecallQuery] = useState('');
+  const [recallResults, setRecallResults] = useState<RecallSearchResult[]>([]);
+  const [recallSearching, setRecallSearching] = useState(false);
+  const [recallStatus, setRecallStatus] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -150,6 +158,34 @@ export default function Bookmarks() {
     ].filter(Boolean);
     return filters.length ? `Filtered export: ${filters.join(', ')}.` : 'All saved RandomPage passages in your Bookmarks.';
   }, [activeCollection, activeTag, collections, query]);
+
+  const runRecallSearch = async () => {
+    const q = recallQuery.trim();
+    if (q.length < 2 || offlineMode) return;
+    setRecallSearching(true);
+    setRecallStatus(null);
+    try {
+      const res = await apiFetch(`/bookmarks/recall-search?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setRecallResults(data.results || []);
+      setRecallStatus((data.results || []).length ? null : 'No fuzzy recall matches yet. Try a broader idea or save more passages.');
+    } catch (error) {
+      setRecallResults([]);
+      setRecallStatus('Recall search is unavailable right now; exact saved-passage search and offline cache still work.');
+    } finally {
+      setRecallSearching(false);
+    }
+  };
+
+  const saveRecallPassage = async (passageId: string) => {
+    if (offlineMode) return;
+    setBusy(true);
+    try {
+      await apiFetch('/bookmarks', { method: 'POST', body: JSON.stringify({ passageId }) });
+      await refresh();
+      setRecallStatus('Saved passage to Bookmarks.');
+    } finally { setBusy(false); }
+  };
 
   const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy' | 'email') => {
     if (filteredBookmarks.length === 0) return;
@@ -361,9 +397,61 @@ export default function Bookmarks() {
 
         <div className="card bg-base-200 shadow mb-4">
           <div className="card-body gap-3 p-4">
+            <div className="rounded-box border border-primary/15 bg-base-100/80 p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <label className="form-control flex-1">
+                  <span className="label-text text-xs uppercase tracking-[0.18em] opacity-60">Recall search · Find by idea</span>
+                  <input
+                    value={recallQuery}
+                    onChange={e => setRecallQuery(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') runRecallSearch(); }}
+                    className="input input-bordered w-full"
+                    placeholder="power corrupting good intentions, loneliness and freedom…"
+                    disabled={offlineMode}
+                  />
+                </label>
+                <button className="btn btn-primary" disabled={offlineMode || recallSearching || recallQuery.trim().length < 2} onClick={runRecallSearch}>
+                  {recallSearching ? <span className="loading loading-spinner loading-xs" /> : 'Find ideas'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs opacity-65">Fuzzy recall searches your saved passages, private notes, collections, History, and Push inbox only. No query or passage text leaves RandomPage.</p>
+              {recallStatus && <p className="mt-2 text-xs opacity-70" role="status">{recallStatus}</p>}
+              {recallResults.length > 0 && (
+                <div className="mt-3 flex flex-col gap-3">
+                  {recallResults.map(result => {
+                    const isSaved = bookmarks.some(bookmark => bookmark.passage.id === result.id);
+                    const resultTags = parseTags(result.tags).slice(0, 4);
+                    return (
+                      <div key={result.id} className="rounded-box border border-base-content/10 bg-base-200/80 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-65">
+                          <span>{result.matchReason}</span>
+                          <span>{(result.sources || []).join(' · ') || 'library'}</span>
+                        </div>
+                        <p className="font-serif leading-relaxed mt-2">{result.snippet}</p>
+                        <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={result.bookTitle} author={result.author} chapter={result.chapter} compact className="items-end opacity-60 hover:opacity-100" /></div>
+                        {resultTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{resultTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                        {result.note && <p className="mt-2 rounded-box bg-warning/10 border border-warning/20 p-2 text-xs"><span className="font-medium">Private note match:</span> {result.note.slice(0, 180)}{result.note.length > 180 ? '…' : ''}</p>}
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button className="btn btn-primary btn-xs" onClick={() => navigate(`/discover?passageId=${result.id}`)}>Open</button>
+                            <ListenControl text={result.text} title={`${result.bookTitle} recall result`} compact />
+                            <SharePassageButton passage={result} compact />
+                            <SharePassageImageButton passage={result} compact />
+                            <button className="btn btn-outline btn-xs" onClick={() => setReadingQueue(addPassageToReadingQueue(result))} disabled={readingQueue.some(item => item.passage.id === result.id)}>
+                              {readingQueue.some(item => item.passage.id === result.id) ? '✓ Queued' : 'Add to queue'}
+                            </button>
+                          </div>
+                          {isSaved ? <span className="badge badge-success badge-outline">Saved</span> : <button className="btn btn-ghost btn-xs" disabled={busy || offlineMode} onClick={() => saveRecallPassage(result.id)}>Save</button>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <label className="input input-bordered flex items-center gap-2 w-full">
-              <span className="opacity-50">Search</span>
-              <input value={query} onChange={e => setQuery(e.target.value)} className="grow" placeholder="title, author, text, tag…" />
+              <span className="opacity-50">Exact search</span>
+              <input value={query} onChange={e => setQuery(e.target.value)} className="grow" placeholder="title, author, exact text, tag…" />
             </label>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <button className={`btn btn-xs ${activeTag === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTag('all')}>All tags</button>

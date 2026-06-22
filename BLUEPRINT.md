@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-22 — PLANET-3046 next-review interval feedback after saved-passage review actions
+> 最后更新: 2026-06-23 — PLANET-3071 fuzzy recall search over user-owned saved/history/push passages
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -47,6 +47,7 @@
 │  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences │ │
 │  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
+│  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
@@ -106,6 +107,7 @@ exisz/randompage (GitHub)
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
+| recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different topic 以 1–12 bounded weight 调整；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone，不参与推荐打分） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
@@ -184,6 +186,14 @@ exisz/randompage (GitHub)
 - Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls.
 - Static regression: `pnpm --filter @randompage/app check:recall-cards`.
 
+## Fuzzy Recall Search
+
+- Bookmarks exposes “Recall search / Find by idea” as a separate natural-language/fuzzy retrieval surface from exact saved-passage search. It is designed for remembered ideas (“power corrupting good intentions”) rather than exact words or tags.
+- `GET /api/bookmarks/recall-search?q=` searches only the signed-in user’s own RandomPage library graph: bookmarks (including private notes and collection names), browsing history, and push inbox. It returns title/author, snippet, source badges, and match reasons; no query or passage text leaves RandomPage.
+- Results reuse existing passage actions where possible: open exact passage, Listen, Share, Card, Add to queue, and Save when the matching passage came from history/push rather than bookmarks.
+- Offline/cached Bookmarks remains graceful: the exact client-side search still works over cached saved passages when the recall endpoint is unavailable.
+- Static regression: `pnpm --filter @randompage/app check:recall-search`.
+
 ## Lightweight Reading Challenges
 
 - Discover renders a signed-in “Reading challenges” panel with 5 fixed personal progress loops: Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic.
@@ -243,6 +253,7 @@ exisz/randompage (GitHub)
 | `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
 | `check-passage-feedback-policy.mjs` | PLANET-2934 | 静态回归检查 Discover + Push inbox feedback chips、`POST /api/passages/:id/feedback`、bounded preference updates 与 double-submit guard。 |
 | `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
+| `check-recall-search-policy.ts` | PLANET-3071 | 验证 deterministic fuzzy recall scorer：approximate idea query ranks the intended saved passage above unrelated passages and private notes/tags contribute to score. |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -259,6 +270,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-23 | PLANET-3071: Added Bookmarks “Recall search / Find by idea” fuzzy retrieval over the signed-in user’s own bookmarks, private notes, collection names, browsing history, and push inbox; results show match reasons/snippets and reuse open/listen/share/card/queue/save actions without external LLMs, embeddings, summaries, or new content sources. Added `check:recall-search`. | Engineer Pod |
 | 2026-06-22 | PLANET-3046: Daily Review / Themed Review / Recall Cards now surface next-review interval feedback from the actual `POST /api/daily-review/:bookmarkId` response (`dueAfter`/`box`/`intervalDays`), making the PLANET-3015 spaced-repetition value visible without new endpoints, schema, summaries, feeds, or content sources. | Engineer Pod |
 | 2026-06-21 | PLANET-2994: Added saved-passage Email export delivery fallback. Settings stores a private Kindle/read-later destination email with active/approval toggles in existing `user_preferences` control rows; Bookmarks and source detail show Email export when active, opening a mailto bundle or falling back to TXT download + clipboard for large saved-passage bundles; `check:kindle-export` now guards the email path. | Engineer Pod |
 | 2026-06-20 | PLANET-2984: Added saved-passage Kindle/read-later export. Bookmarks can export the current filtered saved passage set as HTML/TXT/copy with title/author/excerpt/canonical URL/tags/private notes; source detail can export the signed-in user's saved passages from that source only, with `/api/book-source` returning note snippets for saved rows and `check:kindle-export` guarding the boundary. | Engineer Pod |

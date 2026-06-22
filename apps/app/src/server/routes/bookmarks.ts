@@ -4,6 +4,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { nanoid } from 'nanoid';
 import { parsePassageTags } from '../lib/passageTags.js';
 import { computeReviewSchedule, deriveBoxFromHistory, type ReviewAction } from '../lib/spacedReview.js';
+import { scoreRecallPassages, type RecallSearchPassageInput } from '../lib/recallSearch.js';
 
 export const bookmarksRouter = Router();
 
@@ -119,6 +120,69 @@ bookmarksRouter.get('/bookmarks', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
     res.json({ bookmarks });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/bookmarks/recall-search?q=... — fuzzy idea search over the user's own library/history.
+bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const q = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 160) : '';
+    if (q.length < 2) { res.json({ query: q, results: [] }); return; }
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+
+    const [bookmarks, browsingEvents, pushHistory] = await Promise.all([
+      prisma.bookmark.findMany({
+        where: { userId },
+        include: { passage: true, collectionItems: { include: { collection: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      prisma.browsingEvent.findMany({
+        where: { userId, action: { in: ['view', 'more_like_this'] } },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+      }),
+      prisma.pushHistory.findMany({
+        where: { userId },
+        include: { passage: true },
+        orderBy: { sentAt: 'desc' },
+        take: 120,
+      }),
+    ]);
+
+    const candidates = new Map<string, RecallSearchPassageInput>();
+    const upsertCandidate = (input: RecallSearchPassageInput) => {
+      const existing = candidates.get(input.id);
+      if (!existing) { candidates.set(input.id, input); return; }
+      const sources = Array.from(new Set([...(existing.sources ?? []), ...(input.sources ?? [])]));
+      const collections = Array.from(new Set([...(existing.collections ?? []), ...(input.collections ?? [])]));
+      candidates.set(input.id, {
+        ...existing,
+        note: existing.note ?? input.note,
+        collections,
+        sources,
+      });
+    };
+
+    for (const bookmark of bookmarks) {
+      upsertCandidate({
+        ...bookmark.passage,
+        note: bookmark.note,
+        collections: bookmark.collectionItems.map(item => item.collection.name),
+        sources: ['bookmark'],
+      });
+    }
+    for (const event of browsingEvents) upsertCandidate({ ...event.passage, sources: ['history'] });
+    for (const push of pushHistory) upsertCandidate({ ...push.passage, sources: ['push inbox'] });
+
+    const results = scoreRecallPassages(q, Array.from(candidates.values()), 10);
+    res.json({ query: q, results });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

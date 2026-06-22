@@ -44,7 +44,8 @@
     "check:history-day-grouping": "node scripts/check-history-day-grouping-policy.mjs",
     "check:passage-feedback": "node scripts/check-passage-feedback-policy.mjs",
     "check:kindle-export": "node scripts/check-kindle-export-policy.mjs",
-    "check:spaced-review": "tsx scripts/check-spaced-review-policy.mjs"
+    "check:spaced-review": "tsx scripts/check-spaced-review-policy.mjs",
+    "check:recall-search": "tsx scripts/check-recall-search-policy.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
