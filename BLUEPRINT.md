@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-21 — PLANET-2994 saved-passage Email export delivery fallback
+> 最后更新: 2026-06-22 — PLANET-3046 next-review interval feedback after saved-passage review actions
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -101,7 +101,7 @@ exisz/randompage (GitHub)
 | bookmarks | 用户收藏；`note` 字段保存该用户对 saved passage 的私密笔记/反思（user-passage relationship，不写到 passages 全局内容） |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
-| passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现 |
+| passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after、box），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现；box 支持 increasing-interval ladder |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
@@ -179,7 +179,8 @@ exisz/randompage (GitHub)
 ## Saved-Passage Recall Cards
 
 - `apps/app/src/client/pages/Bookmarks.tsx` exposes an optional mobile-first Recall Cards mode for due saved passages. The card shows title/author/chapter plus the prompt “What idea did this page contain?” before revealing the passage body.
-- Recall actions reuse the existing `POST /api/daily-review/:bookmarkId` / `passage_reviews` path: `reviewed` (Remembered, due in 7 days), `review_later` (due tomorrow), and `skip` (due tomorrow). No new table or scheduler is introduced.
+- Recall actions reuse the existing `POST /api/daily-review/:bookmarkId` / `passage_reviews` path: `reviewed` advances the spaced-review box ladder, `review_later` returns tomorrow without advancing, and `skip` steps back sooner. No new table or scheduler is introduced.
+- Daily Review (Discover), Themed Review, and Recall Cards read the actual POST response (`review.dueAfter` / `intervalDays` / `box`) and surface a lightweight next-review confirmation such as “Nice — next review in ~2 weeks” or “back tomorrow”; the UI does not hardcode cadence.
 - Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls.
 - Static regression: `pnpm --filter @randompage/app check:recall-cards`.
 
@@ -258,6 +259,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-22 | PLANET-3046: Daily Review / Themed Review / Recall Cards now surface next-review interval feedback from the actual `POST /api/daily-review/:bookmarkId` response (`dueAfter`/`box`/`intervalDays`), making the PLANET-3015 spaced-repetition value visible without new endpoints, schema, summaries, feeds, or content sources. | Engineer Pod |
 | 2026-06-21 | PLANET-2994: Added saved-passage Email export delivery fallback. Settings stores a private Kindle/read-later destination email with active/approval toggles in existing `user_preferences` control rows; Bookmarks and source detail show Email export when active, opening a mailto bundle or falling back to TXT download + clipboard for large saved-passage bundles; `check:kindle-export` now guards the email path. | Engineer Pod |
 | 2026-06-20 | PLANET-2984: Added saved-passage Kindle/read-later export. Bookmarks can export the current filtered saved passage set as HTML/TXT/copy with title/author/excerpt/canonical URL/tags/private notes; source detail can export the signed-in user's saved passages from that source only, with `/api/book-source` returning note snippets for saved rows and `check:kindle-export` guarding the boundary. | Engineer Pod |
 | 2026-06-19 | PLANET-2948: Hardened `check-passage-content-policy.mjs` with referenced/unreferenced accounting plus `--apply` cleanup; production cleanup removed 190 unreferenced unreadable passage rows, leaving the documented 39 non-terminal rows that are already user-owned via push_history/bookmarks. | Engineer Pod |

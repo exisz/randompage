@@ -8,6 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import PassageFeedbackChips from '../components/PassageFeedbackChips';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
+import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 import BookSourceLink from '../components/BookSourceLink';
 
 interface Passage {
@@ -508,11 +509,12 @@ export default function Discover() {
 
   const handleReviewAction = async (item: DailyReviewItem, action: 'reviewed' | 'skip') => {
     try {
-      await apiFetch(`/daily-review/${encodeURIComponent(item.bookmarkId)}`, {
+      const res = await apiFetch(`/daily-review/${encodeURIComponent(item.bookmarkId)}`, {
         method: 'POST',
         body: JSON.stringify({ action }),
       });
-      setReviewStatus(action === 'reviewed' ? 'Saved passage reviewed — it will come back later.' : 'Review skipped for now.');
+      const schedule = await res.json() as ReviewSchedulePayload;
+      setReviewStatus(formatReviewScheduleFeedback(action, schedule));
       setDailyReview((current) => current
         ? { ...current, items: current.items.filter((candidate) => candidate.bookmarkId !== item.bookmarkId) }
         : current);

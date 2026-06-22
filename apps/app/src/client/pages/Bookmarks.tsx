@@ -9,6 +9,7 @@ import SharePassageImageButton from '../components/SharePassageImageButton';
 import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
 import { copyPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
+import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
@@ -321,17 +322,12 @@ export default function Bookmarks() {
     setBusy(true);
     setReviewStatus(null);
     try {
-      await apiFetch(`/daily-review/${bookmarkId}`, {
+      const res = await apiFetch(`/daily-review/${bookmarkId}`, {
         method: 'POST',
         body: JSON.stringify({ action }),
       });
-      setReviewStatus(
-        action === 'reviewed'
-          ? 'Saved passage reviewed — it will rest before returning.'
-          : action === 'review_later'
-            ? 'Review later set — this recall card will come back tomorrow.'
-            : 'Skipped for today — it will not immediately repeat.'
-      );
+      const schedule = await res.json() as ReviewSchedulePayload;
+      setReviewStatus(formatReviewScheduleFeedback(action, schedule));
       setRevealedRecallIds(prev => {
         const next = new Set(prev);
         next.delete(bookmarkId);
