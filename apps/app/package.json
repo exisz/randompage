@@ -45,7 +45,8 @@
     "check:passage-feedback": "node scripts/check-passage-feedback-policy.mjs",
     "check:kindle-export": "node scripts/check-kindle-export-policy.mjs",
     "check:spaced-review": "tsx scripts/check-spaced-review-policy.mjs",
-    "check:recall-search": "tsx scripts/check-recall-search-policy.ts"
+    "check:recall-search": "tsx scripts/check-recall-search-policy.ts",
+    "check:passage-annotations": "node scripts/check-passage-annotations-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

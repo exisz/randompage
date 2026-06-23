@@ -62,6 +62,7 @@ async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_user_due_idx ON passage_reviews(user_id, due_after)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_bookmark_reviewed_idx ON passage_reviews(bookmark_id, reviewed_at)');
   await ensurePassageReviewBoxColumn(prisma);
+  await ensurePassageAnnotationTable(prisma);
 }
 
 // PLANET-3015: spaced-repetition box/interval index for increasing-interval scheduling.
@@ -70,6 +71,29 @@ async function ensurePassageReviewBoxColumn(prisma: ReturnType<typeof getPrisma>
   if (!columns.some((column) => column.name === 'box')) {
     await prisma.$executeRawUnsafe('ALTER TABLE passage_reviews ADD COLUMN box INTEGER');
   }
+}
+
+// PLANET-3093: private line-level thoughts anchored to exact text ranges inside saved passages.
+async function ensurePassageAnnotationTable(prisma: ReturnType<typeof getPrisma>) {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS passage_annotations (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      bookmark_id TEXT NOT NULL,
+      passage_id TEXT NOT NULL,
+      quote TEXT NOT NULL,
+      start_offset INTEGER NOT NULL,
+      end_offset INTEGER NOT NULL,
+      note TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_user_bookmark_idx ON passage_annotations(user_id, bookmark_id)');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_passage_idx ON passage_annotations(passage_id)');
 }
 
 function epochSeconds(date: Date) {
@@ -99,6 +123,22 @@ function normalizeBookmarkNote(value: unknown) {
   return trimmed ? trimmed.slice(0, 1200) : null;
 }
 
+function normalizeAnnotationText(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : undefined;
+}
+
+function validateAnnotationAnchor(passageText: string, quote: string, startOffset: unknown, endOffset: unknown) {
+  if (!Number.isInteger(startOffset) || !Number.isInteger(endOffset)) return { error: 'startOffset and endOffset must be integers' };
+  const start = Number(startOffset);
+  const end = Number(endOffset);
+  if (start < 0 || end <= start || end > passageText.length) return { error: 'annotation offsets are outside the passage text' };
+  const anchoredQuote = passageText.slice(start, end).trim();
+  if (!anchoredQuote || anchoredQuote !== quote.trim()) return { error: 'quote must match the selected passage text range' };
+  return { start, end };
+}
+
 async function requireOwnedCollection(prisma: ReturnType<typeof getPrisma>, userId: string, collectionId: string) {
   const collection = await prisma.bookmarkCollection.findFirst({ where: { id: collectionId, userId } });
   return collection;
@@ -116,6 +156,7 @@ bookmarksRouter.get('/bookmarks', async (req: Request, res: Response) => {
         passage: true,
         collectionItems: { include: { collection: true } },
         passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+        annotations: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -138,7 +179,7 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
     const [bookmarks, browsingEvents, pushHistory] = await Promise.all([
       prisma.bookmark.findMany({
         where: { userId },
-        include: { passage: true, collectionItems: { include: { collection: true } } },
+        include: { passage: true, collectionItems: { include: { collection: true } }, annotations: { orderBy: { createdAt: 'asc' } } },
         orderBy: { createdAt: 'desc' },
         take: 200,
       }),
@@ -174,6 +215,7 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
       upsertCandidate({
         ...bookmark.passage,
         note: bookmark.note,
+        annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
         collections: bookmark.collectionItems.map(item => item.collection.name),
         sources: ['bookmark'],
       });
@@ -471,9 +513,91 @@ bookmarksRouter.patch('/bookmarks/:id/note', async (req: Request, res: Response)
     await prisma.bookmark.update({ where: { id: bookmark.id }, data: { note } });
     const updated = await prisma.bookmark.findFirst({
       where: { id: bookmark.id, userId },
-      include: { passage: true, collectionItems: { include: { collection: true } }, passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 } },
+      include: {
+        passage: true,
+        collectionItems: { include: { collection: true } },
+        passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+        annotations: { orderBy: { createdAt: 'asc' } },
+      },
     });
     res.json({ bookmark: updated });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+
+// POST /api/bookmarks/:id/annotations — create a private line-level thought on an owned saved passage
+bookmarksRouter.post('/bookmarks/:id/annotations', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await prisma.bookmark.findFirst({ where: { id: req.params.id, userId }, include: { passage: true } });
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+
+    const quote = normalizeAnnotationText(req.body?.quote, 600);
+    const note = normalizeAnnotationText(req.body?.note, 1200);
+    if (!quote || !note) { res.status(400).json({ error: 'quote and note are required strings' }); return; }
+    const anchor = validateAnnotationAnchor(bookmark.passage.text, quote, req.body?.startOffset, req.body?.endOffset);
+    if ('error' in anchor) { res.status(400).json({ error: anchor.error }); return; }
+
+    const now = new Date();
+    const annotation = await prisma.passageAnnotation.create({
+      data: {
+        id: nanoid(),
+        userId,
+        bookmarkId: bookmark.id,
+        passageId: bookmark.passageId,
+        quote,
+        startOffset: anchor.start,
+        endOffset: anchor.end,
+        note,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+    res.json({ annotation });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// PATCH /api/bookmarks/:id/annotations/:annotationId — edit an owned line-level thought
+bookmarksRouter.patch('/bookmarks/:id/annotations/:annotationId', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await requireOwnedBookmark(prisma, userId, req.params.id);
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+    const note = normalizeAnnotationText(req.body?.note, 1200);
+    if (!note) { res.status(400).json({ error: 'note is required' }); return; }
+    const existing = await prisma.passageAnnotation.findFirst({ where: { id: req.params.annotationId, userId, bookmarkId: bookmark.id } });
+    if (!existing) { res.status(404).json({ error: 'Annotation not found' }); return; }
+    const annotation = await prisma.passageAnnotation.update({ where: { id: existing.id }, data: { note, updatedAt: new Date() } });
+    res.json({ annotation });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// DELETE /api/bookmarks/:id/annotations/:annotationId — delete an owned line-level thought
+bookmarksRouter.delete('/bookmarks/:id/annotations/:annotationId', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await requireOwnedBookmark(prisma, userId, req.params.id);
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+    const existing = await prisma.passageAnnotation.findFirst({ where: { id: req.params.annotationId, userId, bookmarkId: bookmark.id } });
+    if (!existing) { res.status(404).json({ error: 'Annotation not found' }); return; }
+    await prisma.passageAnnotation.delete({ where: { id: existing.id } });
+    res.json({ ok: true });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }

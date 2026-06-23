@@ -22,6 +22,7 @@ model User {
   browsingEvents      BrowsingEvent[]
   userPreferences     UserPreference[]
   passageReviews      PassageReview[]
+  passageAnnotations  PassageAnnotation[]
 
   @@map("users")
 }
@@ -63,6 +64,7 @@ model Passage {
   pushHistory    PushHistory[]
   browsingEvents BrowsingEvent[]
   passageReviews PassageReview[]
+  annotations    PassageAnnotation[]
 
   @@map("passages")
 }
@@ -78,6 +80,7 @@ model Bookmark {
   passage         Passage                  @relation(fields: [passageId], references: [id])
   collectionItems BookmarkCollectionItem[]
   passageReviews  PassageReview[]
+  annotations     PassageAnnotation[]
 
   @@map("bookmarks")
 }
@@ -182,4 +185,25 @@ model PassageReview {
   @@index([userId, dueAfter])
   @@index([bookmarkId, reviewedAt])
   @@map("passage_reviews")
+}
+
+model PassageAnnotation {
+  id          String   @id
+  userId      String   @map("user_id")
+  bookmarkId  String   @map("bookmark_id")
+  passageId   String   @map("passage_id")
+  quote       String
+  startOffset Int      @map("start_offset")
+  endOffset   Int      @map("end_offset")
+  note        String
+  createdAt   DateTime @map("created_at")
+  updatedAt   DateTime @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id])
+  bookmark Bookmark @relation(fields: [bookmarkId], references: [id], onDelete: Cascade)
+  passage  Passage  @relation(fields: [passageId], references: [id])
+
+  @@index([userId, bookmarkId])
+  @@index([passageId])
+  @@map("passage_annotations")
 }

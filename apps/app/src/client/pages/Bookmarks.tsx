@@ -20,8 +20,11 @@ interface PassageReview {
   dueAfter: string;
   action: string;
 }
+interface PassageAnnotation {
+  id: string; quote: string; startOffset: number; endOffset: number; note: string; createdAt: string; updatedAt: string;
+}
 interface Bookmark {
-  id: string; createdAt: string; note?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[];
+  id: string; createdAt: string; note?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[]; annotations?: PassageAnnotation[];
 }
 interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
@@ -29,7 +32,7 @@ interface Collection {
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
 interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
-  note?: string | null; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
+  note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
 }
 
 function parseTags(tags: string) {
@@ -44,7 +47,8 @@ function parseTags(tags: string) {
 function passageSearchText(bookmark: Bookmark) {
   const tags = parseTags(bookmark.passage.tags).join(' ');
   const collections = bookmark.collectionItems?.map(item => item.collection.name).join(' ') ?? '';
-  return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, bookmark.note ?? '', tags, collections]
+  const annotations = bookmark.annotations?.map(annotation => `${annotation.quote} ${annotation.note}`).join(' ') ?? '';
+  return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, bookmark.note ?? '', annotations, tags, collections]
     .join(' ')
     .toLowerCase();
 }
@@ -76,6 +80,9 @@ export default function Bookmarks() {
   const [recallResults, setRecallResults] = useState<RecallSearchResult[]>([]);
   const [recallSearching, setRecallSearching] = useState(false);
   const [recallStatus, setRecallStatus] = useState<string | null>(null);
+  const [selectedThought, setSelectedThought] = useState<{ bookmarkId: string; quote: string; startOffset: number; endOffset: number } | null>(null);
+  const [thoughtDraft, setThoughtDraft] = useState('');
+  const [thoughtBusyId, setThoughtBusyId] = useState<string | null>(null);
   const online = useOnlineStatus();
 
   const loadOfflineCache = () => {
@@ -290,6 +297,57 @@ export default function Bookmarks() {
     if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
     await refresh();
+  };
+
+
+
+  const captureThoughtSelection = (bookmark: Bookmark) => {
+    if (offlineMode) return;
+    const selection = window.getSelection();
+    const quote = selection?.toString().replace(/\s+/g, ' ').trim() ?? '';
+    if (!quote || quote.length < 2) return;
+    const selectedQuote = quote.slice(0, 600);
+    const startOffset = bookmark.passage.text.indexOf(selectedQuote);
+    if (startOffset < 0) {
+      setSelectedThought(null);
+      return;
+    }
+    setSelectedThought({ bookmarkId: bookmark.id, quote: selectedQuote, startOffset, endOffset: startOffset + selectedQuote.length });
+    setThoughtDraft('');
+  };
+
+  const saveLineThought = async () => {
+    if (!selectedThought || offlineMode || !thoughtDraft.trim()) return;
+    setThoughtBusyId(selectedThought.bookmarkId);
+    try {
+      await apiFetch(`/bookmarks/${selectedThought.bookmarkId}/annotations`, {
+        method: 'POST',
+        body: JSON.stringify({ ...selectedThought, note: thoughtDraft.trim() }),
+      });
+      setSelectedThought(null);
+      setThoughtDraft('');
+      await refresh();
+    } finally { setThoughtBusyId(null); }
+  };
+
+  const editLineThought = async (bookmark: Bookmark, annotation: PassageAnnotation) => {
+    if (offlineMode) return;
+    const note = window.prompt('Edit line-level thought', annotation.note)?.trim();
+    if (!note || note === annotation.note) return;
+    setThoughtBusyId(bookmark.id);
+    try {
+      await apiFetch(`/bookmarks/${bookmark.id}/annotations/${annotation.id}`, { method: 'PATCH', body: JSON.stringify({ note }) });
+      await refresh();
+    } finally { setThoughtBusyId(null); }
+  };
+
+  const deleteLineThought = async (bookmark: Bookmark, annotation: PassageAnnotation) => {
+    if (offlineMode || !window.confirm('Delete this line-level thought?')) return;
+    setThoughtBusyId(bookmark.id);
+    try {
+      await apiFetch(`/bookmarks/${bookmark.id}/annotations/${annotation.id}`, { method: 'DELETE' });
+      await refresh();
+    } finally { setThoughtBusyId(null); }
   };
 
   const saveBookmarkNote = async (bookmark: Bookmark, note: string | null) => {
@@ -716,7 +774,51 @@ export default function Bookmarks() {
               return (
                 <div key={bm.id} className="card bg-base-200 shadow">
                   <div className="card-body gap-3 py-4">
-                    <p className="font-serif leading-relaxed">{bm.passage.text.slice(0, 220)}{bm.passage.text.length > 220 ? '…' : ''}</p>
+                    <p
+                      className="font-serif leading-relaxed select-text"
+                      onMouseUp={() => captureThoughtSelection(bm)}
+                      onTouchEnd={() => window.setTimeout(() => captureThoughtSelection(bm), 0)}
+                    >{bm.passage.text}</p>
+                    {selectedThought?.bookmarkId === bm.id && (
+                      <div className="rounded-box border border-accent/30 bg-accent/10 p-3 text-sm">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.18em] opacity-60">Line-level thought</p>
+                            <p className="mt-1 font-serif opacity-85">“{selectedThought.quote}”</p>
+                          </div>
+                          <button className="btn btn-ghost btn-xs" onClick={() => setSelectedThought(null)}>Cancel</button>
+                        </div>
+                        <textarea
+                          className="textarea textarea-bordered w-full mt-2 text-sm"
+                          rows={2}
+                          maxLength={1200}
+                          value={thoughtDraft}
+                          onChange={e => setThoughtDraft(e.target.value)}
+                          placeholder="Add your thought about this exact line…"
+                          disabled={thoughtBusyId === bm.id}
+                        />
+                        <div className="mt-2 flex justify-end">
+                          <button className="btn btn-accent btn-xs" disabled={!thoughtDraft.trim() || thoughtBusyId === bm.id} onClick={saveLineThought}>Add thought</button>
+                        </div>
+                      </div>
+                    )}
+                    {(bm.annotations?.length ?? 0) > 0 && (
+                      <div className="rounded-box bg-accent/5 border border-accent/15 p-3">
+                        <p className="text-xs uppercase tracking-[0.18em] opacity-60 mb-2">Line-level thoughts</p>
+                        <div className="flex flex-col gap-2">
+                          {bm.annotations?.map(annotation => (
+                            <div key={annotation.id} className="rounded-box bg-base-100/75 p-2 text-sm">
+                              <p className="font-serif opacity-80">“{annotation.quote}”</p>
+                              <p className="mt-1">{annotation.note}</p>
+                              <div className="mt-2 flex justify-end gap-2">
+                                <button className="btn btn-ghost btn-xs" disabled={thoughtBusyId === bm.id} onClick={() => editLineThought(bm, annotation)}>Edit</button>
+                                <button className="btn btn-ghost btn-xs text-error" disabled={thoughtBusyId === bm.id} onClick={() => deleteLineThought(bm, annotation)}>Delete</button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
                       <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                       <SharePassageButton passage={bm.passage} compact />
