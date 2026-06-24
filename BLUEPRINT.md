@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-24 — PLANET-3093 line-level private thought annotations on saved passages
+> 最后更新: 2026-06-24 — PLANET-3106 remove stale hard-coded production passage count
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -67,7 +67,7 @@
 ┌──────────────────────────────────────────────────────────────────┐
 │  Turso (生产 SQLite via libSQL)                                   │
 │  DB: turso-randompage-vercel-icfg-...                            │
-│  Tables: users, passages(561), bookmarks, bookmark_collections, │
+│  Tables: users, passages, bookmarks, bookmark_collections,      │
 │          bookmark_collection_items, passage_reviews,             │
 │          passage_annotations,                                    │
 │          push_subscriptions, push_history, browsing_events,      │
@@ -76,6 +76,8 @@
 │  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
 └──────────────────────────────────────────────────────────────────┘
 ```
+
+> Corpus count is intentionally not hard-coded in the topology. Use `pnpm --filter @randompage/app check:passage-content` for the current production count; PLANET-3106 verified `total=746` on 2026-06-24.
 
 ## Monorepo 结构
 
@@ -282,6 +284,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-24 | PLANET-3106: Removed the stale hard-coded production passage count from the Turso table topology; current corpus size should be verified with `pnpm --filter @randompage/app check:passage-content` (746 on 2026-06-24) instead of copied into architecture diagrams. | Engineer Pod |
 | 2026-06-23 | PLANET-3071: Added Bookmarks “Recall search / Find by idea” fuzzy retrieval over the signed-in user’s own bookmarks, private notes, collection names, browsing history, and push inbox; results show match reasons/snippets and reuse open/listen/share/card/queue/save actions without external LLMs, embeddings, summaries, or new content sources. Added `check:recall-search`. | Engineer Pod |
 | 2026-06-22 | PLANET-3046: Daily Review / Themed Review / Recall Cards now surface next-review interval feedback from the actual `POST /api/daily-review/:bookmarkId` response (`dueAfter`/`box`/`intervalDays`), making the PLANET-3015 spaced-repetition value visible without new endpoints, schema, summaries, feeds, or content sources. | Engineer Pod |
 | 2026-06-21 | PLANET-2994: Added saved-passage Email export delivery fallback. Settings stores a private Kindle/read-later destination email with active/approval toggles in existing `user_preferences` control rows; Bookmarks and source detail show Email export when active, opening a mailto bundle or falling back to TXT download + clipboard for large saved-passage bundles; `check:kindle-export` now guards the email path. | Engineer Pod |
