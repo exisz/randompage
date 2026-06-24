@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { parsePassageTags } from '../lib/passageTags.js';
 import { computeReviewSchedule, deriveBoxFromHistory, type ReviewAction } from '../lib/spacedReview.js';
 import { scoreRecallPassages, type RecallSearchPassageInput } from '../lib/recallSearch.js';
+import { parseReviewTuning, tuneDueBookmarks } from '../lib/reviewTuning.js';
 
 export const bookmarksRouter = Router();
 
@@ -368,23 +369,23 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
     const userId = claims.sub as string;
     const now = new Date();
 
-    const bookmarks = await prisma.bookmark.findMany({
-      where: { userId },
-      include: {
-        passage: true,
-        passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 50,
-    });
+    const [bookmarks, preferences] = await Promise.all([
+      prisma.bookmark.findMany({
+        where: { userId },
+        include: {
+          passage: true,
+          passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 50,
+      }),
+      prisma.userPreference.findMany({ where: { userId } }),
+    ]);
+    const reviewTuning = parseReviewTuning(preferences);
 
-    const due = bookmarks
-      .filter((bookmark) => {
-        const latest = bookmark.passageReviews[0];
-        return !latest || latest.dueAfter <= now;
-      })
+    const due = tuneDueBookmarks(bookmarks, reviewTuning, now)
       .slice(0, 3)
-      .map((bookmark, index) => ({
+      .map(({ bookmark, tuning }, index) => ({
         id: bookmark.id,
         bookmarkId: bookmark.id,
         passageId: bookmark.passageId,
@@ -392,9 +393,10 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
         lastReviewedAt: bookmark.passageReviews[0]?.reviewedAt ?? null,
         note: bookmark.note ?? null,
         passage: bookmark.passage,
+        tuningReason: tuning.reason,
       }));
 
-    res.json({ items: due, generatedFor: now.toISOString().slice(0, 10) });
+    res.json({ items: due, generatedFor: now.toISOString().slice(0, 10), reviewTuning });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

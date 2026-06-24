@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-24 — PLANET-3106 remove stale hard-coded production passage count
+> 最后更新: 2026-06-25 — PLANET-3130 Daily Review frequency tuning
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -42,7 +42,7 @@
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览；unread exhausted 时 fallback 到 not-recent/readable existing passages，并返回 emptyReason/counts │ │
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
-│  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action │ │
+│  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action; applies per-user review tuning controls │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences │ │
 │  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export │ │
@@ -114,7 +114,7 @@ exisz/randompage (GitHub)
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different topic 以 1–12 bounded weight 调整；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone，不参与推荐打分） |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制，不参与 Discover 推荐打分） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -199,6 +199,14 @@ exisz/randompage (GitHub)
 - Recall search indexes annotation quote/note text alongside private notes, collections, history, and push inbox.
 - Static regression: `pnpm --filter @randompage/app check:passage-annotations`.
 
+## Daily Review Frequency Tuning
+
+- Bookmarks exposes a signed-in Review tuning card for global saved pages, book/source (`bookTitle::author`), and tag/topic scopes. Presets are Pause / Less often / Normal / More often.
+- Tuning is private per user and stored in existing `user_preferences` control rows (`control:review-tuning:global`, `control:review-tuning:source:<encoded title::author>`, `control:review-tuning:tag:<encoded tag>`), so no new table/migration is introduced.
+- `GET /api/daily-review` still respects spaced-repetition `due_after` first, then excludes paused scopes and ranks due saved passages with less/more multipliers. Returned cards include a compact tuning reason when priority changed.
+- Bookmarks Themed Review applies the same pause/priority controls client-side over the signed-in user’s already-saved RandomPage book passages; Bookmarks and Recall Search visibility are unaffected.
+- Static regression: `pnpm --filter @randompage/app check:review-tuning`.
+
 ## Fuzzy Recall Search
 
 - Bookmarks exposes “Recall search / Find by idea” as a separate natural-language/fuzzy retrieval surface from exact saved-passage search. It is designed for remembered ideas (“power corrupting good intentions”) rather than exact words or tags.
@@ -268,6 +276,7 @@ exisz/randompage (GitHub)
 | `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
 | `check-recall-search-policy.ts` | PLANET-3071 | 验证 deterministic fuzzy recall scorer：approximate idea query ranks the intended saved passage above unrelated passages and private notes/tags contribute to score. |
 | `check-passage-annotations-policy.mjs` | PLANET-3093 | 静态回归检查 passage_annotations inline DDL、owned bookmark/user-scoped edit/delete、offset/quote validation、quote/note caps、Bookmarks selection UI 与 recall-search indexing。 |
+| `check-review-tuning-policy.mjs` | PLANET-3130 | 静态回归检查 review tuning control rows、Daily Review tuned ranking/explanations、Themed Review filtering。 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -284,6 +293,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-25 | PLANET-3130: Added private Daily Review frequency tuning for global saved pages, book/source, and tag/topic scopes with pause/less/normal/more presets stored in `user_preferences` control rows; Daily Review excludes/ranks due saved passages by tuning and Bookmarks Themed Review applies the same controls. Added `check:review-tuning`. | Engineer Pod |
 | 2026-06-24 | PLANET-3106: Removed the stale hard-coded production passage count from the Turso table topology; current corpus size should be verified with `pnpm --filter @randompage/app check:passage-content` (746 on 2026-06-24) instead of copied into architecture diagrams. | Engineer Pod |
 | 2026-06-23 | PLANET-3071: Added Bookmarks “Recall search / Find by idea” fuzzy retrieval over the signed-in user’s own bookmarks, private notes, collection names, browsing history, and push inbox; results show match reasons/snippets and reuse open/listen/share/card/queue/save actions without external LLMs, embeddings, summaries, or new content sources. Added `check:recall-search`. | Engineer Pod |
 | 2026-06-22 | PLANET-3046: Daily Review / Themed Review / Recall Cards now surface next-review interval feedback from the actual `POST /api/daily-review/:bookmarkId` response (`dueAfter`/`box`/`intervalDays`), making the PLANET-3015 spaced-repetition value visible without new endpoints, schema, summaries, feeds, or content sources. | Engineer Pod |

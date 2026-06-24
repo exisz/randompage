@@ -45,6 +45,7 @@
     "check:passage-feedback": "node scripts/check-passage-feedback-policy.mjs",
     "check:kindle-export": "node scripts/check-kindle-export-policy.mjs",
     "check:spaced-review": "tsx scripts/check-spaced-review-policy.mjs",
+    "check:review-tuning": "node scripts/check-review-tuning-policy.mjs",
     "check:recall-search": "tsx scripts/check-recall-search-policy.ts",
     "check:passage-annotations": "node scripts/check-passage-annotations-policy.mjs"
   },

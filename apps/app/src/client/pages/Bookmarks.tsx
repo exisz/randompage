@@ -30,6 +30,9 @@ interface Collection {
   id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
 }
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
+type ReviewTuningPreset = 'pause' | 'less' | 'normal' | 'more';
+type ReviewTuningScope = 'global' | 'source' | 'tag';
+interface ReviewTuningRule { scope: ReviewTuningScope; value: string; preset: ReviewTuningPreset; label: string; }
 interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
   note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
@@ -76,6 +79,12 @@ export default function Bookmarks() {
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
+  const [reviewTuning, setReviewTuning] = useState<ReviewTuningRule[]>([]);
+  const [reviewTuningScope, setReviewTuningScope] = useState<ReviewTuningScope>('global');
+  const [reviewTuningValue, setReviewTuningValue] = useState('');
+  const [reviewTuningPreset, setReviewTuningPreset] = useState<ReviewTuningPreset>('more');
+  const [reviewTuningStatus, setReviewTuningStatus] = useState('');
+  const [reviewTuningLoading, setReviewTuningLoading] = useState(false);
   const [recallQuery, setRecallQuery] = useState('');
   const [recallResults, setRecallResults] = useState<RecallSearchResult[]>([]);
   const [recallSearching, setRecallSearching] = useState(false);
@@ -113,6 +122,7 @@ export default function Bookmarks() {
       setNoteDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, bookmark.note ?? ''])));
       setCollections(nextCollections);
       setReadLaterDestination(preferencesData.readLaterDestination || null);
+      setReviewTuning(Array.isArray(preferencesData.reviewTuning) ? preferencesData.reviewTuning : []);
       setOfflineMode(false);
       setOfflineCachedAt(null);
       saveBookmarksOfflineCache({ bookmarks: nextBookmarks, collections: nextCollections });
@@ -246,6 +256,65 @@ export default function Bookmarks() {
     return '';
   }, [collections, reviewTheme, reviewTopic]);
 
+  const sourceOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const bookmark of bookmarks) {
+      const value = `${bookmark.passage.bookTitle || ''}::${bookmark.passage.author || ''}`;
+      if (!value.trim()) continue;
+      map.set(value, [bookmark.passage.bookTitle, bookmark.passage.author].filter(Boolean).join(' — '));
+    }
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
+  }, [bookmarks]);
+
+  const tagOptions = useMemo(() => Array.from(new Set(bookmarks.flatMap(bookmark => parseTags(bookmark.passage.tags))))
+    .sort((a, b) => a.localeCompare(b)), [bookmarks]);
+
+  const effectiveReviewTuningValue = () => {
+    if (reviewTuningScope === 'global') return '';
+    if (reviewTuningValue) return reviewTuningValue;
+    return reviewTuningScope === 'source' ? sourceOptions[0]?.value || '' : tagOptions[0] || '';
+  };
+
+  const reviewTuningForBookmark = (bookmark: Bookmark) => {
+    const sourceValue = `${bookmark.passage.bookTitle || ''}::${bookmark.passage.author || ''}`;
+    const tags = new Set(parseTags(bookmark.passage.tags).map(tag => tag.toLowerCase()));
+    const matched = reviewTuning.filter(rule => rule.scope === 'global'
+      || (rule.scope === 'source' && rule.value === sourceValue)
+      || (rule.scope === 'tag' && tags.has(rule.value.toLowerCase())));
+    if (matched.some(rule => rule.preset === 'pause')) return { paused: true, score: -Infinity };
+    let score = 1;
+    for (const rule of matched) {
+      if (rule.preset === 'more') score *= 3;
+      if (rule.preset === 'less') score *= 0.25;
+    }
+    return { paused: false, score };
+  };
+
+  const saveReviewTuning = async () => {
+    const value = effectiveReviewTuningValue();
+    if (reviewTuningScope !== 'global' && !value) {
+      setReviewTuningStatus('Choose a saved book/source or tag first.');
+      return;
+    }
+    setReviewTuningLoading(true);
+    setReviewTuningStatus('');
+    try {
+      const response = await apiFetch('/preferences/review-tuning', {
+        method: 'POST',
+        body: JSON.stringify({ scope: reviewTuningScope, value, preset: reviewTuningPreset }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setReviewTuning(Array.isArray(data.reviewTuning) ? data.reviewTuning : []);
+      setReviewTuningStatus(reviewTuningPreset === 'normal' ? 'Saved — tuning reset to normal.' : 'Saved — Daily Review will use this tuning.');
+    } catch (e) {
+      console.error(e);
+      setReviewTuningStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setReviewTuningLoading(false);
+    }
+  };
+
   const themedReviewQueue = useMemo(() => {
     if (!reviewTheme && topicNeedles.length === 0) return [];
     const now = Date.now();
@@ -264,8 +333,12 @@ export default function Bookmarks() {
         const latest = bookmark.passageReviews?.[0];
         return !latest || new Date(latest.dueAfter).getTime() <= now;
       })
-      .slice(0, 5);
-  }, [bookmarks, reviewTheme, topicNeedles]);
+      .map((bookmark, originalIndex) => ({ bookmark, originalIndex, tuning: reviewTuningForBookmark(bookmark) }))
+      .filter(item => !item.tuning.paused)
+      .sort((a, b) => b.tuning.score - a.tuning.score || a.originalIndex - b.originalIndex)
+      .slice(0, 5)
+      .map(item => item.bookmark);
+  }, [bookmarks, reviewTheme, topicNeedles, reviewTuning]);
 
   const recallQueue = useMemo(() => {
     const now = Date.now();
@@ -276,6 +349,7 @@ export default function Bookmarks() {
       })
       .slice(0, 5);
   }, [bookmarks]);
+
 
   const addBookmarkToQueue = (bookmark: Bookmark) => {
     const next = addPassageToReadingQueue(bookmark.passage);
@@ -684,6 +758,52 @@ export default function Bookmarks() {
                 })}
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="card bg-base-200 shadow mb-4">
+          <div className="card-body gap-3 p-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.25em] opacity-50">Review tuning</p>
+              <h3 className="font-serif text-lg">Tune what Daily Review resurfaces</h3>
+              <p className="text-sm opacity-70">Privately pause, quiet, or prioritize saved pages by all saved pages, book/source, or tag. Bookmarks and Recall Search stay untouched.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <select className="select select-bordered select-sm" value={reviewTuningScope} onChange={e => { setReviewTuningScope(e.target.value as ReviewTuningScope); setReviewTuningValue(''); setReviewTuningStatus(''); }} disabled={offlineMode || reviewTuningLoading}>
+                <option value="global">Global</option>
+                <option value="source">Book/source</option>
+                <option value="tag">Tag/topic</option>
+              </select>
+              {reviewTuningScope === 'source' ? (
+                <select className="select select-bordered select-sm sm:col-span-2" value={reviewTuningValue || sourceOptions[0]?.value || ''} onChange={e => { setReviewTuningValue(e.target.value); setReviewTuningStatus(''); }} disabled={offlineMode || reviewTuningLoading || sourceOptions.length === 0}>
+                  {sourceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                </select>
+              ) : reviewTuningScope === 'tag' ? (
+                <select className="select select-bordered select-sm sm:col-span-2" value={reviewTuningValue || tagOptions[0] || ''} onChange={e => { setReviewTuningValue(e.target.value); setReviewTuningStatus(''); }} disabled={offlineMode || reviewTuningLoading || tagOptions.length === 0}>
+                  {tagOptions.map(tag => <option key={tag} value={tag}>#{tag}</option>)}
+                </select>
+              ) : (
+                <div className="rounded-box border border-base-300 bg-base-100 px-3 py-2 text-xs opacity-70 sm:col-span-2">Apply to all saved passages.</div>
+              )}
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <select className="select select-bordered select-sm" value={reviewTuningPreset} onChange={e => { setReviewTuningPreset(e.target.value as ReviewTuningPreset); setReviewTuningStatus(''); }} disabled={offlineMode || reviewTuningLoading}>
+                <option value="more">More often</option>
+                <option value="normal">Normal</option>
+                <option value="less">Less often</option>
+                <option value="pause">Pause</option>
+              </select>
+              <button className="btn btn-secondary btn-sm" onClick={saveReviewTuning} disabled={offlineMode || reviewTuningLoading || (reviewTuningScope === 'source' && sourceOptions.length === 0) || (reviewTuningScope === 'tag' && tagOptions.length === 0)}>
+                {reviewTuningLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                Save tuning
+              </button>
+            </div>
+            {reviewTuning.length > 0 ? (
+              <div className="flex flex-wrap gap-2 text-xs">
+                {reviewTuning.map(rule => <span key={`${rule.scope}:${rule.value}`} className="badge badge-secondary badge-outline">{rule.label}</span>)}
+              </div>
+            ) : <p className="text-xs opacity-60">No tuning yet — Daily Review uses due date order.</p>}
+            {reviewTuningStatus ? <p className="text-xs opacity-70">{reviewTuningStatus}</p> : null}
           </div>
         </div>
 

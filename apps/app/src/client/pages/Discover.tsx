@@ -82,6 +82,7 @@ interface DailyReviewItem {
   reviewPosition: number;
   lastReviewedAt: string | null;
   note?: string | null;
+  tuningReason?: string | null;
   passage: Passage;
 }
 
@@ -798,6 +799,7 @@ export default function Discover() {
                           </div>
                         )}
                         <p className="mt-1 line-clamp-2 text-xs leading-relaxed opacity-70">{shortExcerpt(item.passage.text)}</p>
+                        {item.tuningReason ? <p className="mt-2 text-xs text-secondary">{item.tuningReason}</p> : null}
                         <p className="mt-1 text-xs opacity-50">{item.passage.author}</p>
                       </button>
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">

@@ -4,6 +4,7 @@ import { verifyBearer } from '../middleware/auth.js';
 import { getPrisma } from '../lib/prisma.js';
 import { parsePassageTags } from '../lib/passageTags.js';
 import { AVOID_TAG_WEIGHT, CONTROL_TAG_PREFIX, avoidPreferenceTag, normalizeAvoidTag, splitPreferenceControls } from '../lib/preferenceControls.js';
+import { parseReviewTuning, reviewTuningTag, reviewTuningWeight, type ReviewTuningPreset, type ReviewTuningScope } from '../lib/reviewTuning.js';
 
 export const preferencesRouter = Router();
 
@@ -164,7 +165,8 @@ preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
     const avoidTags = await fetchAvoidTagOptions(prisma);
     const dailyPushSchedule = dailyPushScheduleFromPreferences(prefs);
     const readLaterDestination = readLaterDestinationFromPreferences(prefs);
-    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination });
+    const reviewTuning = parseReviewTuning(prefs);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination, reviewTuning });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -259,6 +261,64 @@ preferencesRouter.post('/preferences/avoid-tags', async (req: Request, res: Resp
     const { positivePreferences, avoidTags: savedAvoidTags } = splitPreferenceControls(prefs);
     const avoidTags = await fetchAvoidTagOptions(prisma);
     res.json({ preferences: positivePreferences, avoidTags, selectedAvoidTags: savedAvoidTags });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+function normalizeReviewTuningScope(value: unknown): ReviewTuningScope | null {
+  return value === 'global' || value === 'source' || value === 'tag' ? value : null;
+}
+
+function normalizeReviewTuningPreset(value: unknown): ReviewTuningPreset | null {
+  return value === 'pause' || value === 'less' || value === 'normal' || value === 'more' ? value : null;
+}
+
+function normalizeReviewTuningValue(scope: ReviewTuningScope, value: unknown) {
+  if (scope === 'global') return '';
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!text || text.length > 220) return null;
+  return scope === 'tag' ? normalizeAvoidTag(text) : text;
+}
+
+// POST /api/preferences/review-tuning
+// Stores per-user Daily Review frequency tuning in existing user_preferences control rows.
+preferencesRouter.post('/preferences/review-tuning', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const scope = normalizeReviewTuningScope(req.body?.scope);
+    const preset = normalizeReviewTuningPreset(req.body?.preset);
+    if (!scope || !preset) {
+      res.status(400).json({ error: 'Choose a valid review tuning scope and preset.' });
+      return;
+    }
+    const value = normalizeReviewTuningValue(scope, req.body?.value);
+    if (value === null) {
+      res.status(400).json({ error: 'Choose a valid book/source or tag.' });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    const tag = reviewTuningTag(scope, value);
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId} AND tag = ${tag}
+    `;
+    if (preset !== 'normal') {
+      await prisma.$executeRaw`
+        INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+        VALUES (${nanoid()}, ${userId}, ${tag}, ${reviewTuningWeight(preset)}, ${updatedAt})
+      `;
+    }
+
+    const prefs = await fetchPreferences(prisma, userId);
+    res.json({ reviewTuning: parseReviewTuning(prefs) });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
