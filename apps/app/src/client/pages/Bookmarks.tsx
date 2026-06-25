@@ -37,6 +37,10 @@ interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
   note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
 }
+interface ActiveRecallCard {
+  id: string; bookmarkId: string; passageId: string; quote: string; startOffset: number; endOffset: number; contextBefore: string; contextAfter: string; dueAfter: string; box?: number | null; passage: Passage;
+}
+type ActiveRecallAction = 'remembered' | 'forgot' | 'soon' | 'later' | 'someday';
 
 function parseTags(tags: string) {
   try {
@@ -89,6 +93,10 @@ export default function Bookmarks() {
   const [recallResults, setRecallResults] = useState<RecallSearchResult[]>([]);
   const [recallSearching, setRecallSearching] = useState(false);
   const [recallStatus, setRecallStatus] = useState<string | null>(null);
+  const [activeRecallCards, setActiveRecallCards] = useState<ActiveRecallCard[]>([]);
+  const [revealedActiveRecallIds, setRevealedActiveRecallIds] = useState<Set<string>>(() => new Set());
+  const [activeRecallStatus, setActiveRecallStatus] = useState<string | null>(null);
+  const [activeRecallBusyId, setActiveRecallBusyId] = useState<string | null>(null);
   const [selectedThought, setSelectedThought] = useState<{ bookmarkId: string; quote: string; startOffset: number; endOffset: number } | null>(null);
   const [thoughtDraft, setThoughtDraft] = useState('');
   const [thoughtBusyId, setThoughtBusyId] = useState<string | null>(null);
@@ -98,6 +106,7 @@ export default function Bookmarks() {
     const cached = readBookmarksOfflineCache();
     if (!cached) return false;
     const cachedBookmarks = (cached.bookmarks as Bookmark[]) || [];
+    setActiveRecallCards([]);
     setBookmarks(cachedBookmarks);
     setNoteDrafts(Object.fromEntries(cachedBookmarks.map(bookmark => [bookmark.id, bookmark.note ?? ''])));
     setCollections((cached.collections as Collection[]) || []);
@@ -108,14 +117,16 @@ export default function Bookmarks() {
 
   const refresh = async () => {
     try {
-      const [bookmarksRes, collectionsRes, preferencesRes] = await Promise.all([
+      const [bookmarksRes, collectionsRes, preferencesRes, recallCardsRes] = await Promise.all([
         apiFetch('/bookmarks'),
         apiFetch('/bookmark-collections'),
         apiFetch('/preferences'),
+        apiFetch('/bookmarks/recall-cards'),
       ]);
       const bookmarksData = await bookmarksRes.json();
       const collectionsData = await collectionsRes.json();
       const preferencesData = await preferencesRes.json();
+      const recallCardsData = await recallCardsRes.json();
       const nextBookmarks = bookmarksData.bookmarks || [];
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
@@ -123,6 +134,7 @@ export default function Bookmarks() {
       setCollections(nextCollections);
       setReadLaterDestination(preferencesData.readLaterDestination || null);
       setReviewTuning(Array.isArray(preferencesData.reviewTuning) ? preferencesData.reviewTuning : []);
+      setActiveRecallCards(Array.isArray(recallCardsData.cards) ? recallCardsData.cards : []);
       setOfflineMode(false);
       setOfflineCachedAt(null);
       saveBookmarksOfflineCache({ bookmarks: nextBookmarks, collections: nextCollections });
@@ -402,6 +414,38 @@ export default function Bookmarks() {
       setThoughtDraft('');
       await refresh();
     } finally { setThoughtBusyId(null); }
+  };
+
+  const saveActiveRecallCard = async () => {
+    if (!selectedThought || offlineMode) return;
+    setActiveRecallBusyId(selectedThought.bookmarkId);
+    setActiveRecallStatus(null);
+    try {
+      await apiFetch(`/bookmarks/${selectedThought.bookmarkId}/recall-cards`, {
+        method: 'POST',
+        body: JSON.stringify(selectedThought),
+      });
+      setSelectedThought(null);
+      await refresh();
+      setActiveRecallStatus('Active-recall card created — it is due in Recall Practice now.');
+    } finally { setActiveRecallBusyId(null); }
+  };
+
+  const reviewActiveRecallCard = async (cardId: string, action: ActiveRecallAction) => {
+    if (offlineMode) return;
+    setActiveRecallBusyId(cardId);
+    try {
+      const res = await apiFetch(`/bookmarks/recall-cards/${cardId}/review`, { method: 'POST', body: JSON.stringify({ action }) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Recall review failed');
+      const interval = data.review?.intervalDays;
+      const label = interval ? (interval >= 60 ? '~2 months' : interval === 1 ? 'tomorrow' : `in ~${interval} days`) : 'later';
+      setActiveRecallStatus(action === 'remembered' || action === 'someday' ? `Recall recorded — next practice ${label}.` : `Recall recorded — this card comes back ${label}.`);
+      setRevealedActiveRecallIds(prev => { const next = new Set(prev); next.delete(cardId); return next; });
+      await refresh();
+    } catch (e) {
+      setActiveRecallStatus(e instanceof Error ? e.message : String(e));
+    } finally { setActiveRecallBusyId(null); }
   };
 
   const editLineThought = async (bookmark: Bookmark, annotation: PassageAnnotation) => {
@@ -761,6 +805,71 @@ export default function Bookmarks() {
           </div>
         </div>
 
+        <div className="card bg-gradient-to-br from-secondary/15 via-base-200 to-accent/10 shadow mb-4">
+          <div className="card-body gap-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] opacity-50">Active Recall Mastery</p>
+                <h3 className="font-serif text-lg">Practice private cloze cards</h3>
+                <p className="text-sm opacity-70">Select a phrase in any saved passage and choose “Make recall card”. Practice hides that phrase in context, then schedules it from your recall result.</p>
+              </div>
+              <span className="badge badge-secondary badge-outline shrink-0">{activeRecallCards.length} due</span>
+            </div>
+            {activeRecallStatus && <div className="alert alert-success py-2 text-sm"><span>{activeRecallStatus}</span></div>}
+            {activeRecallCards.length === 0 ? (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">No active-recall cards due.</p>
+                <p className="opacity-70 mt-1">Highlight a short phrase in a saved passage below to create a private cloze prompt over your own RandomPage library.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {activeRecallCards.map((card, index) => {
+                  const revealed = revealedActiveRecallIds.has(card.id);
+                  const cardTags = parseTags(card.passage.tags).slice(0, 4);
+                  return (
+                    <div key={card.id} className="rounded-box border border-secondary/20 bg-base-100/85 p-3 shadow-sm">
+                      <div className="flex items-center justify-between gap-2 text-xs opacity-60">
+                        <span>Mastery {index + 1} of {activeRecallCards.length}</span>
+                        <span>due {new Date(card.dueAfter).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-secondary mt-3">Recall the hidden phrase</p>
+                      <p className="font-serif leading-relaxed mt-2">
+                        {card.contextBefore}
+                        <span className="mx-1 rounded bg-secondary/20 px-2 py-1 font-sans text-xs uppercase tracking-[0.18em]">hidden phrase</span>
+                        {card.contextAfter}
+                      </p>
+                      <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={card.passage.bookTitle} author={card.passage.author} chapter={card.passage.chapter} compact className="items-end opacity-60 hover:opacity-100" /></div>
+                      {cardTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{cardTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                      {!revealed ? (
+                        <button className="btn btn-secondary btn-sm mt-3 w-full sm:w-auto" onClick={() => setRevealedActiveRecallIds(prev => new Set(prev).add(card.id))}>Reveal answer</button>
+                      ) : (
+                        <div className="mt-3 rounded-box bg-secondary/10 border border-secondary/20 p-3">
+                          <p className="text-xs uppercase tracking-[0.18em] opacity-60">Hidden phrase</p>
+                          <p className="font-serif text-lg mt-1">“{card.quote}”</p>
+                          <p className="font-serif leading-relaxed mt-3">{card.passage.text}</p>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <ListenControl text={card.passage.text} title={`${card.passage.bookTitle} active recall`} compact />
+                            <SharePassageButton passage={card.passage} compact />
+                            <SharePassageImageButton passage={card.passage} compact />
+                            <button className="btn btn-outline btn-xs" onClick={() => navigate(`/discover?passageId=${card.passage.id}`)}>Open passage</button>
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3">
+                        <button className="btn btn-primary btn-sm" disabled={!revealed || activeRecallBusyId === card.id} onClick={() => reviewActiveRecallCard(card.id, 'remembered')}>Remembered</button>
+                        <button className="btn btn-outline btn-sm" disabled={!revealed || activeRecallBusyId === card.id} onClick={() => reviewActiveRecallCard(card.id, 'forgot')}>Forgot</button>
+                        <button className="btn btn-ghost btn-sm" disabled={!revealed || activeRecallBusyId === card.id} onClick={() => reviewActiveRecallCard(card.id, 'soon')}>Soon</button>
+                        <button className="btn btn-ghost btn-sm" disabled={!revealed || activeRecallBusyId === card.id} onClick={() => reviewActiveRecallCard(card.id, 'later')}>Later</button>
+                        <button className="btn btn-ghost btn-sm" disabled={!revealed || activeRecallBusyId === card.id} onClick={() => reviewActiveRecallCard(card.id, 'someday')}>Someday</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="card bg-base-200 shadow mb-4">
           <div className="card-body gap-3 p-4">
             <div>
@@ -917,7 +1026,8 @@ export default function Bookmarks() {
                           placeholder="Add your thought about this exact line…"
                           disabled={thoughtBusyId === bm.id}
                         />
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-2 flex flex-wrap justify-end gap-2">
+                          <button className="btn btn-outline btn-xs" disabled={activeRecallBusyId === bm.id} onClick={saveActiveRecallCard}>Make recall card</button>
                           <button className="btn btn-accent btn-xs" disabled={!thoughtDraft.trim() || thoughtBusyId === bm.id} onClick={saveLineThought}>Add thought</button>
                         </div>
                       </div>

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-25 — PLANET-3130 Daily Review frequency tuning
+> 最后更新: 2026-06-25 — PLANET-3146 Active Recall Mastery cards
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -69,10 +69,10 @@
 │  DB: turso-randompage-vercel-icfg-...                            │
 │  Tables: users, passages, bookmarks, bookmark_collections,      │
 │          bookmark_collection_items, passage_reviews,             │
-│          passage_annotations,                                    │
+│          passage_annotations, passage_recall_cards,             │
 │          push_subscriptions, push_history, browsing_events,      │
 │          user_preferences, reading_paths,                       │
-│          credentials, sessions, ingest_runs, passage_tag_failures│
+│          passage_recall_reviews, credentials, sessions, ingest_runs, passage_tag_failures│
 │  ORM: Prisma v6 + @prisma/adapter-libsql (`User` @@map("users")) │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -108,6 +108,8 @@ exisz/randompage (GitHub)
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after、box），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现；box 支持 increasing-interval ladder |
 | passage_annotations | 用户对 saved passage 内具体选中文本的私密 line-level thoughts；保存 quote、start_offset/end_offset、note，按 user_id + bookmark_id 隔离，可独立 edit/delete |
+| passage_recall_cards | 用户从 saved passage 选中短语创建的私密 active-recall cloze cards；保存 quote offsets、hidden context、due_after、box，按 user_id/bookmark_id 隔离 |
+| passage_recall_reviews | active-recall card grading history（remembered/forgot/soon/later/someday）与下次 due_after/box，用于调度方向验证 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
@@ -199,6 +201,14 @@ exisz/randompage (GitHub)
 - Recall search indexes annotation quote/note text alongside private notes, collections, history, and push inbox.
 - Static regression: `pnpm --filter @randompage/app check:passage-annotations`.
 
+## Active Recall Mastery Cards
+
+- Bookmarks saved-passage text selection can create a private active-recall cloze card from an exact phrase/range. Cards remain linked to the owned bookmark and original existing RandomPage passage.
+- `passage_recall_cards` and `passage_recall_reviews` are inline-DDL tables scoped by `user_id`; no public/social flashcard marketplace, AI quiz generation, summaries, or new content source is introduced.
+- Bookmarks exposes an “Active Recall Mastery” practice surface: before reveal it hides the selected phrase in local context; after reveal it shows the quote, original passage, Listen/Share/Card/Open actions, and grading buttons Remembered/Forgot/Soon/Later/Someday.
+- Recall grading updates the card `due_after`/`box`: Remembered advances using the existing spaced-review ladder, Forgot/Soon bring it back sooner, Later returns soon, and Someday is capped at ~60 days.
+- Static regression: `pnpm --filter @randompage/app check:active-recall`.
+
 ## Daily Review Frequency Tuning
 
 - Bookmarks exposes a signed-in Review tuning card for global saved pages, book/source (`bookTitle::author`), and tag/topic scopes. Presets are Pause / Less often / Normal / More often.
@@ -276,6 +286,7 @@ exisz/randompage (GitHub)
 | `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
 | `check-recall-search-policy.ts` | PLANET-3071 | 验证 deterministic fuzzy recall scorer：approximate idea query ranks the intended saved passage above unrelated passages and private notes/tags contribute to score. |
 | `check-passage-annotations-policy.mjs` | PLANET-3093 | 静态回归检查 passage_annotations inline DDL、owned bookmark/user-scoped edit/delete、offset/quote validation、quote/note caps、Bookmarks selection UI 与 recall-search indexing。 |
+| `check-active-recall-policy.mjs` | PLANET-3146 | 静态回归检查 active-recall cloze card inline DDL、owned bookmark scope、quote offset validation、hidden-before-reveal UI、remembered/forgot interval direction、original passage actions。 |
 | `check-review-tuning-policy.mjs` | PLANET-3130 | 静态回归检查 review tuning control rows、Daily Review tuned ranking/explanations、Themed Review filtering。 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
@@ -293,6 +304,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-25 | PLANET-3146: Added private Active Recall Mastery cloze cards over saved RandomPage passages. Users can select an exact phrase in Bookmarks, create a private card linked to that bookmark/passage, practice with the phrase hidden in context, reveal the source, grade remembered/forgot/soon/later/someday, and schedule the next due date with bounded spaced-review direction. Added `check:active-recall`. | Engineer Pod |
 | 2026-06-25 | PLANET-3130: Added private Daily Review frequency tuning for global saved pages, book/source, and tag/topic scopes with pause/less/normal/more presets stored in `user_preferences` control rows; Daily Review excludes/ranks due saved passages by tuning and Bookmarks Themed Review applies the same controls. Added `check:review-tuning`. | Engineer Pod |
 | 2026-06-24 | PLANET-3106: Removed the stale hard-coded production passage count from the Turso table topology; current corpus size should be verified with `pnpm --filter @randompage/app check:passage-content` (746 on 2026-06-24) instead of copied into architecture diagrams. | Engineer Pod |
 | 2026-06-23 | PLANET-3071: Added Bookmarks “Recall search / Find by idea” fuzzy retrieval over the signed-in user’s own bookmarks, private notes, collection names, browsing history, and push inbox; results show match reasons/snippets and reuse open/listen/share/card/queue/save actions without external LLMs, embeddings, summaries, or new content sources. Added `check:recall-search`. | Engineer Pod |

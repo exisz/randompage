@@ -64,6 +64,7 @@ async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_reviews_bookmark_reviewed_idx ON passage_reviews(bookmark_id, reviewed_at)');
   await ensurePassageReviewBoxColumn(prisma);
   await ensurePassageAnnotationTable(prisma);
+  await ensurePassageRecallCardTables(prisma);
 }
 
 // PLANET-3015: spaced-repetition box/interval index for increasing-interval scheduling.
@@ -95,6 +96,47 @@ async function ensurePassageAnnotationTable(prisma: ReturnType<typeof getPrisma>
   `);
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_user_bookmark_idx ON passage_annotations(user_id, bookmark_id)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_passage_idx ON passage_annotations(passage_id)');
+}
+
+// PLANET-3146: private active-recall cloze cards over saved RandomPage passages.
+async function ensurePassageRecallCardTables(prisma: ReturnType<typeof getPrisma>) {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS passage_recall_cards (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      bookmark_id TEXT NOT NULL,
+      passage_id TEXT NOT NULL,
+      quote TEXT NOT NULL,
+      start_offset INTEGER NOT NULL,
+      end_offset INTEGER NOT NULL,
+      context_before TEXT NOT NULL,
+      context_after TEXT NOT NULL,
+      due_after TEXT NOT NULL,
+      box INTEGER,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      archived_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (bookmark_id) REFERENCES bookmarks(id) ON DELETE CASCADE ON UPDATE CASCADE,
+      FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE RESTRICT ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_recall_cards_user_due_idx ON passage_recall_cards(user_id, due_after)');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_recall_cards_bookmark_idx ON passage_recall_cards(bookmark_id)');
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS passage_recall_reviews (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      recall_card_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      reviewed_at TEXT NOT NULL,
+      due_after TEXT NOT NULL,
+      box INTEGER,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (recall_card_id) REFERENCES passage_recall_cards(id) ON DELETE CASCADE ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_recall_reviews_card_reviewed_idx ON passage_recall_reviews(recall_card_id, reviewed_at)');
 }
 
 function epochSeconds(date: Date) {
@@ -138,6 +180,27 @@ function validateAnnotationAnchor(passageText: string, quote: string, startOffse
   const anchoredQuote = passageText.slice(start, end).trim();
   if (!anchoredQuote || anchoredQuote !== quote.trim()) return { error: 'quote must match the selected passage text range' };
   return { start, end };
+}
+
+function buildRecallContext(passageText: string, startOffset: number, endOffset: number) {
+  return {
+    contextBefore: passageText.slice(Math.max(0, startOffset - 180), startOffset),
+    contextAfter: passageText.slice(endOffset, Math.min(passageText.length, endOffset + 180)),
+  };
+}
+
+function normalizeRecallReviewAction(value: unknown): 'remembered' | 'forgot' | 'soon' | 'later' | 'someday' {
+  return value === 'forgot' || value === 'soon' || value === 'later' || value === 'someday' ? value : 'remembered';
+}
+
+function computeRecallReviewSchedule(previousBox: number | null, action: 'remembered' | 'forgot' | 'soon' | 'later' | 'someday', now: Date) {
+  if (action === 'someday') {
+    const dueAfter = new Date(now);
+    dueAfter.setDate(dueAfter.getDate() + 60);
+    return { box: 5, intervalDays: 60, dueAfter };
+  }
+  const reviewAction: ReviewAction = action === 'remembered' ? 'reviewed' : action === 'later' ? 'review_later' : 'skip';
+  return computeReviewSchedule(previousBox, reviewAction, now);
 }
 
 async function requireOwnedCollection(prisma: ReturnType<typeof getPrisma>, userId: string, collectionId: string) {
@@ -600,6 +663,106 @@ bookmarksRouter.delete('/bookmarks/:id/annotations/:annotationId', async (req: R
     if (!existing) { res.status(404).json({ error: 'Annotation not found' }); return; }
     await prisma.passageAnnotation.delete({ where: { id: existing.id } });
     res.json({ ok: true });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+// POST /api/bookmarks/:id/recall-cards — create a private active-recall cloze card from selected saved-passage text
+bookmarksRouter.post('/bookmarks/:id/recall-cards', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await prisma.bookmark.findFirst({ where: { id: req.params.id, userId }, include: { passage: true } });
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+
+    const quote = normalizeAnnotationText(req.body?.quote, 240);
+    if (!quote) { res.status(400).json({ error: 'quote is required' }); return; }
+    const anchor = validateAnnotationAnchor(bookmark.passage.text, quote, req.body?.startOffset, req.body?.endOffset);
+    if ('error' in anchor) { res.status(400).json({ error: anchor.error }); return; }
+
+    const now = new Date();
+    const cardId = nanoid();
+    const context = buildRecallContext(bookmark.passage.text, anchor.start, anchor.end);
+    await prisma.$executeRaw`
+      INSERT INTO passage_recall_cards (id, user_id, bookmark_id, passage_id, quote, start_offset, end_offset, context_before, context_after, due_after, box, created_at, updated_at, archived_at)
+      VALUES (${cardId}, ${userId}, ${bookmark.id}, ${bookmark.passageId}, ${quote}, ${anchor.start}, ${anchor.end}, ${context.contextBefore}, ${context.contextAfter}, ${now.toISOString()}, ${0}, ${now.toISOString()}, ${now.toISOString()}, ${null})
+    `;
+    res.json({ recallCard: { id: cardId, userId, bookmarkId: bookmark.id, passageId: bookmark.passageId, quote, startOffset: anchor.start, endOffset: anchor.end, ...context, dueAfter: now.toISOString(), box: 0, passage: bookmark.passage } });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/bookmarks/recall-cards — due private cloze cards for active Recall Practice
+bookmarksRouter.get('/bookmarks/recall-cards', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const now = new Date();
+    const rows = await prisma.$queryRaw<Array<{
+      id: string; bookmark_id: string; passage_id: string; quote: string; start_offset: number; end_offset: number; context_before: string; context_after: string; due_after: string; box: number | null; created_at: string;
+      text: string; book_title: string; author: string; chapter: string | null; tags: string; language: string;
+    }>>`
+      SELECT c.id, c.bookmark_id, c.passage_id, c.quote, c.start_offset, c.end_offset, c.context_before, c.context_after, c.due_after, c.box, c.created_at,
+             p.text, p.book_title, p.author, p.chapter, p.tags, p.language
+      FROM passage_recall_cards c
+      JOIN bookmarks b ON b.id = c.bookmark_id AND b.user_id = c.user_id
+      JOIN passages p ON p.id = c.passage_id
+      WHERE c.user_id = ${userId} AND c.archived_at IS NULL AND c.due_after <= ${now.toISOString()}
+      ORDER BY c.due_after ASC, c.created_at ASC
+      LIMIT 8
+    `;
+    const cards = rows.map(row => ({
+      id: row.id,
+      bookmarkId: row.bookmark_id,
+      passageId: row.passage_id,
+      quote: row.quote,
+      startOffset: Number(row.start_offset),
+      endOffset: Number(row.end_offset),
+      contextBefore: row.context_before,
+      contextAfter: row.context_after,
+      dueAfter: row.due_after,
+      box: row.box,
+      passage: { id: row.passage_id, text: row.text, bookTitle: row.book_title, author: row.author, chapter: row.chapter ?? undefined, tags: row.tags, language: row.language },
+    }));
+    res.json({ cards, generatedFor: now.toISOString().slice(0, 10) });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/bookmarks/recall-cards/:cardId/review — grade private active recall and schedule next due date
+bookmarksRouter.post('/bookmarks/recall-cards/:cardId/review', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const action = normalizeRecallReviewAction(req.body?.action);
+    const cards = await prisma.$queryRaw<Array<{ id: string; box: number | null }>>`
+      SELECT id, box FROM passage_recall_cards WHERE id = ${req.params.cardId} AND user_id = ${userId} AND archived_at IS NULL LIMIT 1
+    `;
+    const card = cards[0];
+    if (!card) { res.status(404).json({ error: 'Recall card not found' }); return; }
+    const now = new Date();
+    const schedule = computeRecallReviewSchedule(card.box, action, now);
+    await prisma.$executeRaw`
+      UPDATE passage_recall_cards
+      SET due_after = ${schedule.dueAfter.toISOString()}, box = ${schedule.box}, updated_at = ${now.toISOString()}
+      WHERE id = ${card.id} AND user_id = ${userId}
+    `;
+    const reviewId = nanoid();
+    await prisma.$executeRaw`
+      INSERT INTO passage_recall_reviews (id, user_id, recall_card_id, action, reviewed_at, due_after, box)
+      VALUES (${reviewId}, ${userId}, ${card.id}, ${action}, ${now.toISOString()}, ${schedule.dueAfter.toISOString()}, ${schedule.box})
+    `;
+    res.json({ review: { id: reviewId, recallCardId: card.id, action, reviewedAt: now.toISOString(), dueAfter: schedule.dueAfter.toISOString(), box: schedule.box, intervalDays: schedule.intervalDays } });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }
