@@ -28,7 +28,7 @@ const topics = String(args.topics || DEFAULT_TOPICS.join(','))
   .split(',')
   .map((topic) => topic.trim())
   .filter(Boolean);
-const perTopic = clamp(Number(args.perTopic || args['per-topic'] || 8), 1, 20);
+const perTopic = clamp(Number(args.perTopic || args['per-topic'] || 20), 1, 20);
 const maxTextFetches = clamp(Number(args.maxTextFetches || args['max-text-fetches'] || 20), 0, 50);
 const maxCandidates = clamp(Number(args.maxCandidates || args['max-candidates'] || 20), 1, 80);
 const reportPath = path.resolve(APP_ROOT, args.report || 'docs/openlibrary-search-inside-eval-report.md');

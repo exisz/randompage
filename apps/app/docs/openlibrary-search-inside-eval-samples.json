@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-26T02:21:18.165Z",
+  "generatedAt": "2026-06-26T06:13:53.450Z",
   "policy": "local evaluation only; no production writes; direct OCR candidate excerpts only from openly readable IA identifiers",
   "topics": [
     "philosophy",
@@ -9,7 +9,7 @@
     "classics"
   ],
   "perTopic": 20,
-  "maxTextFetches": 40,
+  "maxTextFetches": 20,
   "summary": {
     "recordsReturned": 100,
     "readable": 23,
