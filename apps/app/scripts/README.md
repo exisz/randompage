@@ -92,6 +92,33 @@ Notes:
   version still needs a signed-in UI, explicit user confirmation, and private
   save/import handling.
 
+## openlibrary-search-inside-eval.mjs — PLANET-3169
+
+Local evaluation for Open Library Search Inside plus Internet Archive readable
+OCR/plaintext fetchability. It queries RandomPage preference topics, records
+OLID/IA identifiers and Read API availability, then attempts small serial direct
+text fetches only for openly readable IA identifiers. It writes a Markdown
+verdict and JSON sample candidates; it never writes Turso or imports production
+passages.
+
+```bash
+pnpm --filter @randompage/app eval:ol-search-inside -- \
+  --per-topic 20 \
+  --max-text-fetches 40 \
+  --max-candidates 20
+```
+
+Outputs:
+- `apps/app/docs/openlibrary-search-inside-eval-report.md`
+- `apps/app/docs/openlibrary-search-inside-eval-samples.json`
+
+Safety/rate limits:
+- Serial requests only, descriptive User-Agent, short delays between calls.
+- Search Inside snippets are discovery evidence; production passage import must
+  use a reviewed allowlist and the existing IA OCR/content-policy checks.
+- No protected full-text caching, summaries, generic reader/feed scope, or
+  production writes.
+
 ## tag-passages.mjs — PLANET-1173
 
 Backfill `tags` for any passage where `tags IS NULL OR '' OR '[]'`.

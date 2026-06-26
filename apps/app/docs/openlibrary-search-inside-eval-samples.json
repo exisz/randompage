@@ -1,0 +1,2749 @@
+{
+  "generatedAt": "2026-06-26T02:21:18.165Z",
+  "policy": "local evaluation only; no production writes; direct OCR candidate excerpts only from openly readable IA identifiers",
+  "topics": [
+    "philosophy",
+    "psychology",
+    "history",
+    "literature",
+    "classics"
+  ],
+  "perTopic": 20,
+  "maxTextFetches": 40,
+  "summary": {
+    "recordsReturned": 100,
+    "readable": 23,
+    "openDirect": 23,
+    "snippetRows": 100,
+    "fetchSuccesses": 20,
+    "fetchFailures": 0,
+    "passageYield": 20,
+    "verdict": "A: viable as a reviewed direct passage source for open IA OCR items"
+  },
+  "records": [
+    {
+      "topic": "philosophy",
+      "rank": 1,
+      "title": "Introduction to the study of philosophy",
+      "author": "Stuckenberg, John Henry Wilburn, 1835-1903. [from old catalog]",
+      "olid": "/books/OL25388661M",
+      "iaIdentifier": "introductiontos00stu",
+      "year": 1888,
+      "snippetLength": 272,
+      "snippets": [
+        "Definition of Philosophy 11\nII. Relation of Philosophy to Religion 57\nIII. Philosophy and Natural",
+        "93\nIV. Philosophy and Empirical Psychology .... 129 V. Division of Philosophy 159\nVI"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL25388661M/Introduction_to_the_study_of_philosophy"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 2,
+      "title": "Christianity & western thought : a history of philosophers, ideas & movements",
+      "author": "Brown, Colin, 1932-",
+      "olid": null,
+      "iaIdentifier": "christianitywest0003brow",
+      "year": null,
+      "snippetLength": 312,
+      "snippets": [
+        "in Analytic Philosophy\n. Faith in Philosophy: Thomism, Hermeneutics\nand Christian Philosophy\n9. Journey",
+        "1. Christianity—Philosophy. 2. Faith and reason—History of doctrines. 3. Philosophy—History. 1. Title"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 3,
+      "title": "Recent British Philosophy: A Review, with Criticisms; Including Some Comments on Mr. Mill's ...",
+      "author": "David Masson",
+      "olid": "/books/OL20501351M",
+      "iaIdentifier": "recentbritishph03massgoog",
+      "year": 1867,
+      "snippetLength": 322,
+      "snippets": [
+        "Fhcenomenal Philosophy, or the Philosophy of Phanomenalism. The fundamental maxim of the Philosophy, at all",
+        "•' ')3\nRECENT BRITISH PHILOSOPHY.\n/ .5 ■ / ci\n\"A\nRECENT BRITISH PHILOSOPHY:\nA REVIEW, WITH CRITICISMS;"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL20501351M/Recent_British_Philosophy_A_Review_with_Criticisms_Including_Some_Comments_on_Mr._Mill's_..."
+    },
+    {
+      "topic": "philosophy",
+      "rank": 4,
+      "title": "How the Cold War transformed philosophy of science : to the icy slopes of logic",
+      "author": "Reisch, George A., 1962-",
+      "olid": "/books/OL22624427M",
+      "iaIdentifier": "howcoldwartransf0000reis",
+      "year": 2005,
+      "snippetLength": 321,
+      "snippets": [
+        "Science\nRed Philosophy of Science: Blumberg, Malisoff, Somerville, and Early Philosophy of Science\nThe",
+        "actually said, “it’s not science. It’s philosophy.” Philosophy itse/fin his outlook repre- sented a backwater"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL22624427M/HOW_THE_COLD_WAR_TRANSFORMED_PHILOSOPHY_OF_SCIENCE_TO_THE_ICY_SLOPES_OF_LOGIC."
+    },
+    {
+      "topic": "philosophy",
+      "rank": 5,
+      "title": "A preface to philosophy",
+      "author": "Woodhouse, Mark B",
+      "olid": "/books/OL3572523M",
+      "iaIdentifier": "prefacetophiloso0007wood",
+      "year": 2003,
+      "snippetLength": 280,
+      "snippets": [
+        "areas, such as philosophy of mathematics, philosophy of history, philosophy of edu¬ cation",
+        "PHILOSOPHY\nA Preface to Philosophy\nSeventh Edition\nMark B. Woodhouse\nGeorgia State University"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL3572523M/A_preface_to_philosophy"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 6,
+      "title": "Martin Heidegger : the philosophy of another beginning",
+      "author": "Dugin, Aleksandr, author",
+      "olid": "/books/OL32124020M",
+      "iaIdentifier": "martinheideggerp0000dugi",
+      "year": 2014,
+      "snippetLength": 282,
+      "snippets": [
+        "MARTIN HEIDEGGER'S PHILOSOPHY | 283\nIL DASEIN AND THE HISTORY OF PHILOSOPHY (FROM THE FIRST",
+        "language of philosophy — a kind of metalanguage. This is based on his specific philosophy of language"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL32124020M/Martin_Heidegger"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 7,
+      "title": "Falling in love with wisdom : American philosophers talk about their calling",
+      "author": "Karnos, David D",
+      "olid": "/books/OL7387018M",
+      "iaIdentifier": "fallinginlovewit00davi",
+      "year": null,
+      "snippetLength": 274,
+      "snippets": [
+        "Backing into Philosophy, 226\nVI OF PLACES AND PASSAGES Linda A. Bell, Philosophy — A Lifeline",
+        "literary philosophy that had interested me at Yale, but the mathematical philosophy that I"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7387018M/Falling_in_Love_with_Wisdom"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 8,
+      "title": "Ancient European philosophy; the history of Greek philosophy psychologically treated",
+      "author": "Snider, Denton Jaques, 1841-1925",
+      "olid": "/books/OL13504299M",
+      "iaIdentifier": "ancienteuropeanp00snid",
+      "year": 1903,
+      "snippetLength": 282,
+      "snippets": [
+        "Ancient European Philosophy . . . 1 50\n6. Modern European Philosophy\n(in prejyaration)",
+        "Publishing Co.\nANCIENT\nEuropean Philosophy\nThe History of Greek Philosophy Psychologically Treated.\nBY"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL13504299M/Ancient_European_philosophy"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 9,
+      "title": "Early German philosophy : Kant and his predecessors",
+      "author": "Beck, Lewis White",
+      "olid": null,
+      "iaIdentifier": "earlygermanphilo0000unse",
+      "year": 1969,
+      "snippetLength": 313,
+      "snippets": [
+        "properly called German philosophy.\n20 | Early German Philosophy\n.\nGerman philosophy, in this respect, is",
+        "thoughts than French philosophy or English philosophy, and European philosophy would probably have been"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 10,
+      "title": "A brief history of Greek philosophy",
+      "author": "Burt, Benjamin Chapman, 1852-1915",
+      "olid": "/books/OL24605951M",
+      "iaIdentifier": "briefhistoryofgr00burt",
+      "year": 1889,
+      "snippetLength": 283,
+      "snippets": [
+        "Subsequent History of Greek Philosophy, pp. 45-47; Philosophy of Socrates, p. 47; Spirit",
+        "146) ; Practical Philosophy, p. 147; Method of Practical Philosophy, p. 147 ; End of Practical"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24605951M/A_brief_history_of_Greek_philosophy"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 11,
+      "title": "A history of philosophy in epitome",
+      "author": "Schwegler, Albert, 1819-1857",
+      "olid": "/books/OL14013488M",
+      "iaIdentifier": "histphilosophy00schwrich",
+      "year": 1856,
+      "snippetLength": 278,
+      "snippets": [
+        "Transcendental Philosophy . •\n(1.) The Theoretical Philosophy\n(2.) The Practical Philosophy\n(8.) Philosophy",
+        "SOPHISTIC PHILOSOPHY ... 43\n1. The Relation of the Sophistic Philosophy to the Anaxagorcan"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL14013488M/A_history_of_philosophy_in_epitome"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 12,
+      "title": "An Introduction To Indian Philosophy",
+      "author": "Satischandra Chatterjee; Dhirendramohan Datta",
+      "olid": "/books/OL58949174M",
+      "iaIdentifier": "mlbd.introductiontoin0000sati_t0v5",
+      "year": 1939,
+      "snippetLength": 322,
+      "snippets": [
+        "of Philosophy 1 The Meaning and Scope of Indian\nPhilosophy 3 3. The Schools of Indian Philosophy 5\n4",
+        "outlook of Indian philosophy.\n2. The Meaning and Scope of Indian Philosophy\nIndian philosophy denotes the philosophical"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL58949174M/An_Introduction_To_Indian_Philosophy"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 13,
+      "title": "Rational philosophy in history and in system: an introduction to a logical and metaphysical course",
+      "author": "Fraser, Alexander Campbell, 1819-1914",
+      "olid": "/books/OL7167694M",
+      "iaIdentifier": "rationalphilosop00frasrich",
+      "year": 1858,
+      "snippetLength": 261,
+      "snippets": [
+        "Of San Francisco. 1873.\nRATIONAL PHILOSOPHY.\nRATIONAL PHILOSOPHY\nHISTORY AND IN SYSTEM\nAN",
+        "ACADEMICAL STUDY OF RATIONAL PHILOSOPHY, . 1\nU. \\TIQNAL PHILOSOPHY IN HISTOKY, —\n1. The"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7167694M/Rational_philosophy_in_history_and_in_system"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 14,
+      "title": "The story of philosophy",
+      "author": "Magee, Bryan",
+      "olid": null,
+      "iaIdentifier": "storyofphilosoph0000mage_o2k4",
+      "year": 1998,
+      "snippetLength": 318,
+      "snippets": [
+        "” is philosophy of science, philosophy of religion, philosophy he is beginning to do philosophy of law",
+        "moral and political philosophy, philosophy of constitutes the branch of philosophy known as ontology."
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 15,
+      "title": "Land, value, community : Callicott and environmental philosophy",
+      "author": "Unknown",
+      "olid": null,
+      "iaIdentifier": "landvaluecommuni0000unse",
+      "year": null,
+      "snippetLength": 333,
+      "snippets": [
+        "Eugene C. Hargrove\nPhilosophy of Nature or Natural Philosophy? Science and Philosophy in Callicott’s Metaphysics",
+        "sec. 5, pt. 1.\n9\nPhilosophy of Nature or Natural Philosophy?\nScience and Philosophy in Callicott’s Metaphysics"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 16,
+      "title": "Shakespeare, philosophy, and literature : essays",
+      "author": "Weitz, Morris",
+      "olid": null,
+      "iaIdentifier": "shakespearephilo0010weit",
+      "year": null,
+      "snippetLength": 323,
+      "snippets": [
+        "to philosophy in literature.\nPhilosophy and Literature, Philosophy of Literature, and Philosophy in Literature",
+        "dramatizes the moral philosophy of the play that too much philosophy, that is, philosophy without action,"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 17,
+      "title": "The philosophy of the present in Germany",
+      "author": "Külpe, Oswald, 1862-1915",
+      "olid": "/books/OL6561014M",
+      "iaIdentifier": "philosophyofpres00kl",
+      "year": 1913,
+      "snippetLength": 261,
+      "snippets": [
+        "J\nTHE PHILOSOPHY OF\nTHE PRESENT IN\nGERMANY\nBY\nOSWALD KULPE\nPROFESSOR OF PHILOSOPHY IN THE",
+        "is true if by the philosophy of the pre- sent we mean the philosophy of the moment — the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL6561014M/The_philosophy_of_the_present_in_Germany"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 18,
+      "title": "Philosophy of law",
+      "author": "Del Vecchio, Giorgio, 1878-1970",
+      "olid": "/books/OL26545899M",
+      "iaIdentifier": "philosophyoflaw0000delv",
+      "year": 1953,
+      "snippetLength": 280,
+      "snippets": [
+        "Concept and functions of Philosophy of Law . 1\n1. Philosophy and Science of Law . 1\n2.",
+        "function . 4\n4. Philosophy of Law and Natural Law . 6\nII. Relation between Philosophy of Law and"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL26545899M/Philosophy_of_law"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 19,
+      "title": "The Cambridge companion to modern Jewish philosophy",
+      "author": "Unknown",
+      "olid": null,
+      "iaIdentifier": "cambridgecompani0000unse_y6z4",
+      "year": 2007,
+      "snippetLength": 307,
+      "snippets": [
+        "regard, Western philosophy and Jewish philosophy did not differ at the core. All philosophy needed to be",
+        "TO\nMODERN JEWISH PHILOSOPHY\n \nThe Cambridge Companion to Modern Jewish Philosophy is a collec- tion"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "philosophy",
+      "rank": 20,
+      "title": "Saint Thomas and the gentiles, under the auspices of the Aristotelian society of Marquette university",
+      "author": "Adler, Mortimer Jerome, 1902-",
+      "olid": "/books/OL16444797M",
+      "iaIdentifier": "saintthomasgenti0000adle",
+      "year": 1938,
+      "snippetLength": 278,
+      "snippets": [
+        "which philosophy is only one, certainly must have realized the limitations of philosophy, bounded",
+        "work of St. Thomas as the best philosophy, but philosophy withal and hence forever open to"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL16444797M/Saint_Thomas_and_the_gentiles."
+    },
+    {
+      "topic": "psychology",
+      "rank": 1,
+      "title": "Careers in psychology",
+      "author": "Tara L. Kuther",
+      "olid": "/books/OL3697691M",
+      "iaIdentifier": "careersinpsychol00kuth",
+      "year": 2003,
+      "snippetLength": 301,
+      "snippets": [
+        "Health Psychology History ot Psychology\n'■% s.\nHumanistic Psychology\nInternational Psychology\nGroup",
+        "quantitative psychology, de¬ velopmental psychology, general psychology, and experimental psychology have"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL3697691M/Careers_in_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 2,
+      "title": "A history of psychology",
+      "author": "Klemm, Otto, 1884-",
+      "olid": "/books/OL7083190M",
+      "iaIdentifier": "historyofpsychol00klemuoft",
+      "year": 1914,
+      "snippetLength": 289,
+      "snippets": [
+        "TENDENCIES OF PSYCHOLOGY\nI. METAPHYSICAL PSYCHOLOGY Chapter I. Dualism in Psychology\n1. Relation",
+        "TENDENCIES OF PSYCHOLOGY\nI. METAPHYSICAL PSYCHOLOGY CHAPTER I\nDUALISM IN PSYCHOLOGY\nI. Relation"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7083190M/A_history_of_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 3,
+      "title": "SOCIAL PSYCHOLOGY INTERPRETED",
+      "author": "JESSE WILLIAM SPROW",
+      "olid": "/books/OL59045933M",
+      "iaIdentifier": "socialpsychology0000jess",
+      "year": 1927,
+      "snippetLength": 316,
+      "snippets": [
+        "heads: (1) the psychology of religion, (2) the psychology of war, (3) the psychology of art, (4) the",
+        "Social Psychology, and Ginsberg’s Psychology of Society. Zmnaniecki’s Laws of Social Psychology, a difficult"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL59045933M/SOCIAL_PSYCHOLOGY_INTERPRETED"
+    },
+    {
+      "topic": "psychology",
+      "rank": 4,
+      "title": "Systems and theories in psychology",
+      "author": "Melvin Herman Marx",
+      "olid": "/books/OL5283910M",
+      "iaIdentifier": "systemstheoriesi00melv",
+      "year": 1973,
+      "snippetLength": 287,
+      "snippets": [
+        "Experiments in Psychology Crites Vocational Psychology\nO’Amato Experimental Psychology: Methodology",
+        "Industrial Psychology\nGilmer Industrial and Organizational Psychology\nGray Psychology Applied to"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5283910M/Systems_and_theories_in_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 5,
+      "title": "Employment in community psychology : the diversity of opportunity",
+      "author": "O'Donnell, Clifford R",
+      "olid": "/books/OL8152230M",
+      "iaIdentifier": "employmentincomm00jose",
+      "year": 2000,
+      "snippetLength": 292,
+      "snippets": [
+        "Community Psychology: The Diversity of Opportunity\nEmployment in Community Psychology: The Diversity",
+        "Community Psychology: The Diversity of Opportunity\nEmployment in Community Psychology: The Diversity"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL8152230M/Employment_in_Community_Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 6,
+      "title": "Social psychology",
+      "author": "Hogg, Michael A., 1954-",
+      "olid": "/books/OL29007779M",
+      "iaIdentifier": "socialpsychology0000hogg_v8e8",
+      "year": 2008,
+      "snippetLength": 311,
+      "snippets": [
+        "areas of psychology, such as sports psychology, health psychology and organis- ational psychology.\nSocial",
+        "tour\nIntroducing social psychology\nWhat is social psychology? Social psychology and its close neighbours"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL29007779M/Social_Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 7,
+      "title": "The Person in Psychology",
+      "author": "Gordon W. Allport",
+      "olid": "/books/OL58651193M",
+      "iaIdentifier": "bwb_P7-BWR-889",
+      "year": 1968,
+      "snippetLength": 329,
+      "snippets": [
+        "Imagination in Psychology: Some Needed Steps 107\nto existential psychology, to humanistic psychology. The trend",
+        "PERSON IN PSYCHOLOGY ce .\n, M+,\na\n,\ne bs eliy » 9 q y - _ b , a _\n7 - J\nTHE PERSON IN PSYCHOLOGY\nSelected"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL58651193M/The_Person_in_Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 8,
+      "title": "Exploring Social Psychology",
+      "author": "David G. Myers",
+      "olid": "/books/OL46923101M",
+      "iaIdentifier": "exploringsocialp0000davi",
+      "year": 2011,
+      "snippetLength": 311,
+      "snippets": [
+        "PART ONE Introducing Social Psychology 1 MODULE 1 Doing Social Psychology 8 MODULE 2 Did You Know It All",
+        "PART ONE\nIntroducing Social Psychology\nMODULE 1 Doing Social Psychology\nForming and Testing Theories"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL46923101M/Exploring_Social_Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 9,
+      "title": "The social psychology of emotional and behavioral problems : interfaces of social and clinical psychology",
+      "author": "None",
+      "olid": "/books/OL371706M",
+      "iaIdentifier": "socialpsychology0000unse_i2b3",
+      "year": 1999,
+      "snippetLength": 285,
+      "snippets": [
+        "Social Psychology tended to focus on either social psychology or abnormal psychology, with",
+        "The Social Psychology of Emotional and Behavioral Problems\ns\n'\nThe Social Psychology of Emotional"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL371706M/The_social_psychology_of_emotional_and_behavioral_problems"
+    },
+    {
+      "topic": "psychology",
+      "rank": 10,
+      "title": "Why men fear marriage : the surprising truth behind why so many men can't commit",
+      "author": "Johnson, R. M. (Rodney Marcus)",
+      "olid": null,
+      "iaIdentifier": "whymenfearmarria0002john",
+      "year": 2009,
+      "snippetLength": 306,
+      "snippets": [
+        "system.\nPsychology\nDevelopment • 503\nDevelopment\nType of psychology: Developmental psychology Fields",
+        "Disaster psychology\nType of psychology: Emotion; sensation and per¬ ception; social psychology; stress"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "psychology",
+      "rank": 11,
+      "title": "The Psychology of Religion",
+      "author": "L. W. Grensted",
+      "olid": "/books/OL46946781M",
+      "iaIdentifier": "bwb_KR-426-956",
+      "year": 1952,
+      "snippetLength": 317,
+      "snippets": [
+        "was an\nPSYCHOLOGY 51\nimportant one for psychology in general and decisive for the psychology of religion",
+        "the psychology of Gestalt, pattern, or structure, and the psychology of Personality.\nPSYCHOLOGY 63\nThe"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL46946781M/The_psychology_of_religion"
+    },
+    {
+      "topic": "psychology",
+      "rank": 12,
+      "title": "Developmental psychology : historical and philosophical perspectives",
+      "author": "None",
+      "olid": "/books/OL21349747M",
+      "iaIdentifier": "developmentalpsy0000unse_f3k1",
+      "year": 1983,
+      "snippetLength": 301,
+      "snippets": [
+        "introductory psychology, experi¬ mental psychology, and history of psychology courses at Hunter",
+        "DEVELOPMENTAL PSYCHOLOGY: Historical and Philosophical\nPerspectives\nCHILD PSYCHOLOGY\nA series of"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL21349747M/Developmental_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 13,
+      "title": "School psychology : perspectives and issues",
+      "author": "Gary D. Phye",
+      "olid": "/books/OL4733664M",
+      "iaIdentifier": "schoolpsychology0000unse_n8n2",
+      "year": 1979,
+      "snippetLength": 319,
+      "snippets": [
+        "field of psychology. In reality, school psychology is just about as old as formal psychology in this country",
+        "school psychology. Psychology in the Schools, 1975, 12, 50-57.\nJames, W. The principles of psychology. New"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL4733664M/School_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 14,
+      "title": "Dialogue and debate in the making of theoretical psychology : peer-reviewed, edited and selected proceedings of the Fifteenth Biennial Conference of the International Society for Theoretical Psychology Santiago, Chile, May 2013",
+      "author": "International Society for Theoretical Psychology. Biennial Conference (15th : 2013 : Santiago, Chile)",
+      "olid": "/books/OL32771085M",
+      "iaIdentifier": "dialoguedebatein0000inte",
+      "year": 2015,
+      "snippetLength": 316,
+      "snippets": [
+        "Theoretical Psychology titled: 'Dialogue and Debate in the Making of Theoretical Psychology’, Santiago",
+        "Dialogue and debate in psychology: Commentary on\nthe foundational myth of psychology as a science Constance"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL32771085M/Dialogue_and_debate_in_the_making_of_theoretical_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 15,
+      "title": "Psychology and law : a critical introduction",
+      "author": "Kapardis, Andreas",
+      "olid": "/books/OL1001469M",
+      "iaIdentifier": "psychologylawcri0000kapa_u8u8",
+      "year": 1997,
+      "snippetLength": 288,
+      "snippets": [
+        "termed:1 (a) ‘psychology in law’; (b) ‘psychology and law’; and (c) ‘psychology of law’. According",
+        "articles in several refereed journals.\nPSYCHOLOGY AND LAW\nPSYCHOLOGY AND LAW\nA Critical Introduction"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL1001469M/Psychology_and_law"
+    },
+    {
+      "topic": "psychology",
+      "rank": 16,
+      "title": "Psychology",
+      "author": "Butler, Gillian, 1942-",
+      "olid": "/books/OL24468115M",
+      "iaIdentifier": "psychology0000butl",
+      "year": 2011,
+      "snippetLength": 282,
+      "snippets": [
+        "to I Psychology\nThe Main Branches of Psychology\nIt has been argued that psychology is not",
+        "of psychology and between psychology and related fields.\nClose Relatives of Psychology\nThere"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24468115M/Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 17,
+      "title": "Social psychology",
+      "author": "Franzoi, Stephen L",
+      "olid": "/books/OL22819082M",
+      "iaIdentifier": "socialpsychology0003fran",
+      "year": 2003,
+      "snippetLength": 301,
+      "snippets": [
+        "Social Psychology Quarterly.\nPsychology.\nSocial Psychology Is Studied in Both Psychology and Sociology",
+        "Introducing Social\nPsychology 3\nWHAT IS SOCIAL PSYCHOLOGY? 5\nSocial Psychology Studies How We"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL22819082M/Social_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 18,
+      "title": "Development of Clinical Psychology",
+      "author": "John Reisman",
+      "olid": "/books/OL51005920M",
+      "iaIdentifier": "bwb_P8-BGH-437",
+      "year": null,
+      "snippetLength": 324,
+      "snippets": [
+        "what clinical psychology is.\nClinical psychology is defined here as a branch of psychology devoted to the",
+        "0177\nA Fiistory of CLINICAL PSYCHOLOGY\nENLARGED EDITION\nTHE CENTURY PSYCHOLOGY SERIES\nGardner Lindzey, Kenneth"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL51005920M/Development_of_Clinical_Psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 19,
+      "title": "Cross-cultural topics in psychology",
+      "author": "None",
+      "olid": "/books/OL1429283M",
+      "iaIdentifier": "crossculturaltop0000unse",
+      "year": 1994,
+      "snippetLength": 301,
+      "snippets": [
+        "CULTURAL TOPICS IN PSYCHOLOGY\nCROSS- CULTURAL TOPICS IN PSYCHOLOGY\nEdited by LEONORE LOEB ADLER",
+        "Cross-Cultural Psychology 3\nDavid Yau-Fai Ho\n2. A Brief History of Cross-Cultural Psychology 15\nJohn"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL1429283M/Cross-cultural_topics_in_psychology"
+    },
+    {
+      "topic": "psychology",
+      "rank": 20,
+      "title": "The education of selves : how psychology transformed students",
+      "author": "Martin, Jack, 1950-",
+      "olid": "/books/OL25376547M",
+      "iaIdentifier": "educationofselve0000mart",
+      "year": 2013,
+      "snippetLength": 307,
+      "snippets": [
+        "psychotherapy, health psychology, forensic psychology, industrial/organizational psychology, and, of course",
+        "Educational psychology. 2. Transformative learning. 3. Self-actualization (Psychology)\nI. McLellan"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL25376547M/The_education_of_selves"
+    },
+    {
+      "topic": "history",
+      "rank": 1,
+      "title": "Guide to the history of science",
+      "author": "Roger Turner",
+      "olid": "/books/OL10193185M",
+      "iaIdentifier": "guidetohistoryof0000unse_h7y2",
+      "year": 2002,
+      "snippetLength": 328,
+      "snippets": [
+        "2002|GUIDE\nTO THE HISTORY OF SCIENCE\nhttp://www.hssonline.org\nHistory of Science Society\nThe History of Science",
+        "OF THE HISTORY OF SCIENCE SOCIETY\nThe Guide to the History of Science was prepared by the History of Science"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL10193185M/2002_Guide_to_the_History_of_Science"
+    },
+    {
+      "topic": "history",
+      "rank": 2,
+      "title": "Suggestions for the teaching of history and civics in the high school",
+      "author": "Krey, August C. (August Charles), 1887-1961",
+      "olid": "/books/OL7175660M",
+      "iaIdentifier": "suggestionsforte00kreyrich",
+      "year": 1915,
+      "snippetLength": 268,
+      "snippets": [
+        "States History or to a combination of United States History and Civics, the history being",
+        "sity: Ancient History, 1 unit; Medieval and Modern History, 1 unit; English History, 1 unit;"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7175660M/Suggestions_for_the_teaching_of_history_and_civics_in_the_high_school"
+    },
+    {
+      "topic": "history",
+      "rank": 3,
+      "title": "The pursuit of history : aims, methods and new directions in the study of history",
+      "author": "Tosh, John",
+      "olid": "/books/OL28801016M",
+      "iaIdentifier": "pursuitofhistory0006tosh",
+      "year": 2015,
+      "snippetLength": 322,
+      "snippets": [
+        "gender history and postcolonial history. Chapter 11 considers the relationship between history and memory",
+        "political need: one thinks of labour history, women’s history and African history. It is not always possible to"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL28801016M/Pursuit_of_History"
+    },
+    {
+      "topic": "history",
+      "rank": 4,
+      "title": "Handbook for history teachers",
+      "author": "W. H. Burston",
+      "olid": "/books/OL10213971M",
+      "iaIdentifier": "handbookforhisto0000unse",
+      "year": 1972,
+      "snippetLength": 281,
+      "snippets": [
+        "School 59\nLocal History 75\nWorld History 90\nGeneral History and Aspect History 99\nThe Place",
+        "Homes\n665\nLocal History : London and Leeds\n668\nMusic and History\n673\nPostal History\n688\nTransport"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL10213971M/Handbook_for_History_Teachers"
+    },
+    {
+      "topic": "history",
+      "rank": 5,
+      "title": "The Abridged Bliss Classification",
+      "author": "Various",
+      "olid": "/books/OL58538797M",
+      "iaIdentifier": "abridgedblisscla0000vari",
+      "year": null,
+      "snippetLength": 320,
+      "snippets": [
+        "Constitutional history\nDiplomatic history, Foreign policy Economic history\nSocial history\nMilitary history See also",
+        "Geography History: General and Ancient\nHistory of Europe\nHistory of America . : 3 ;\nHistory of Australasia"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL58538797M/The_Abridged_Bliss_Classification"
+    },
+    {
+      "topic": "history",
+      "rank": 6,
+      "title": "The varieties of history: from Voltaire to the present",
+      "author": "Stern, Fritz Richard, 1926- ed",
+      "olid": "/books/OL5414824M",
+      "iaIdentifier": "varietiesofhisto0000ster",
+      "year": 1973,
+      "snippetLength": 321,
+      "snippets": [
+        "Thomas Carlyle\nOn History From On Heroes, Hero-Worship, and the Heroic in\nHistory\n. HISTORY AS A NATIONAL",
+        "AMERICAN DEFINITION OF HISTORY: Frederick Jackson Turner The Significance of History\nHISTORY AS A SCIENCE: J"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5414824M/The_varieties_of_history_from_Voltaire_to_the_present"
+    },
+    {
+      "topic": "history",
+      "rank": 7,
+      "title": "Young Ireland and the writing of Irish history",
+      "author": "Quinn, James, 1961-",
+      "olid": "/books/OL31277366M",
+      "iaIdentifier": "youngirelandwrit0000quin",
+      "year": 2015,
+      "snippetLength": 312,
+      "snippets": [
+        "FOUR THE USES OF HISTORY 60\nFIVE\nMAKING HISTORY 81\nSIX THE HISTORY OF THEIR OWN TIMES\nMEMOIRS, JOURNALS",
+        "attention to military history — social history was generally ignored and economic history rarely went beyond"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL31277366M/Young_Ireland_and_the_writing_of_Irish_history"
+    },
+    {
+      "topic": "history",
+      "rank": 8,
+      "title": "The new art history",
+      "author": "Borzello, Frances",
+      "olid": "/books/OL2322829M",
+      "iaIdentifier": "newarthistory00alre",
+      "year": 1986,
+      "snippetLength": 282,
+      "snippets": [
+        "assert that the ‘old’ art history is Art History. It is the history of European painting and",
+        "1 1 Reviewing Art History\n1 9 How Revolutionary is the N e w Art History?\n32 On Newness, Art"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL2322829M/The_New_art_history"
+    },
+    {
+      "topic": "history",
+      "rank": 9,
+      "title": "Library of Congress classification. PB-PH. Modern European languages",
+      "author": "Library of Congress",
+      "olid": "/books/OL24013310M",
+      "iaIdentifier": "libraryofcongres0000libr_d2l1",
+      "year": 2009,
+      "snippetLength": 321,
+      "snippets": [
+        "Auxiliary Sciences of History\nHistory (General) and History of Europe\nHistory of Asia, Africa, Australia",
+        "philology (Table P-PZ4a modified) History of philology Cf. PB1015 History of the languages General works"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24013310M/Library_of_Congress_classification._PB-PH._Modern_European_languages"
+    },
+    {
+      "topic": "history",
+      "rank": 10,
+      "title": "Revolution and regeneration : life cycle and the historical vision of the generation of 1776",
+      "author": "Hoffer, Peter Charles, 1944-",
+      "olid": "/books/OL20141720M",
+      "iaIdentifier": "revolutionregene0000hoff",
+      "year": 1983,
+      "snippetLength": 298,
+      "snippets": [
+        "instructions. A separate\n22\nA History All Our Own\nhistory — a history that began with their flight",
+        "CHAPTER ONE\nA History All Our Own: Identity , 1763-2776 14\nCHAPTER TWO\nA History without Parallel:"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL20141720M/Revolution_and_regeneration"
+    },
+    {
+      "topic": "history",
+      "rank": 11,
+      "title": "Decimal classification and relative [sic] index for Libraries, clippings, notes, etc",
+      "author": "Dewey, Melvil, 1851-1931",
+      "olid": "/books/OL19375790M",
+      "iaIdentifier": "de00cimalclassificdewerich",
+      "year": null,
+      "snippetLength": 282,
+      "snippets": [
+        "Political history\n.32 Diplomatic history\nSee also 940.3 1-.3 14 Political history •33 Groups",
+        "simply class 9, History ; e. g. 942, history of England, analyzd is 9, history, 42, England"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL19375790M/Decimal_classification_and_relative_sic_index_for_Libraries_clippings_notes_etc."
+    },
+    {
+      "topic": "history",
+      "rank": 12,
+      "title": "The Supreme Court and the uses of history",
+      "author": "Miller, Charles A. (Charles Allen), 1937-",
+      "olid": "/books/OL5439543M",
+      "iaIdentifier": "supremecourtthe00mill",
+      "year": 1969,
+      "snippetLength": 275,
+      "snippets": [
+        "discussed, and legal history. Legal history pertains to the history of legal terms and doctrine",
+        "material, history as intent is essentially history as command. The other history, ongoing"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5439543M/The_Supreme_Court_and_the_uses_of_history"
+    },
+    {
+      "topic": "history",
+      "rank": 13,
+      "title": "American economic history : a guide to information sources",
+      "author": "Hutchinson, William Kenneth, 1945-",
+      "olid": null,
+      "iaIdentifier": "americaneconomic0000hutc_b8c7",
+      "year": null,
+      "snippetLength": 279,
+      "snippets": [
+        "Arthur H. \"Business History and Economic History.\" JOURNAL OF\nECONOMIC HISTORY 5 (December 1945):",
+        "\"Economic History and the New Business History.\" JOURNAL OF ECONOMIC HISTORY 18 (December"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "history",
+      "rank": 14,
+      "title": "The French Historical Revolution: The Annales School, 1929-89",
+      "author": "Peter Burke",
+      "olid": null,
+      "iaIdentifier": "isbn_0804718377",
+      "year": 1990,
+      "snippetLength": 323,
+      "snippets": [
+        "action against traditional history, politi- cal history, and the history of events. After the Second",
+        "socio-cultural history, while others are rediscovering political history and even narrative.\nThe history of Annales"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "history",
+      "rank": 15,
+      "title": "Clio and the doctors : psycho-history, quanto-history, & history",
+      "author": "Barzun, Jacques, 1907-2012",
+      "olid": "/books/OL19975079M",
+      "iaIdentifier": "cliodoctorspsych0000barz_j0l4",
+      "year": 1974,
+      "snippetLength": 281,
+      "snippets": [
+        "Barzun\nCLIO\nAND THE\nDOCTORS\nPSYCHO-HISTORY QUANTO-HISTORY & HISTORY\nThe University of Chicago Press",
+        "such as “philosophy of history\" or \"the lesson of history, or history was made when the two"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL19975079M/Clio_and_doctors_psycho-history_quanto-history_history._--."
+    },
+    {
+      "topic": "history",
+      "rank": 16,
+      "title": "Making sense of social studies",
+      "author": "Jenness, David",
+      "olid": "/books/OL7270108M",
+      "iaIdentifier": "makingsenseofsoc0000jenn",
+      "year": 1990,
+      "snippetLength": 350,
+      "snippets": [
+        "Traditional\n(A1) U.S. History (A2) U.S. History (A3) U.S. History — — World History Civics/Government Civics/Government",
+        "Comprehensive (B1) U.S. History (B2) U.S. History World History World History* Civics/Government Civics/Government"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7270108M/Making_Sense_of_Social_Studies"
+    },
+    {
+      "topic": "history",
+      "rank": 17,
+      "title": "The philosophy of history in France and Germany",
+      "author": "Flint, Robert, 1838-1910",
+      "olid": "/books/OL7160316M",
+      "iaIdentifier": "thephilosophyofh00flinuoft",
+      "year": 1874,
+      "snippetLength": 257,
+      "snippets": [
+        "philosophy of history is a natural growth of history itself, . . 8\nHistory in the great",
+        ". .11\nHistory among the Greeks, . . . . . .12\nThe idea of a universal history was the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7160316M/The_philosophy_of_history_in_France_and_Germany"
+    },
+    {
+      "topic": "history",
+      "rank": 18,
+      "title": "Henry Adams : a scientific historian. --",
+      "author": "Jordy, William H",
+      "olid": "/books/OL6109516M",
+      "iaIdentifier": "henryadamsscient0000jord",
+      "year": 1963,
+      "snippetLength": 268,
+      "snippets": [
+        "New History,” in which he proposed an end to purely narrative history, to the history of",
+        "He had read widely in history, taught history, written history. He had acquired knowledge"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL6109516M/Henry_Adams_scientific_historian."
+    },
+    {
+      "topic": "history",
+      "rank": 19,
+      "title": "Catalogue of the Apprentices' Library in New York: Established and Supported by the General ...",
+      "author": "General Society of Mechanics and Tradesmen of the City of New York Library",
+      "olid": "/books/OL20485319M",
+      "iaIdentifier": "catalogueappren01librgoog",
+      "year": 1860,
+      "snippetLength": 313,
+      "snippets": [
+        "Abbott, Jacob, History of Alexander the Great, 12mo. 8,584. Abbott, Jacob, History of Cleopatra, Queen",
+        "58^. Abbott, Jacob, History of Cy-nia the Great, 12mo. 8,583. Abbott, Jacob, History of Darius tlje Great"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL20485319M/Catalogue_of_the_Apprentices'_Library_in_New_York_Established_and_Supported_by_the_General_..."
+    },
+    {
+      "topic": "history",
+      "rank": 20,
+      "title": "The racial and ethnic presence in American Methodism : a bibliography",
+      "author": "Gray, C. Jarrett, Jr",
+      "olid": "/books/OL12141165M",
+      "iaIdentifier": "racialethnicpres0000gray",
+      "year": 1991,
+      "snippetLength": 317,
+      "snippets": [
+        "an aspect of our history that we must celebrate.\nThere is another aspect of our history, however, for which",
+        "Method- ist History 9 (April 1981): 21-33.\n*Harrison, Cynthia E. Women in American History: A Bib- liography"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL12141165M/The_Racial_Ethnic_Presence_in_American_Methodism"
+    },
+    {
+      "topic": "literature",
+      "rank": 1,
+      "title": "A celebration of literature and response : children, books, and teachers in K-8 classrooms",
+      "author": "Hancock, Marjorie R",
+      "olid": "/books/OL17110017M",
+      "iaIdentifier": "celebrationoflit0000hanc_o9j9",
+      "year": 2004,
+      "snippetLength": 302,
+      "snippets": [
+        "response to literature.\n• Up-to-date literature. The text emphasizes current literature with many",
+        "Multicultural Literature 188 Response to Multicultural Literature 189 International Literature 201\nLocating"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL17110017M/A_celebration_of_literature_and_response"
+    },
+    {
+      "topic": "literature",
+      "rank": 2,
+      "title": "Directory of American scholars",
+      "author": "Unknown",
+      "olid": null,
+      "iaIdentifier": "directoryofameri0000unse_a4x3",
+      "year": 2002,
+      "snippetLength": 322,
+      "snippets": [
+        "poetics and theory of literature, semiotics, folk- lore and literature, Polish literature. SELECTED PUBLICA-",
+        "century French literature, sixteenth century French literature, Pierre Loti, French gay literature. SELECTED"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "literature",
+      "rank": 3,
+      "title": "Literatures of the East, an Appreciation",
+      "author": "Eric B. Ceadel",
+      "olid": "/books/OL58927604M",
+      "iaIdentifier": "literaturesofeas0000eric",
+      "year": 1953,
+      "snippetLength": 314,
+      "snippets": [
+        "HEBREW LITERATURE Arabic LITERATURE\nIRANIAN LITERATURE\nPERSIAN LITERATURE\nANCIENT INDIAN LITERATURE .\nCHINESE",
+        "all in Hebrew literature for what we call secular\n16 ANCIENT HEBREW LITERATURE\nliterature. What is and"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL58927604M/Literatures_of_the_East_an_Appreciation"
+    },
+    {
+      "topic": "literature",
+      "rank": 4,
+      "title": "The function of literature; a study of Christopher Caudwell's aesthetics",
+      "author": "Margolies, David",
+      "olid": "/books/OL5695147M",
+      "iaIdentifier": "functionoflitera0000marg",
+      "year": 1969,
+      "snippetLength": 277,
+      "snippets": [
+        "kinds of literature. If literature exists, he felt, there must be a reason: literature must",
+        "view of literature, seeing literature not as static works but as a process. Literature and"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5695147M/The_function_of_literature"
+    },
+    {
+      "topic": "literature",
+      "rank": 5,
+      "title": "Yearbook of comparative and general literature",
+      "author": "Unknown",
+      "olid": null,
+      "iaIdentifier": "yearbookofcompar0004unse",
+      "year": 1952,
+      "snippetLength": 326,
+      "snippets": [
+        "COMPARATIVE AND GENERAL LITERATURE IV\npublished in collaboration with The Comparative Literature Committee of the",
+        "Method in the Study of Literature,” SHER, VI (June, 1927).\n2 COMPARATIVE LITERATURE IN THE SOVIET UNION"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "literature",
+      "rank": 6,
+      "title": "Anglophone Caribbean poetry, 1970-2001 : an annotated bibliography",
+      "author": "Williams, Emily Allen",
+      "olid": "/books/OL3568809M",
+      "iaIdentifier": "anglophonecaribb0000will",
+      "year": 2002,
+      "snippetLength": 331,
+      "snippets": [
+        "Canadian literature is diluting Canadian Literature.\nDathorne, O. R. Dark Ancestor: The Literature of the",
+        "Caribbean Literature: A Bibliography 086\nCaribbean Literature in Comparison 850\nCaribbean Literature in English"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL3568809M/Anglophone_Caribbean_poetry_1970-2001"
+    },
+    {
+      "topic": "literature",
+      "rank": 7,
+      "title": "Marxist literary thought in China : the influence of Chʻü Chʻiu-pai",
+      "author": "Pickowicz, Paul",
+      "olid": "/books/OL22138451M",
+      "iaIdentifier": "marxistliteraryt0000pick",
+      "year": 1981,
+      "snippetLength": 309,
+      "snippets": [
+        "inter- pretation. 2. Communism and literature. 3. Chinese literature—20th century—History and criticism",
+        "that literature should play an active social role; what they objected to was the role literature played"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL22138451M/Marxist_literary_thought_in_China"
+    },
+    {
+      "topic": "literature",
+      "rank": 8,
+      "title": "Searching the chemical literature",
+      "author": "American Chemical Society. Division of Chemical Literature",
+      "olid": "/books/OL5824314M",
+      "iaIdentifier": "searchingchemica0000amer",
+      "year": 1961,
+      "snippetLength": 310,
+      "snippets": [
+        "Pharmaceutical and Medicinal Chemistry\nLiterature\nTraining of Literature Chemists\nThermodynamic Properties",
+        "helpful to those who use the chemical literature, a literature which has grown enormously in the decade"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5824314M/Searching_the_chemical_literature."
+    },
+    {
+      "topic": "literature",
+      "rank": 9,
+      "title": "Writing essays about literature",
+      "author": "Kelley Griffith",
+      "olid": "/books/OL7365291M",
+      "iaIdentifier": "writingessaysabo00grif_0",
+      "year": null,
+      "snippetLength": 275,
+      "snippets": [
+        "33\nLiterature Is Aesthetic 34\nLiterature Is Fictional 35\nliterature Is True 37\nLiterature Is",
+        "How to Analyze Literature 31\nAnalysis 32\nThe Nature of Literature 33\nLiterature Is Language"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7365291M/Writing_Essays_about_Literature"
+    },
+    {
+      "topic": "literature",
+      "rank": 10,
+      "title": "Child and story : the literary connection",
+      "author": "Vandergrift, Kay E",
+      "olid": "/books/OL8340663M",
+      "iaIdentifier": "childstory0000unse",
+      "year": 1980,
+      "snippetLength": 270,
+      "snippets": [
+        "children’s literature ; 1) Bibliography: p.\nIncludes index.\n1 . Children’s literature — History",
+        "the literature created for them, a commitment to and a joy in children’s literature, and"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL8340663M/Child_and_Story_(Diversity_and_direction_in_children's_literature_series)"
+    },
+    {
+      "topic": "literature",
+      "rank": 11,
+      "title": "Lectures on English literature, from Chaucer to Tennyson",
+      "author": "Reed, Henry, 1808-1854. [from old catalog]",
+      "olid": "/books/OL25583279M",
+      "iaIdentifier": "lecturesonenglis00reed_1",
+      "year": 1867,
+      "snippetLength": 305,
+      "snippets": [
+        "remove them — All books not literature — Accurate definition of literature — Its universality — Izaak",
+        "Browning 215\nLECTURE VIII.\nLITERATURE OP THE NINETEENTH CENTURY.\nLiterature of our own times— Influence"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL25583279M/Lectures_on_English_literature_from_Chaucer_to_Tennyson"
+    },
+    {
+      "topic": "literature",
+      "rank": 12,
+      "title": "Contesting the classroom : reimagining education in Moroccan and Algerian literatures",
+      "author": "Twohig, Erin, author",
+      "olid": "/books/OL29432600M",
+      "iaIdentifier": "contestingclassr0000twoh",
+      "year": 2019,
+      "snippetLength": 327,
+      "snippets": [
+        "lonial education system. Literature relies on the classroom: for a national literature to flourish, the education",
+        "postcolonial Tunisian literature.’ The gap that separates Tunisian literature from its Moroccan and Algerian"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL29432600M/Contesting_the_Classroom"
+    },
+    {
+      "topic": "literature",
+      "rank": 13,
+      "title": "The Cambridge history of literary criticism",
+      "author": "George A. Kennedy",
+      "olid": "/books/OL10435507M",
+      "iaIdentifier": "cambridgehistory0006unse_l5g0",
+      "year": 1989,
+      "snippetLength": 322,
+      "snippets": [
+        "Western literature and art. His books include A Dictionary of Biblical Tradition in English Literature (1992)",
+        "Cambridge Companion to English Literature 1830-1914 (2010), Women and Literature in Britain (2001) and The"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL10435507M/The_Cambridge_History_of_Literary_Criticism"
+    },
+    {
+      "topic": "literature",
+      "rank": 14,
+      "title": "International dictionary of literary awards",
+      "author": "Clapp, Jane",
+      "olid": null,
+      "iaIdentifier": "internationaldic0000clap",
+      "year": 1963,
+      "snippetLength": 329,
+      "snippets": [
+        "university teachers of English literature--one a special- ist in Australian literature --and a member of The Advertiser",
+        "science and literature, rotating awards during a three year period, resulting in prizes for literature given"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "literature",
+      "rank": 15,
+      "title": "International dictionary of literary awards",
+      "author": "Jane Clapp",
+      "olid": null,
+      "iaIdentifier": "internationaldic0000unse_g4u8",
+      "year": 1963,
+      "snippetLength": 329,
+      "snippets": [
+        "university teachers of English literature--one a special- ist in Australian literature --and a member of The Advertiser",
+        "science and literature, rotating awards during a three year period, resulting in prizes for literature given"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "literature",
+      "rank": 16,
+      "title": "Language, literature, and critical practice : ways of analysing text",
+      "author": "Birch, David (David Ian)",
+      "olid": null,
+      "iaIdentifier": "languageliteratu0000birc",
+      "year": 1989,
+      "snippetLength": 300,
+      "snippets": [
+        "‘literatures’ to a singular notion of literature. Some replace ‘literature’ alto¬ gether with the term",
+        "the ‘independent’ status of literature, that is, that literature is not ‘just’ different from"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "literature",
+      "rank": 17,
+      "title": "THe bible as english literature",
+      "author": "J.H. Gardiner",
+      "olid": "/books/OL58596037M",
+      "iaIdentifier": "bibleasenglishli0000jhga",
+      "year": 1906,
+      "snippetLength": 315,
+      "snippets": [
+        "Gene an\nTHE BIBLE AS ENGLISH LITERATURE\nTHE BIBLE AS ENGLISH LITERATURE\n“o BY\neri: GARDINER be\nASSISTANT",
+        "basis for the study of Hebrew literature or of New Testa- ment literature.\nIn all my discussion I have"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL58596037M/THe_bible_as_english_literature"
+    },
+    {
+      "topic": "literature",
+      "rank": 18,
+      "title": "Voices of October, art and literature in soviet Russia",
+      "author": "Freeman, Joseph, 1897-1965",
+      "olid": "/books/OL6742845M",
+      "iaIdentifier": "voicesofoctober0000unse",
+      "year": 1930,
+      "snippetLength": 285,
+      "snippets": [
+        "art and literature.\nART AND LITERATURE IN SOVIET RUSSIA 59\nRESOLUTION ON LITERATURE ADOPTED",
+        "Communist Party on Literature — Chaotic Ferment — Communist Resolution on Literature\nn. MEN AND WOMEN"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL6742845M/Voices_of_October"
+    },
+    {
+      "topic": "literature",
+      "rank": 19,
+      "title": "Some religious elements in English literature",
+      "author": "Macaulay, Rose, 1881-1958",
+      "olid": "/books/OL5447472M",
+      "iaIdentifier": "somereligiousele0000maca",
+      "year": null,
+      "snippetLength": 297,
+      "snippets": [
+        "ON LITERATURE\nSOME RELIGIOUS ELEMENTS IN ENGLISH LITERATURE\nHOGARTH LECTURES ON LITERATURE SERIES",
+        "Hogarth lectures on literature.\n1. Religion in literature. 2. English literature — History and criticism"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL5447472M/Some_religious_elements_in_English_literature"
+    },
+    {
+      "topic": "literature",
+      "rank": 20,
+      "title": "Language, literature & meaning",
+      "author": "John Odmark",
+      "olid": "/books/OL4488286M",
+      "iaIdentifier": "languageliteratu0000unse_f4f2",
+      "year": 1979,
+      "snippetLength": 277,
+      "snippets": [
+        "Language, Literature & Meaning I: Problems of Literary Theory\nLANGUAGE, LITERATURE & MEANING",
+        "119\nLANGUAGE, LITERATURE AND MEANING\nout the complete morphology of literature. Here we must"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL4488286M/Language_literature_meaning"
+    },
+    {
+      "topic": "classics",
+      "rank": 1,
+      "title": "Directory of American scholars",
+      "author": "Unknown",
+      "olid": null,
+      "iaIdentifier": "directoryofameri0000unse_a4x3",
+      "year": 2002,
+      "snippetLength": 313,
+      "snippets": [
+        "Col; Oxford, 61-65; prof classics, Univ Reading, 66-74; chmn, Dept Classics, 75-80, prof Greek, philos",
+        "Instr classics, Yale Univ, 55-60; from asst prof to assoc prof Latin, 60-65, chmn dept classics, 70-73"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "classics",
+      "rank": 2,
+      "title": "Latin and Greek in American Education: With Symposia on the Value of Humanistic Studies",
+      "author": "Francis Willey Kelsey",
+      "olid": "/books/OL6531869M",
+      "iaIdentifier": "latinandgreekin00kelsgoog",
+      "year": 1911,
+      "snippetLength": 314,
+      "snippets": [
+        "from the classics. That must be obtained in some other way.\nBut it is maintained for the classics (1) that",
+        "HUMANISTIC STUDIES: THE CLASSICS AND\nTHE NEW EDUCATION\nI. THE CLASSICS IN EUROPEAN EDUCATION\nEDWARD"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL6531869M/Latin_and_Greek_in_American_education"
+    },
+    {
+      "topic": "classics",
+      "rank": 3,
+      "title": "The New junior classics",
+      "author": "Mabel Williams and Marcia Dalphins",
+      "olid": null,
+      "iaIdentifier": "newjuniorclassic0005unse",
+      "year": 1949,
+      "snippetLength": 313,
+      "snippets": [
+        "Syed wi :\n‘ h ‘ olay lig i ie a\nThe New JUNIOR CLASSICS\nPOeUIME FIVE” SITORIES-ITHAI NEVER GROW OLD\nfw)",
+        "Quixote Pee Miguel de Cervantes\nVv\n. 194\nTHE JUNIOR CLASSICS\nPAGE\nRip Van Winkle . . ee Bet Washington Irving"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "classics",
+      "rank": 4,
+      "title": "American stories",
+      "author": "Hale, Edward Everett, 1822-1909",
+      "olid": "/books/OL23379358M",
+      "iaIdentifier": "americanstories00halegoog",
+      "year": 1903,
+      "snippetLength": 306,
+      "snippets": [
+        "Street,\nBasten.\n3 2044 097 057 236\nTHE HAWTHORNE CLASSICS\nAMERICAN STORIES\nEDITED BY EDWAED EVERETT HALE",
+        "not diflScult when we think of the established classics of our literature. And yet, following out the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL23379358M/American_stories"
+    },
+    {
+      "topic": "classics",
+      "rank": 5,
+      "title": "The new puzzle classics : ingenious twists on timeless favorites",
+      "author": "Grabarchuk, Serhiy",
+      "olid": "/books/OL8393514M",
+      "iaIdentifier": "newpuzzleclassic0000grab",
+      "year": 2005,
+      "snippetLength": 306,
+      "snippets": [
+        "existing puzzles—\ngenerally, the classics, because they’re classics for a reason—perhaps modify them",
+        "248 The New Puzzle Classics\n249\n250\nRESTORE THE BUTTON\nte.\nThe New Puzzle Classics\nsoe\nVanes\n+ A\nZ, pe"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL8393514M/The_New_Puzzle_Classics"
+    },
+    {
+      "topic": "classics",
+      "rank": 6,
+      "title": "The German classics of the nineteenth and twentieth centuries: masterpieces of German literature, tr. into English",
+      "author": "Francke, Kuno, 1855-1930, ed",
+      "olid": "/books/OL24155144M",
+      "iaIdentifier": "cu31924087727065",
+      "year": 1913,
+      "snippetLength": 281,
+      "snippets": [
+        "power of assimilating the Greek and Latin classics, and of reproducing their figures with renewed",
+        "in preparing it. Vol. XVI— 1\n2 THE GERMAN CLASSICS\npatriotism I became a journalist, from natural"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24155144M/The_German_classics_of_the_nineteenth_and_twentieth_centuries"
+    },
+    {
+      "topic": "classics",
+      "rank": 7,
+      "title": "Intellectual trends in the Ch'ing period : (Ch'ing-tai hsu#x1A;eh-shu kai-lun)",
+      "author": "Liang, Ch'i-ch'ao, 1873-1939",
+      "olid": "/books/OL27794504M",
+      "iaIdentifier": "intellectualtren0000lian",
+      "year": 1959,
+      "snippetLength": 283,
+      "snippets": [
+        "directly from the old classics. Yen Jo-chus examination of the forged classics stirred up the",
+        "empirical research and studied classics for the sake of classics.\nThe central core of the Orthodox"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL27794504M/Intellectual_trends_in_the_Ch'ing_period"
+    },
+    {
+      "topic": "classics",
+      "rank": 8,
+      "title": "A picture story of the house of Derr [Pennsylvania's contribution to a world of primitive art; a true story of three brothers, Peter, John, and Joe Derr in the Summer Hills of Berks County, Pa",
+      "author": "Spears, James Foster, 1899-",
+      "olid": null,
+      "iaIdentifier": "picturestoryofho0008spea",
+      "year": 1949,
+      "snippetLength": 321,
+      "snippets": [
+        "org/details/picturestoryofho0008spea\nThe New JUNIOR CLASSICS\nVOLUME EIGHT * STORIES FROM HISTORY\n4\nmF INIO",
+        "gp ALIKOe\nPade!\nes\n- 159\nwes\n. 199\nTHE JUNIOR CLASSICS\nSalt-Water Tea Se\nEsther Forbes The Story of Molly"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    },
+    {
+      "topic": "classics",
+      "rank": 9,
+      "title": "Eton school lists from 1791 to 1877, with notes and index",
+      "author": "Unknown",
+      "olid": "/books/OL24237980M",
+      "iaIdentifier": "etonschoollistsf00lond",
+      "year": null,
+      "snippetLength": 281,
+      "snippets": [
+        "1839-41. Student of Ch. Ch. Oxf. 1st cL classics 1807.\nMusgravo\nSutton\nMoore\nCraeroft\nHankey",
+        "Afterwards Bruce. Ch. Ch. Oxf., 1st cL classics, 1810. Resided in Fifeshire ; and d. lately"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24237980M/Eton_school_lists_from_1791_to_1877_with_notes_and_index."
+    },
+    {
+      "topic": "classics",
+      "rank": 10,
+      "title": "The golden age of top 40 music (1955-1973) on compact disc",
+      "author": "Downey, Pat",
+      "olid": "/books/OL1754699M",
+      "iaIdentifier": "goldenageoftop400000down",
+      "year": 1992,
+      "snippetLength": 311,
+      "snippets": [
+        "Columbia 45047 Pop Classics Of The 70’s. (S) (2:52) Columbia 46032 Columbia Country Classics Volume 4.\nLEE",
+        "(3:06)\nColumbia 45018 Rock Classics Of The 60’s.\nDunhill Compact Classics 045 Golden Age Of Underground"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL1754699M/The_golden_age_of_top_40_music_(1955-1973)_on_compact_disc"
+    },
+    {
+      "topic": "classics",
+      "rank": 11,
+      "title": "Moosewood Restaurant new classics : 350 recipes for homestyle favorites and everyday feasts",
+      "author": "Clarkson N. Potter",
+      "olid": "/books/OL23007746M",
+      "iaIdentifier": "moosewoodrestaur0000unse_j9n0",
+      "year": 2001,
+      "snippetLength": 297,
+      "snippets": [
+        "cago Public Library\nMoosewood Restaurant new classics : 350\nother hooks from the moosewood collective",
+        "Cataloging-in-Publication Data\nMoosewood Restaurant new classics: 350 recipes for homestyle favorites and"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL23007746M/Moosewood_Restaurant_new_classics"
+    },
+    {
+      "topic": "classics",
+      "rank": 12,
+      "title": "Keynes, Pigou and Cambridge Keynesians : authenticity and analytical perpective in the Keynes-Classics debate",
+      "author": "Ambrosi, Gerhard Michael",
+      "olid": "/books/OL3686683M",
+      "iaIdentifier": "keynespigoucambr0000ambr",
+      "year": 2003,
+      "snippetLength": 315,
+      "snippets": [
+        "Re-authenticated Keynes—Classics Debate 25.1 Re-authenticating the Keynes—Classics debate\nDAT Zl 240 242",
+        "out to be left with a Keynes—Classics debate with neither Keynes nor Classics — nor even a ‘real’ debate"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL3686683M/Keynes_Pigou_and_Cambridge_Keynesians"
+    },
+    {
+      "topic": "classics",
+      "rank": 13,
+      "title": "The NPR basic record library",
+      "author": "Martin Goldsmith",
+      "olid": "/books/OL8555910M",
+      "iaIdentifier": "nprbasicrecordli0000unse",
+      "year": 1999,
+      "snippetLength": 327,
+      "snippets": [
+        "Barbirolli EMI Classics CDM 64749 2\nRoyal Philharmonic/Daniele Gatti BMG/Conifer Classics 75605 51318 2",
+        "EMI Classics CDC 47717\nROSSINI\nOvertures\nLondon Classical Players/Roger Norrington EMI Classics CDC 54091"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL8555910M/The_NPR®_Basic_Record_Library"
+    },
+    {
+      "topic": "classics",
+      "rank": 14,
+      "title": "The turn of the screw",
+      "author": "James, Henry, 1843-1916",
+      "olid": "/books/OL8179462M",
+      "iaIdentifier": "turnofscrew00acad",
+      "year": 1984,
+      "snippetLength": 282,
+      "snippets": [
+        "of the Screw\n7\nPOCKET CLASSICS\n8\nThe Turn of the Screw\nPOCKET CLASSICS\n10\nThe Turn of the Screw",
+        "ten years old!\nPOCKET CLASSICS\n16\nThe Turn of the Screw\nPOCKET CLASSICS\n/ was only the daughter"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL8179462M/The_Turn_of_the_Screw"
+    },
+    {
+      "topic": "classics",
+      "rank": 15,
+      "title": "Around the world in eighty days;",
+      "author": "Verne, Jules, 1828-1905",
+      "olid": "/books/OL24739777M",
+      "iaIdentifier": "aroundworldine00vern",
+      "year": 1984,
+      "snippetLength": 274,
+      "snippets": [
+        "wife!\n61\nCOMPLETE LIST OF POCKET CLASSICS AVAILABLE\nCLASSICS\nC 1 Black Beauty\nC 2 The Call",
+        "imagine how he had made his fortune.\nPOCKET CLASSICS\nFor years he had passed every single day"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": true,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL24739777M/Around_the_world_in_eighty_days"
+    },
+    {
+      "topic": "classics",
+      "rank": 16,
+      "title": "[Publications]",
+      "author": "Oxford Historical Society",
+      "olid": "/books/OL7068190M",
+      "iaIdentifier": "publicationsoxf27oxfouoft",
+      "year": 1885,
+      "snippetLength": 270,
+      "snippets": [
+        "Rutland; 2 Classics 1819, B.A. i July 1820, M.A. 16 Feb. 1822, Examiner in Classics 1826, pres",
+        "Dec. 1838; 2 Classics 1819, Select Preacher 1828, 1839, Examiner in Classics 1828-29; vac"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7068190M/Publications"
+    },
+    {
+      "topic": "classics",
+      "rank": 17,
+      "title": "The thin red line",
+      "author": "Chion, Michel, 1947-",
+      "olid": "/books/OL22606353M",
+      "iaIdentifier": "thinredline0000chio",
+      "year": 2004,
+      "snippetLength": 315,
+      "snippets": [
+        "neOOO0Ochio\nBFI| Modern Classics\nRob White Series Editor\nBFI Modern Classics is a series of critical",
+        "Appendix: Synopsis 74 Notes 87\nCredits 88\n6\nBFI MODERN CLASSICS\nAcknowledgments\nI should very much like to thank"
+      ],
+      "readApi": {
+        "status": "private",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL22606353M/THIN_RED_LINE_TRANS._BY_TRISTA_SELOUS."
+    },
+    {
+      "topic": "classics",
+      "rank": 18,
+      "title": "Creepy classics III : more hair-raising horror from the masters of the macabre",
+      "author": "Glen Bledsoe",
+      "olid": "/books/OL7897396M",
+      "iaIdentifier": "creepyclassicsii0000unse",
+      "year": 1999,
+      "snippetLength": 281,
+      "snippets": [
+        "Classic Vampire Stories Christmas Classics Creepy Classics II\nLowell\nC L A\ns s\nI c s\n9780737398564",
+        "HALF PAA5TC 0 price D\\J\\JPsp pri|\nCreepy Classics III\n0$l.?8i.\nCLEARANC\n16 1\nE\n*'5 n\n03-19-16"
+      ],
+      "readApi": {
+        "status": "borrow_available",
+        "isReadable": false,
+        "isPreviewable": true,
+        "isLendable": true,
+        "availableToBorrow": false,
+        "availableToBrowse": true
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL7897396M/Creepy_Classics_III"
+    },
+    {
+      "topic": "classics",
+      "rank": 19,
+      "title": "The miraculous pitcher, and biographical stories",
+      "author": "Hawthorne, Nathaniel, 1804-1864",
+      "olid": "/books/OL26257859M",
+      "iaIdentifier": "miraculouspitche00hawt",
+      "year": 1905,
+      "snippetLength": 288,
+      "snippets": [
+        "V\n^JL'>.‘' ':■\nW v/t.. % *.•\nTHE CRANE CLASSICS\nTHE MIRACULOUS PITCHER,\nAND\nBIOaEAPHICAL STOEIES",
+        "HaAvthorne’s mother removed (5)\n6\nTHE CEAHE CLASSICS\nwith her family to Raymond, Maine, near"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/books/OL26257859M/The_miraculous_pitcher_and_biographical_stories"
+    },
+    {
+      "topic": "classics",
+      "rank": 20,
+      "title": "Jazz for dummies",
+      "author": "Sutro, Dirk",
+      "olid": null,
+      "iaIdentifier": "jazzfordummies0000sutr",
+      "year": 1998,
+      "snippetLength": 322,
+      "snippets": [
+        "(Original Jazz Classics), Out There (Original Jazz Classics), and Far Cry (Original Jazz Classics), and on",
+        "(Original Jazz Classics), Smokin’ (Original Jazz Classics), Trane Whistle (Original Jazz Classics), and All"
+      ],
+      "readApi": {
+        "status": null,
+        "isReadable": false,
+        "isPreviewable": false,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "sourceUrl": "https://openlibrary.org/search/inside"
+    }
+  ],
+  "textAttempts": [
+    {
+      "identifier": "introductiontos00stu",
+      "success": true,
+      "textFile": "introductiontos00stu_djvu.txt",
+      "bytes": 918960
+    },
+    {
+      "identifier": "recentbritishph03massgoog",
+      "success": true,
+      "textFile": "recentbritishph03massgoog_djvu.txt",
+      "bytes": 481468
+    },
+    {
+      "identifier": "ancienteuropeanp00snid",
+      "success": true,
+      "textFile": "ancienteuropeanp00snid_djvu.txt",
+      "bytes": 1191336
+    },
+    {
+      "identifier": "briefhistoryofgr00burt",
+      "success": true,
+      "textFile": "briefhistoryofgr00burt_djvu.txt",
+      "bytes": 631839
+    },
+    {
+      "identifier": "histphilosophy00schwrich",
+      "success": true,
+      "textFile": "histphilosophy00schwrich_djvu.txt",
+      "bytes": 950511
+    },
+    {
+      "identifier": "mlbd.introductiontoin0000sati_t0v5",
+      "success": true,
+      "textFile": "mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+      "bytes": 899719
+    },
+    {
+      "identifier": "rationalphilosop00frasrich",
+      "success": true,
+      "textFile": "rationalphilosop00frasrich_djvu.txt",
+      "bytes": 209070
+    },
+    {
+      "identifier": "philosophyofpres00kl",
+      "success": true,
+      "textFile": "philosophyofpres00kl_djvu.txt",
+      "bytes": 359998
+    },
+    {
+      "identifier": "historyofpsychol00klemuoft",
+      "success": true,
+      "textFile": "historyofpsychol00klemuoft_djvu.txt",
+      "bytes": 832655
+    },
+    {
+      "identifier": "socialpsychology0000jess",
+      "success": true,
+      "textFile": "socialpsychology0000jess_djvu.txt",
+      "bytes": 652914
+    },
+    {
+      "identifier": "suggestionsforte00kreyrich",
+      "success": true,
+      "textFile": "suggestionsforte00kreyrich_djvu.txt",
+      "bytes": 122338
+    },
+    {
+      "identifier": "de00cimalclassificdewerich",
+      "success": true,
+      "textFile": "de00cimalclassificdewerich_djvu.txt",
+      "bytes": 2216996
+    },
+    {
+      "identifier": "thephilosophyofh00flinuoft",
+      "success": true,
+      "textFile": "thephilosophyofh00flinuoft_djvu.txt",
+      "bytes": 1690011
+    },
+    {
+      "identifier": "catalogueappren01librgoog",
+      "success": true,
+      "textFile": "catalogueappren01librgoog_djvu.txt",
+      "bytes": 827895
+    },
+    {
+      "identifier": "lecturesonenglis00reed_1",
+      "success": true,
+      "textFile": "lecturesonenglis00reed_1_djvu.txt",
+      "bytes": 812316
+    },
+    {
+      "identifier": "bibleasenglishli0000jhga",
+      "success": true,
+      "textFile": "bibleasenglishli0000jhga_djvu.txt",
+      "bytes": 550191
+    },
+    {
+      "identifier": "voicesofoctober0000unse",
+      "success": true,
+      "textFile": "voicesofoctober0000unse_djvu.txt",
+      "bytes": 665559
+    },
+    {
+      "identifier": "latinandgreekin00kelsgoog",
+      "success": true,
+      "textFile": "latinandgreekin00kelsgoog_djvu.txt",
+      "bytes": 755762
+    },
+    {
+      "identifier": "americanstories00halegoog",
+      "success": true,
+      "textFile": "americanstories00halegoog_djvu.txt",
+      "bytes": 409223
+    },
+    {
+      "identifier": "cu31924087727065",
+      "success": true,
+      "textFile": "cu31924087727065_djvu.txt",
+      "bytes": 1004319
+    }
+  ],
+  "candidates": [
+    {
+      "topic": "philosophy",
+      "title": "Introduction to the study of philosophy",
+      "author": "Stuckenberg, John Henry Wilburn, 1835-1903. [from old catalog]",
+      "olid": "/books/OL25388661M",
+      "iaIdentifier": "introductiontos00stu",
+      "sourceUrl": "https://openlibrary.org/books/OL25388661M/Introduction_to_the_study_of_philosophy",
+      "textFile": "introductiontos00stu_djvu.txt",
+      "passage": "The specific aim has not merely determined the gen- eral character of the volume, but also its particular parts, so as to limit the contents strictly to the scope of an introductory work. No labor has been spared to present, in the clearest manner, such thoughts as are regarded most essential for the beginner. The reader who knows the difference between floundering in a subject, and thinking through it, is in no danger of mistaking obscurity as synonymous with philosophical profundity. But even an elementary work in philos- ophy is obliged to discuss subjects which require pro- found study, and furnish food for the deepest thought. Particularly is this the case with those great problems which have enlisted the best energies of thinkers ever since the birth of philosophy. The student who has the acumen and thoroughness which adapt him to phil- osophical investigations will appreciate the importance of grappling early with themes which most severely test his intellectual powers. While intent on securing all possible help to put him into the right attitude to philosophy, he will value all aids only as means for becoming independent of foreign help. Philosophy is not taught, but thought; and even an introductory work presupposes that the student will do more for himself than others can do for him. Particularly in philosophy is it true, that what one gets depends on what he brings. ment and proper direction of the energy of thought. While the following chapters aim to give a clear state- ment of problems, and hints for their solution, it is evi- dent that their full discussion must be left to philosophy itself. Where mere statements are all that the philoso- pher requires, the beginner may need the processes themselves which lead to the results attained by ma- ture thinkers ;",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "Recent British Philosophy: A Review, with Criticisms; Including Some Comments on Mr. Mill's ...",
+      "author": "David Masson",
+      "olid": "/books/OL20501351M",
+      "iaIdentifier": "recentbritishph03massgoog",
+      "sourceUrl": "https://openlibrary.org/books/OL20501351M/Recent_British_Philosophy_A_Review_with_Criticisms_Including_Some_Comments_on_Mr._Mill's_...",
+      "textFile": "recentbritishph03massgoog_djvu.txt",
+      "passage": "not believe it; and, if I did, I should be sad. Whatever nation has given up Philosophy — I will be bolder, and, using a word very much out of favour at present, I will say whatever nation has given up Metaphysics — is in a state of intellectual insolvency. Though its granaries should be bursting, though its territories should be netted with railroads, though its mills and foundries should be the busiest in the world, the mark of the beast is upon it, and it is going the way of all brutality. Britain, notwithstanding temporary misrepresentations of her, is fiot yet in this state. We have not, it is true, and we have not had for a long while, the reputation among our continental neighbours of being a nation caring much for Philosophy. The Germans, in par- ticular, have long pitied us on this account. It is more than forty years since one of their greatest thinkers pub- licly denounced us by pointing out that England was the only country in Europe where the word Philosophy had become synonymous with natural science, where the barometer and thermometer were spoken of as \" philoso- phical instruments,\" and where a so-called Philosophical Journal treated of agriculture, housekeeping, cookery, and the construction of fire-places.* Historically it might be shown that this very degradation of the word Philosophy among us arose from what was originally a philosophical conception, and may have been a good one. Not the less was the taunt well deserved. And, though we may have been recovering since then, our recovery, it must be admitted, has been very gradual. Exactly thirty years ago Mr. John Stuart Mill could * H^el, as quoted by Mausel, Metaphysics^ p. 4, note. \" Matter. The French were the first to desert Metaphysics, \"and, though",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "Ancient European philosophy; the history of Greek philosophy psychologically treated",
+      "author": "Snider, Denton Jaques, 1841-1925",
+      "olid": "/books/OL13504299M",
+      "iaIdentifier": "ancienteuropeanp00snid",
+      "sourceUrl": "https://openlibrary.org/books/OL13504299M/Ancient_European_philosophy",
+      "textFile": "ancienteuropeanp00snid_djvu.txt",
+      "passage": "In these days not a few European writers on Philosophy have proclaimed the demise and dis- appearance of the science to which they have devoted their powers. Philosophy, then, has run its course ; but what new discipline is to take its place? Such is the coming problem. Other writers have been willing to grant to Philosophy a fresh lease of life, if it can only be brought to mend its ways. And the way often recom- mended to it is that of Natural Science, or the purely experimental method. Such a solution, however, though it has been offered by meta- physicians as well as by scientists, could only end in the abolition or at least the enslavement of Philosophy as conceived by its greatest mas- ters. An outcome of this sort seems not alto- gether satisfactory, and so the solvent word remains unspoken. On the other hand, there are men who are still constructing or re-constructing systems of Philosophy, wrought after the old pattern with new additions here and there, and spiced usually with sharp criticisms on all other systems. Of such Germany has been and still is the prolific home. In the first half of the past century, Philosophy-building became the chief occupa- tion of the highest order of German intellect, with wonderful results ; in the second half it was still kept up, though the output was less in quantity, and far inferior in originality. The result, however, can hardly be denied: ancient Greece and modern Germany show the two highest points in the development of Philosophy. But is this all of it? What is to be its future? In its antique and in its modern periods it seems to lie before us rounded out and complete. Is it again to be an epoch-making utterance of human",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "A brief history of Greek philosophy",
+      "author": "Burt, Benjamin Chapman, 1852-1915",
+      "olid": "/books/OL24605951M",
+      "iaIdentifier": "briefhistoryofgr00burt",
+      "sourceUrl": "https://openlibrary.org/books/OL24605951M/A_brief_history_of_Greek_philosophy",
+      "textFile": "briefhistoryofgr00burt_djvu.txt",
+      "passage": "The writer takes the liberty to express here his sense of obligation to G. S. Morris, Professor of Philosophy in the University of Michigan, and formerly Lecturer on Philosopy in the Johns Hopkins University, and to G. S. Hall, late Professor of Psychology in the Johns Hopkins University, and now President of Clark Uni- versity, for suggestions and encouragement received from them. A word of thanks is due also to John Dewey, now Assistant Professor of Philosophy in Michigan University, and Professor Elect of Philos- ophy in the University of Minnesota ; and to a college- classmate who has become a life-companion. The Hylicists, Hylozoists, or Early Ionic Natural Philosophers : Thales, p. I; Anaximander, p„ 2; Anaximenes, p. 3; Result, p. 3. §2. The Pythagoreans, p. 4 : Pythagoras and the Pythagorean Society, pp. 4-6; Pythagorean Philosophy, p. 6; Number-Theory and Doctrine of Contraries, pp. 6-7; Theories not purely Pythagorean, pp. 7-9; Miscellaneous Theories, p. 9; Result, p. 9. §4. Heraclitus : Life of Heraclitus, p. 20; First Principle, pp. 20-21 ; Physi- cal Doctrine, p. 22; The Soul and Reason, p. 22; Result, p. 23. §5- Later Natural Philosophers, p. 23: Life of Empedocles,^. 24; Theory of Nature, pp. 24-25 ; Theory of Knowledge, p. 26; Result, p. 26; Life of Anaxagoras, p. 27; Theory of Nature, pp. 27-28; Theory of . Nous, or Mind, and Knowledge, p. 29; Result, p. 29; The Atomists, Leucippus and Democritus, p. 30; Theory of Nature, pp. 30-31 ; Theory of the Soul, etc., pp. 31-32; Result, pp. 32-33. §6. General Character of the First Period in the History of Greek Philosophy, pp. 33-34. The Sophists, p. 34 : Life of Protagoras, p. 35 ; Theory of Protagoras, pj 35-36; Life of Gorgias, p. 36; Theory of Gorgias, pp. 36-37; Result, p.",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "A history of philosophy in epitome",
+      "author": "Schwegler, Albert, 1819-1857",
+      "olid": "/books/OL14013488M",
+      "iaIdentifier": "histphilosophy00schwrich",
+      "sourceUrl": "https://openlibrary.org/books/OL14013488M/A_history_of_philosophy_in_epitome",
+      "textFile": "histphilosophy00schwrich_djvu.txt",
+      "passage": "SCHWEGLER'S History of Philosophy originally appeared in the \" Neue Encyldopadiefur Wissenschaften und Kunste\" Its great value soon awakened a call for its separate issue, in which form it has attained a very wide circulation in Germany. It is found in the hands of almost every stu dent in the philosophical department of a German uni versity, and is highly esteemed for its clearness, concise ness, and comprehensiveness. to students of philosophy here. It was thought espe cially, that a proper translation of this manual would supply a want for a suitable text-book on this branch of study, long felt by, both teachers and students in our American colleges. The effort has been made to translate, and not to para phrase the author's meaning. Many of his statements might have been amplified without diffuseness, and made more perceptible to the superficial reader without losing their interest to the more profound student, but he has so happily seized upon the germs of the different systems, that they neither need, nor wrould be improved by any farther development, and has, moreover, presented them so clearly, that no student need have any difficulty in ap prehending them as they are. The translator has there fore endeavored to represent faithfully and clearly the original history. As such, he offers his work to the American public, indulging no hope, and making no ef forts for its success beyond that which its own merits shall ensure. J. H. S. (4.) Impossibility of furnishing a System of Concrete Moral Duties from this Standpoint . . . . form, in its method, in its mode of knowledge, that philosophy is to be distinguished from the empirical sciences. These latter derive their material directly from experience; they find it at hand and take it up just as they find",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "An Introduction To Indian Philosophy",
+      "author": "Satischandra Chatterjee; Dhirendramohan Datta",
+      "olid": "/books/OL58949174M",
+      "iaIdentifier": "mlbd.introductiontoin0000sati_t0v5",
+      "sourceUrl": "https://openlibrary.org/books/OL58949174M/An_Introduction_To_Indian_Philosophy",
+      "textFile": "mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+      "passage": "The object of this book is to provide a simple introduction to the Indian systems of philosophy. Each one of these systems has had a vast and varied development and cannot be treated adequately in a brief work like this. Attempt has been made to introduce the reader to the spirit and outlook of Indian philosophy and help him to grasp thoroughly the central ideas rather than acquaint him with minute details. Modern students of philosophy feel many difficulties in understanding the Indian problems and theories. Their long experience with university students has helped the authors to realise these, and they have tried to remove them as far as possible. This accounts for most of the critical discussions which could otherwise have been dispensed with. The book has been primarily written for beginners. The first chapter which contains the general principles and basic features of Indian philosophy, as well as a brief sketch of each system, gives the student a bird’s-eye view of the entire field and prepares him for a more intensive study of the systems which are contained in the following chapters. It is hoped, therefore, that the book will suit the needs of university students at different stages, as well as of general readers interested in Indian philosophy. It will serve the needs of B.A. Pass students who may be required to have a brief general acquaintance with Indian philosophy as a whole, as well as those of Honours students who may be expected to have a more detailed knowledge of one or more systems. experience, and embodies one aspect of Truth. They have tried to approach each system with sympathy and justify it, rather than dismiss it with a customary criticism. They believe that a sympathetic insight into the great systems will enable the student to",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "Rational philosophy in history and in system: an introduction to a logical and metaphysical course",
+      "author": "Fraser, Alexander Campbell, 1819-1914",
+      "olid": "/books/OL7167694M",
+      "iaIdentifier": "rationalphilosop00frasrich",
+      "sourceUrl": "https://openlibrary.org/books/OL7167694M/Rational_philosophy_in_history_and_in_system",
+      "textFile": "rationalphilosop00frasrich_djvu.txt",
+      "passage": "A view of Logic and Metaphysics, as the phi- losophical theory of Understanding and Belief in the mutual relation of their first principles, though not, as far as I am aware, hitherto stated and sys- tematically unfolded, seems to bring into harmony some of the best current doctrine regarding these studies. It must be remembered, however, that an- swers to the questions which I have, in the last para- graph, supposed, — far more full and satisfying than any I pretend to offer, — if merely placed on paper, to be lodged in the memory, are no provision for the wants of a reflecting mind. Philosophy cannot be taught or learned by rote. But something may perhaps be done, through a printed statement of this sort, to put or keep in motion, in the mind of a student, that train of meditative experiments, which is the essential part of a philosophical life. It is not in the design of this little work to bring much into light, either the proofs on which its doc- trines rest, or the consequences which may be de- duced from them. In the class-room, such premises and conclusions should gradually make their appear- ance, in co-operation with those who study there ; and that co-operation is heartily given by a large number of the students of this University. In case these pages happen to fall under the eye of a philo- sophical reader, already matured, he is well able (if he should care, as an experiment, to occupy their point of view thoughtfully for a little time) to draw out for himself the reasoning that is latent in them, by which their teaching may be confirmed, or its errors made more apparent ; and in the stores of his own reflection and learning, a reader",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "title": "The philosophy of the present in Germany",
+      "author": "Külpe, Oswald, 1862-1915",
+      "olid": "/books/OL6561014M",
+      "iaIdentifier": "philosophyofpres00kl",
+      "sourceUrl": "https://openlibrary.org/books/OL6561014M/The_philosophy_of_the_present_in_Germany",
+      "textFile": "philosophyofpres00kl_djvu.txt",
+      "passage": "This little book has met with a great success in Germany. In England and America the perennial desire to follow closely the move- ments of German thought will, we believe, insure a welcome for the translation. Profes- sor Kulpe is well known in English-speaking countries through his other works, particularly his Introduction to Philosophy and his Outlines of Psychology, both standard works on these subjects, and both in English translations. the present advance in this sphere of thought. Professor Kulpe's book gives a clear picture of four of the typical philosophical movements of the present time in Germany — Positivism, Materialism, Naturalism, and Idealism; and he sets them before us in the form presented by the leading representatives of these move- ments—men like Mach, Haeckel, Nietzsche, and Wundt. The unique feature of this book is not so much Professor Kulpe's clear and concise state- ment of the characteristics of the four schools and their representatives, as it is his criticism of them. Following the detailed exposition of each philosopher, there is a concise and penetrating critique. Especial attention may be called to the instructive critiques of Mach, Nietzsche, and Wundt. after the manner of Plato, Leibniz, Fechner, or Wiindt, by means of induction and analogy ; and, finally, his suggestive remarks about neo- rationalism and inductive metaphysics. It is believed that the book may be found useful as a text for the use of college classes in modern German philosophy. The translators wish to acknowledge their indebtedness to Mr. Edward Henry Lauer and to Professor Edward L. Schaub for valuable suggestions in the work of translation. regarded as unquestionably the most substantial fruit of all ideal endeavour. It was to philo- sophy that the arts and sciences crowded for inspiration, while culture and civilisation seemed almost to flow from it,",
+      "tags": [
+        "philosophy",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "psychology",
+      "title": "A history of psychology",
+      "author": "Klemm, Otto, 1884-",
+      "olid": "/books/OL7083190M",
+      "iaIdentifier": "historyofpsychol00klemuoft",
+      "sourceUrl": "https://openlibrary.org/books/OL7083190M/A_history_of_psychology",
+      "textFile": "historyofpsychol00klemuoft_djvu.txt",
+      "passage": "The following work Is a translation of Professor Klemm's Geschichte der Psychologie, which constitutes Volume VIII of the now widely known series \"Science and H^^othesis.\" As a searching study of an enormously wide and difficult field the original German work has already won for itself an es- tablished place in the recent literature of the subject, and it is confidently believed that the qualities which have given the original work its deserved popularity, the author's equally firm grasp of the most widely separated psychological epochs and tendencies, his admirable attention to both the specu- lative and the scientific aspects of psychology, and, finally, the relative prominence given to recent and experimental psychology, will at once commend the work to the large number of workers in modern psychology to whom English works of just this type have heretofore not been available. The work of translation has been about equally divided between the tw^o translators, Chapters I-VI, inclusive, having been executed by myself, and Chapters VII-XII, inclusive, by Doctor Pintner, and each translator is solely responsible for the final form in which his own part of the work appears. I wish to express my cordial acknowledgments to Pro- fessor Munsterberg, to whose friendly suggestion the plan for this translation owed its first inception, and to Professor Titchener for a number of valued suggestions on terminology. In the autumn of 1911 I received a letter from Doctor Wilm informing me that at the suggestion of Professor Munsterberg he was maturing plans for an English trans- lation of my History of Psychology, and requesting my co- operation. I very gladly granted him permission for such an undertaking, and I have since then had much pleasure, as different parts of the translation have come to me, in seeing how completely he and his excellent collaborator.",
+      "tags": [
+        "psychology",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "psychology",
+      "title": "SOCIAL PSYCHOLOGY INTERPRETED",
+      "author": "JESSE WILLIAM SPROW",
+      "olid": "/books/OL59045933M",
+      "iaIdentifier": "socialpsychology0000jess",
+      "sourceUrl": "https://openlibrary.org/books/OL59045933M/SOCIAL_PSYCHOLOGY_INTERPRETED",
+      "textFile": "socialpsychology0000jess_djvu.txt",
+      "passage": "This volume is intended for students who are beginning the study of social psychology. As the title indicates it is an introduction to social psychology. This work has grown out of the author’s expe- rience in teaching this particular phase of psychology to under- graduates. The volume attempts to supply what the author feels is a genuine need, namely, a survey of leading problems that in one form or another have engaged the attention of students in this field. Social psychology, in some respects the most important of all psy- chologies, is characterized by an indefiniteness of both subject-matter and method unknown in any other branch of science. These two leading problems comprehend all others. As long as the student is ignorant of their origin, he can be only a reader of books. As long as they remain indefinite, he may be expected to become a learner of this or that aspect of social psychology without becoming in any real sense a student. The nature of social psychology is such that it cannot in its present stage of development be known without recourse to its history. For this reason considerable space has been given to historical considera- tions. The close relation of social psychology to sociology, history and anthropology is sufficient reason for pursuing it from a historical point of view. class room with its members is a living workable laboratory. In fact the work for a whole semester of laboratory instruction need not extend beyond the college campus. Numerous cross referénces have been made throughout. While these may appear unnecessary repetitions (and they certainly are for those familiar with the subject) they are made deliberately in order to emphasize certain fundamental aspects, or to illustrate their application in different connections, or still again to show their limita- tions. These",
+      "tags": [
+        "psychology",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "history",
+      "title": "Suggestions for the teaching of history and civics in the high school",
+      "author": "Krey, August C. (August Charles), 1887-1961",
+      "olid": "/books/OL7175660M",
+      "iaIdentifier": "suggestionsforte00kreyrich",
+      "sourceUrl": "https://openlibrary.org/books/OL7175660M/Suggestions_for_the_teaching_of_history_and_civics_in_the_high_school",
+      "textFile": "suggestionsforte00kreyrich_djvu.txt",
+      "passage": "The material contained in this bulletin is largely a reprint of a bulletin of the same title written by Mr. A. C. Krey (formerly of the University of Texas). As the supply of the original bulletin was exhausted it became necessary to provide a new bulletin. This was done by revising the old bulletin. The work of revision was done by various members of the faculty of the School of History. The extensive bibliography included in the new bulletin is largely the work of Mr. Herbert Keller (formerly of the University of Texas). The Duty of the History Teacher to the High School. — The problem of teaching history in the high school is not alone one of meeting requirements for affiliation with the State Univer- sity. The first duty of the high school teacher is to the majority of the students. If this obligation is fully discharged there can be little question of affiliation with the University, for that will come as a matter of course. In view of the fact that a majority of the high school students nevjer go to college, the task is rather one of equipping them with a certain amount of training which will be of direct benefit to them in understand- ing and meeting the problems of daily life. Under these cir- cumstances, it is necessary to throw the pupils into contact with problems which they might otherwise better attack at a later date. This is an unfortunate situation, but neither university nor high school can ignore it. The public welfare demands a hearty co- operation between both institutions in order to accomplish as much as possible for the high school student. irrhe following units may be offered for affiliation in the Univer- sity: Ancient History, 1 unit; Medieval and Modern History, 1",
+      "tags": [
+        "history",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "history",
+      "title": "Decimal classification and relative [sic] index for Libraries, clippings, notes, etc",
+      "author": "Dewey, Melvil, 1851-1931",
+      "olid": "/books/OL19375790M",
+      "iaIdentifier": "de00cimalclassificdewerich",
+      "sourceUrl": "https://openlibrary.org/books/OL19375790M/Decimal_classification_and_relative_sic_index_for_Libraries_clippings_notes_etc.",
+      "textFile": "de00cimalclassificdewerich_djvu.txt",
+      "passage": "Note Ad at end of next to last note, after 'goes with botanic books'. This plan may be carried out more specifically where .9 has been used for the history of a subject, by adding for biografy the figure 2, making the Ufe of a botanist 580.92. Plan of tables . \" Index . Numeration Familiarity with classification . How to find subject of book Assigning class numbers . Nimiber of figures used in class numbers Bilding numbers .... Combining language and literature Reference library ... Contractions for specialists Alfabet or chronology for final subdivisions Broken order . The field of knowledge is divided into nine main classes and these are numbered by the digits, i to 9. Cyclopedias, periodicals, etc., so general in character as to belong to 710 one of these classes are marked nought, and form a tenth class. Each class is similarly separated into 9 divisions, general works belonging to no division having nought in place of the division number. Divisions are similarly divided into 9 sections and the process is repeated as often as necessary. Thus 512 means Class 5 (Natural Science), Division I (Mathematics), Section 2 (Algebra), and every Algebra is numbered 512. The books on the shelves and the cards in the subject catalog are arranged in simple numerical order, all class numbers being decimals. Since each subject has a definite number, it follows that 'all books on any subject must stand together. These tables show the order in which subjects follow one another. Thus 5 1 2 Algebra precedes 5 1 3 Geometry and follows 5 1 1 Arithmetic. Summaries. The first summary shows the ten Classes into which all topics are divided. The second summary shows the nine Divisions of each of the ten classes, and is useful as a bird's-eye",
+      "tags": [
+        "history",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "history",
+      "title": "The philosophy of history in France and Germany",
+      "author": "Flint, Robert, 1838-1910",
+      "olid": "/books/OL7160316M",
+      "iaIdentifier": "thephilosophyofh00flinuoft",
+      "sourceUrl": "https://openlibrary.org/books/OL7160316M/The_philosophy_of_history_in_France_and_Germany",
+      "textFile": "thephilosophyofh00flinuoft_djvu.txt",
+      "passage": "IN this volume I have endeavoured to give an account of the principal attempts which have been made in France and Germany philosophically to comprehend and explain the history of mankind, with a reasoned estimate of their value. I have still to describe and criticise the general philosophies of history which have appeared in Italy and England ; to indicate what light has been thrown on the course, laws, and significance of human development by the progress of the sciences ; and to notice the chief contributions which have been made to the discussion of the special problems of historical speculation. In bibliographical appendices I mean briefly to characterise the large number of writings on the philosophy of history which, from their inferior importance, or other causes, have not been examined in the work itself. The substance, or, I should perhaps rather say, the germ, of the following work was delivered in two series of lectures at the Edinburgh Philosophical Institution. With the exception of some pages on Comte and Hegel, little has been directly transferred from the lectures to the book ; and I here mention the former merely because I would gladly associate in some measure the latter with an Institution which has had a very honourable place in the intellectual history of Scotland, and from the members of which I have repeatedly received much indulgent kindness. The volume has been a considerable time in passing through the press. Thus the chapter on the historical speculations of MM. Michelet and Quinet was printed and revised previous to the death of M. Michelet, which took place on 10th February 1874. Although the work was begun and has been carried on mainly as an introduction to other studies which have longer occupied my thoughts, it has cost a con siderable",
+      "tags": [
+        "history",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "history",
+      "title": "Catalogue of the Apprentices' Library in New York: Established and Supported by the General ...",
+      "author": "General Society of Mechanics and Tradesmen of the City of New York Library",
+      "olid": "/books/OL20485319M",
+      "iaIdentifier": "catalogueappren01librgoog",
+      "sourceUrl": "https://openlibrary.org/books/OL20485319M/Catalogue_of_the_Apprentices'_Library_in_New_York_Established_and_Supported_by_the_General_...",
+      "textFile": "catalogueappren01librgoog_djvu.txt",
+      "passage": "are our gateways to the past, representing a wealth of history, culture and knowledge that's often difficult to discover. + Make non-commercial use of the files We designed Google Book Search for use by individuals, and we request that you use these files for personal, non-commercial purposes. + Refrain fivm automated querying Do not send automated queries of any sort to Google's system: If you are conducting research on machine translation, optical character recognition or other areas where access to a large amount of text is helpful, please contact us. We encourage the use of public domain materials for these purposes and may be able to help. + Maintain attributionTht GoogXt \"watermark\" you see on each file is essential for in forming people about this project and helping them find additional materials through Google Book Search. Please do not remove it. + Keep it legal Whatever your use, remember that you are responsible for ensuring that what you are doing is legal. Do not assume that just because we believe a book is in the public domain for users in the United States, that the work is also in the public domain for users in other countries. Whether a book is still in copyright varies from country to country, and we can't offer guidance on whether any specific use of any specific book is allowed. Please do not assume that a book's appearance in Google Book Search means it can be used in any manner anywhere in the world. Copyright infringement liabili^ can be quite severe. T^B last edition of our Catalogue was all disposed of in four years, a much shorter time than any former one, which is considered a proof that it was adapted to the requirements of our readers. In preparing the present edition, the same method",
+      "tags": [
+        "history",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "literature",
+      "title": "Lectures on English literature, from Chaucer to Tennyson",
+      "author": "Reed, Henry, 1808-1854. [from old catalog]",
+      "olid": "/books/OL25583279M",
+      "iaIdentifier": "lecturesonenglis00reed_1",
+      "sourceUrl": "https://openlibrary.org/books/OL25583279M/Lectures_on_English_literature_from_Chaucer_to_Tennyson",
+      "textFile": "lecturesonenglis00reed_1_djvu.txt",
+      "passage": "however irksome; and never in all that period, until his visit to Europe, absent for any length of time from his post, except when compelled hj sickness. In 1835, he was elected Professor of Rhetoric and English Literature. Mr. Heed was married, in 1834, to Elizabeth White Bron- son, who, with three children, now survives him. It had long been his wish to visit Europe, but his profes- sional duties and other claims had always prevented it. In the spring of 1854, the Professorship of Moral Philosophy, which he had once filled as Assistant Professor, being vacant, Mr. Eeed became a candidate for the chair, but was not elected. Although no personal disparagement was intended, so earnest and so reasonable was his ambition for what he considered a high academical distinction, that his disappointment was most keen and depressing. His secluded mode of life, exempt from the world's rough com- petitions; his modest wishes; his consciousness of services rendered and duties performed; his natural pride in the affection of his students ; and, above all, his conviction that moral science, in its highest and holiest sense, as elevated by religious truth, was a department of education which he was peculiarly competent to take charge of, combined to render the disappointment very poignant. His friends and family never saw him more depressed. I certainly never saw him so deeply wounded. He asked for leave of absence, which was granted by the Trustees; and early in May, 1854, accompanied by his sister-in-law, Miss Bronson, he sailed for Europe. ever received a kinder or more discriminating welcome. The last months of his life were pure sunshine. Before he landed in England, his friends, the family of Dr. Arnold, whom he had only known by correspondence, came on board the ship to receive him;",
+      "tags": [
+        "literature",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "literature",
+      "title": "THe bible as english literature",
+      "author": "J.H. Gardiner",
+      "olid": "/books/OL58596037M",
+      "iaIdentifier": "bibleasenglishli0000jhga",
+      "sourceUrl": "https://openlibrary.org/books/OL58596037M/THe_bible_as_english_literature",
+      "textFile": "bibleasenglishli0000jhga_djvu.txt",
+      "passage": "Since this is a study in English literature I have confined myself wholly to the Authorised Version. If another generation should return to the general reading of the Bible the Revised Version may be- come English literature; but that is a matter for the future to determine. For this reason all my quota- tions come from the Authorised Version, even where the translation is imperfect or incorrect. It is well understood that the Revised Version is a better basis for the study of Hebrew literature or of New Testa- ment literature. every one who cares for a delimitation must run his line for himself. It. is obvious, however, that no literary criticism of the Bible could hope for success which was not reverent in tone. A critic who should approach it superciliously or arrogantly would miss all that has given the book its power as literature and its lasting and universal appeal. A large part of the book was delivered in the form of a course of lectures at the Lowell Institute during the past winter. The chapter on the poetry, and portions of some other chapters, have appeared as essays in the Atlantic Monthly; and I am under ob- ligations to the editor of that magazine for his kind permission to use them. To several of my colleagues I owe special thanks for their generosity in opening to me their own stores of learning and for advising me in my reading. Chief among them are Professor Toy, who has shown me unwearying kindness in many difficulties, Pro- fessor G. F. Moore, Professor Lyon, and Professor Ropes, who, besides giving me much valuable advice, has been good enough to read some of the manuscript. The different types of narrative—Their primitive simplicity of thought—The simplicity of the Hebrew language—The New Testament",
+      "tags": [
+        "literature",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "literature",
+      "title": "Voices of October, art and literature in soviet Russia",
+      "author": "Freeman, Joseph, 1897-1965",
+      "olid": "/books/OL6742845M",
+      "iaIdentifier": "voicesofoctober0000unse",
+      "sourceUrl": "https://openlibrary.org/books/OL6742845M/Voices_of_October",
+      "textFile": "voicesofoctober0000unse_djvu.txt",
+      "passage": "Since ideas lag behind events, it is not surprising that long after the western countries lifted the economic and political blockade against the Soviet Union there should have continued a kind of intellectual blockade obscuring the cultural achievements of the Revolution. In this respect the United States has been slower than certain European countries, notably Germany, which, for a number of years, has been translating Soviet novelists and poets and showing Soviet films. \\7e have begun to do so only in the past few years. In 1927, for example, ten years after the October Revolution, there existed a paradoxical situation: on the one hand, we had many books describing in great detail the political, economic and social achievements of the Soviet Union; on the other hand, only a few isolated books touching on Soviet literature, painting, the theatre and the cinema. Conse¬ quently it is possible even today for reputable journals to publish statements about Soviet art which they would dismiss as infantile if made about Soviet politics or eco¬ nomics. As late as last year, twelve years after the Revo¬ lution, a liberal New York weekly published an article mourning the \"tragedy of modern Russian literature,” whose themes are \"limited by a narrow, official Com¬ munist outlook”; a literature whose writers must \"forgo all individual or psychological problems” because they are \"denied the freedom of art”; where \"lyricism is taboo” and the development of talent is \"either totally checked or at least arrested.” The past two years, however, have witnessed in this country a growing interest in Soviet art and literature, due to some direct acquaintance with certain of its achievements. This is primarily true of the cinema, which until 1928 was represented by three or four films, but since then has been represented by over forty. In the",
+      "tags": [
+        "literature",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "classics",
+      "title": "Latin and Greek in American Education: With Symposia on the Value of Humanistic Studies",
+      "author": "Francis Willey Kelsey",
+      "olid": "/books/OL6531869M",
+      "iaIdentifier": "latinandgreekin00kelsgoog",
+      "sourceUrl": "https://openlibrary.org/books/OL6531869M/Latin_and_Greek_in_American_education",
+      "textFile": "latinandgreekin00kelsgoog_djvu.txt",
+      "passage": "The heat of the strife over the position of the ancient classics in our curricula has died away. Only rarely nowadays does either the advocate or the opponent of the study of Latin and Greek indulge in polemics. The latter is satisfied because he knows that in most schools and colleges the student has no reason to take instruction in Latin unless he elects the study of his own free choice, and that in the great majority of pubhc high schools, now more than 10,000 in number, no opportunity is afforded to study Greek even if the pupil desires to do so; and the friends of the classics, engaged meanwhile in adjust- ing themselves so far as may be to the new conditions, have observed that the questions relating to the status of Greek and Latin are, for the most part, merely phases of a much broader problem, which has to do not only with the determination of educational values but also with the adjustment of the limits of prescription and election of studies. The chaotic condition of the courses in many of the larger institutions of secondary as well as of collegiate rank must eventually, for administrative if not for educational reasons, give place to a more sys- tematic grouping of subjects; and a general movement in that direction has already begim. The time has come for the fresh consideration of course-making along con- structive lines; we are justified, therefore, in entering upon an inquiry as to the place which Latin and Greek now have, and should have, in our courses of study. studies of secondary schools, which have been published in the Reports of the Commissioner of Education since 1890, have been much discussed and variously inter- preted. Whatever may be the difiiculty of drawing from them correct",
+      "tags": [
+        "classics",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "classics",
+      "title": "American stories",
+      "author": "Hale, Edward Everett, 1822-1909",
+      "olid": "/books/OL23379358M",
+      "iaIdentifier": "americanstories00halegoog",
+      "sourceUrl": "https://openlibrary.org/books/OL23379358M/American_stories",
+      "textFile": "americanstories00halegoog_djvu.txt",
+      "passage": "This is a digital copy of a book that was preserved for generations on library shelves before it was carefully scanned by Google as part of a project to make the world's books discoverable online. It has survived long enough for the copyright to expire and the book to enter the public domain. A public domain book is one that was never subject to copyright or whose legal copyright term has expired. Whether a book is in the public domain may vary country to country. Public domain books are our gateways to the past, representing a wealth of history, culture and knowledge that's often difficult to discover. Marks, notations and other marginalia present in the original volume will appear in this file - a reminder of this book's long journey from the publisher to a library and finally to you. Google is proud to partner with libraries to digitize public domain materials and make them widely accessible. Public domain books belong to the public and we are merely their custodians. Nevertheless, this work is expensive, so in order to keep providing this resource, we have taken steps to prevent abuse by commercial parties, including placing technical restrictions on automated querying. + Make non-commercial use of the files We designed Google Book Search for use by individuals, and we request that you use these files for personal, non-commercial purposes. + Refrain from automated querying Do not send automated queries of any sort to Google's system: If you are conducting research on machine translation, optical character recognition or other areas where access to a large amount of text is helpful, please contact us. We encourage the use of public domain materials for these purposes and may be able to help. + Maintain attribution The Google \"watermark\" you see on each file is",
+      "tags": [
+        "classics",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    },
+    {
+      "topic": "classics",
+      "title": "The German classics of the nineteenth and twentieth centuries: masterpieces of German literature, tr. into English",
+      "author": "Francke, Kuno, 1855-1930, ed",
+      "olid": "/books/OL24155144M",
+      "iaIdentifier": "cu31924087727065",
+      "sourceUrl": "https://openlibrary.org/books/OL24155144M/The_German_classics_of_the_nineteenth_and_twentieth_centuries",
+      "textFile": "cu31924087727065_djvu.txt",
+      "passage": "ERMAN literature of the nineteenth cen- tury has two principal characteristics. These are: first, an unusual closeness to the life of the people; and second, the power of assimilating the Greek and Latin classics, and of reproducing their figures with renewed vitality. These qualities often exist together in the same author; notably in Goethe, with his Iphigenie and Roman Elegies on the one hand, his Wilhelm Meister and his Ballads on the other. In Faust, of course, both elements are united. Then we have Morike writing Erinna to Sappho in a thoroughly Grecian spirit, and again, too, in another mood giving us the song of a German peasant girl. The dramatist Grill- parzer achieved nearly equal success with classic legend and with Austrian history, and the list might be continued indefinitely. In the past generation few writers have culti- vated both of these qualities with more ardor than has Adolf Wilbrandt. In 1859 Wilbrandt undertook the varied and exacting duties of newspaper work. His home was then at Munich, where he became intimately associated with an artistic circle, including such men as Paul Heyse and Franz von Lenbach. But eager though he was at first, the incipient poet eventually found out that journalism did not suit him. He was wearied by ' ' the eternal monotony of eternal change.\" He thereupon made his debut in literature by an excellent book on the dramatist Heinrich von Kleist. Following this came his novel Spirits and Mortals, a melo- dramatic work, full of ill-regulated genius. But the en- thusiast had overtaxed his powers, and suffered in con- sequence a nervous breakdown. In his convalescence Wilbrandt resolved henceforth to live in art, ' ' the realm of eternal things,\" and he at once put his resolution into effect by a long sojourn in Italy",
+      "tags": [
+        "classics",
+        "openlibrary-search-inside-eval",
+        "ia-ocr-candidate"
+      ]
+    }
+  ]
+}

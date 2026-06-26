@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-25 — PLANET-3146 Active Recall Mastery cards
+> 最后更新: 2026-06-26 — PLANET-3169 Open Library Search Inside passage-source evaluation
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -294,6 +294,7 @@ exisz/randompage (GitHub)
 | `ia-ocr-pilot.mjs` | PLANET-2502 | Small Internet Archive OCR/plaintext fetchability pilot; serially downloads `_djvu.txt` candidates, slices to 180–800 char passages, writes local report/samples only |
 | `ia-ocr-ingest.mjs` | PLANET-2508 | Reviewed tiny-batch IA OCR ingestion path; dry-run report by default, `--apply --ack-reviewed` required for Turso inserts with `tags='[]'` |
 | `page-photo-ocr-eval.mjs` | PLANET-2708 | Local single-image Tesseract OCR evaluation for user-provided physical book pages; outputs private/import-candidate passage samples and report, no production writes |
+| `openlibrary-search-inside-eval.mjs` | PLANET-3169 | Local Open Library Search Inside + IA OCR/plaintext fetchability evaluation; queries preference topics, records Read API availability, emits JSON/Markdown report with reviewed open direct-text passage candidates only, no production writes |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
@@ -304,6 +305,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-26 | PLANET-3169: Added local Open Library Search Inside passage-source evaluation (`pnpm --filter @randompage/app eval:ol-search-inside`) that queries five preference topics, records OLID/IA identifiers + Read API availability, attempts direct IA OCR/plaintext fetches for openly readable identifiers, and emits JSON/Markdown reports with RandomPage-style candidate passages without production writes. | Engineer Pod |
 | 2026-06-25 | PLANET-3146: Added private Active Recall Mastery cloze cards over saved RandomPage passages. Users can select an exact phrase in Bookmarks, create a private card linked to that bookmark/passage, practice with the phrase hidden in context, reveal the source, grade remembered/forgot/soon/later/someday, and schedule the next due date with bounded spaced-review direction. Added `check:active-recall`. | Engineer Pod |
 | 2026-06-25 | PLANET-3130: Added private Daily Review frequency tuning for global saved pages, book/source, and tag/topic scopes with pause/less/normal/more presets stored in `user_preferences` control rows; Daily Review excludes/ranks due saved passages by tuning and Bookmarks Themed Review applies the same controls. Added `check:review-tuning`. | Engineer Pod |
 | 2026-06-24 | PLANET-3106: Removed the stale hard-coded production passage count from the Turso table topology; current corpus size should be verified with `pnpm --filter @randompage/app check:passage-content` (746 on 2026-06-24) instead of copied into architecture diagrams. | Engineer Pod |
