@@ -1,0 +1,714 @@
+{
+  "generatedAt": "2026-06-26T18:17:43.165Z",
+  "source": "docs/openlibrary-search-inside-eval-samples.json",
+  "policy": "metadata-only reviewed candidate queue; no OCR/plaintext fetch; reviewed allowlist required before ia-ocr-ingest",
+  "queue": [
+    {
+      "identifier": "recentbritishph03massgoog",
+      "title": "Recent British Philosophy: A Review, with Criticisms; Including Some Comments on Mr. Mill's ...",
+      "author": "David Masson",
+      "topic": "philosophy",
+      "olid": "/books/OL20501351M",
+      "year": 1867,
+      "sourceUrl": "https://openlibrary.org/books/OL20501351M/Recent_British_Philosophy_A_Review_with_Criticisms_Including_Some_Comments_on_Mr._Mill's_...",
+      "archiveUrl": "https://archive.org/details/recentbritishph03massgoog",
+      "snippetLength": 322,
+      "snippets": [
+        "Fhcenomenal Philosophy, or the Philosophy of Phanomenalism. The fundamental maxim of the Philosophy, at all",
+        "•' ')3 RECENT BRITISH PHILOSOPHY. / .5 ■ / ci \"A RECENT BRITISH PHILOSOPHY: A REVIEW, WITH CRITICISMS;"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "recentbritishph03massgoog_djvu.txt",
+        "passageCandidateChars": 1753
+      },
+      "score": 89,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "mlbd.introductiontoin0000sati_t0v5",
+      "title": "An Introduction To Indian Philosophy",
+      "author": "Satischandra Chatterjee; Dhirendramohan Datta",
+      "topic": "philosophy",
+      "olid": "/books/OL58949174M",
+      "year": 1939,
+      "sourceUrl": "https://openlibrary.org/books/OL58949174M/An_Introduction_To_Indian_Philosophy",
+      "archiveUrl": "https://archive.org/details/mlbd.introductiontoin0000sati_t0v5",
+      "snippetLength": 322,
+      "snippets": [
+        "of Philosophy 1 The Meaning and Scope of Indian Philosophy 3 3. The Schools of Indian Philosophy 5 4",
+        "outlook of Indian philosophy. 2. The Meaning and Scope of Indian Philosophy Indian philosophy denotes the philosophical"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+        "passageCandidateChars": 1783
+      },
+      "score": 89,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "socialpsychology0000jess",
+      "title": "SOCIAL PSYCHOLOGY INTERPRETED",
+      "author": "JESSE WILLIAM SPROW",
+      "topic": "psychology",
+      "olid": "/books/OL59045933M",
+      "year": 1927,
+      "sourceUrl": "https://openlibrary.org/books/OL59045933M/SOCIAL_PSYCHOLOGY_INTERPRETED",
+      "archiveUrl": "https://archive.org/details/socialpsychology0000jess",
+      "snippetLength": 316,
+      "snippets": [
+        "heads: (1) the psychology of religion, (2) the psychology of war, (3) the psychology of art, (4) the",
+        "Social Psychology, and Ginsberg’s Psychology of Society. Zmnaniecki’s Laws of Social Psychology, a difficult"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "socialpsychology0000jess_djvu.txt",
+        "passageCandidateChars": 1837
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "bibleasenglishli0000jhga",
+      "title": "THe bible as english literature",
+      "author": "J.H. Gardiner",
+      "topic": "literature",
+      "olid": "/books/OL58596037M",
+      "year": 1906,
+      "sourceUrl": "https://openlibrary.org/books/OL58596037M/THe_bible_as_english_literature",
+      "archiveUrl": "https://archive.org/details/bibleasenglishli0000jhga",
+      "snippetLength": 315,
+      "snippets": [
+        "Gene an THE BIBLE AS ENGLISH LITERATURE THE BIBLE AS ENGLISH LITERATURE “o BY eri: GARDINER be ASSISTANT",
+        "basis for the study of Hebrew literature or of New Testa- ment literature. In all my discussion I have"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "bibleasenglishli0000jhga_djvu.txt",
+        "passageCandidateChars": 1751
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "latinandgreekin00kelsgoog",
+      "title": "Latin and Greek in American Education: With Symposia on the Value of Humanistic Studies",
+      "author": "Francis Willey Kelsey",
+      "topic": "classics",
+      "olid": "/books/OL6531869M",
+      "year": 1911,
+      "sourceUrl": "https://openlibrary.org/books/OL6531869M/Latin_and_Greek_in_American_education",
+      "archiveUrl": "https://archive.org/details/latinandgreekin00kelsgoog",
+      "snippetLength": 314,
+      "snippets": [
+        "from the classics. That must be obtained in some other way. But it is maintained for the classics (1) that",
+        "HUMANISTIC STUDIES: THE CLASSICS AND THE NEW EDUCATION I. THE CLASSICS IN EUROPEAN EDUCATION EDWARD"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "latinandgreekin00kelsgoog_djvu.txt",
+        "passageCandidateChars": 1734
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "catalogueappren01librgoog",
+      "title": "Catalogue of the Apprentices' Library in New York: Established and Supported by the General ...",
+      "author": "General Society of Mechanics and Tradesmen of the City of New York Library",
+      "topic": "history",
+      "olid": "/books/OL20485319M",
+      "year": 1860,
+      "sourceUrl": "https://openlibrary.org/books/OL20485319M/Catalogue_of_the_Apprentices'_Library_in_New_York_Established_and_Supported_by_the_General_...",
+      "archiveUrl": "https://archive.org/details/catalogueappren01librgoog",
+      "snippetLength": 313,
+      "snippets": [
+        "Abbott, Jacob, History of Alexander the Great, 12mo. 8,584. Abbott, Jacob, History of Cleopatra, Queen",
+        "58^. Abbott, Jacob, History of Cy-nia the Great, 12mo. 8,583. Abbott, Jacob, History of Darius tlje Great"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "catalogueappren01librgoog_djvu.txt",
+        "passageCandidateChars": 1744
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "americanstories00halegoog",
+      "title": "American stories",
+      "author": "Hale, Edward Everett, 1822-1909",
+      "topic": "classics",
+      "olid": "/books/OL23379358M",
+      "year": 1903,
+      "sourceUrl": "https://openlibrary.org/books/OL23379358M/American_stories",
+      "archiveUrl": "https://archive.org/details/americanstories00halegoog",
+      "snippetLength": 306,
+      "snippets": [
+        "Street, Basten. 3 2044 097 057 236 THE HAWTHORNE CLASSICS AMERICAN STORIES EDITED BY EDWAED EVERETT HALE",
+        "not diflScult when we think of the established classics of our literature. And yet, following out the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "americanstories00halegoog_djvu.txt",
+        "passageCandidateChars": 1793
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "lecturesonenglis00reed_1",
+      "title": "Lectures on English literature, from Chaucer to Tennyson",
+      "author": "Reed, Henry, 1808-1854. [from old catalog]",
+      "topic": "literature",
+      "olid": "/books/OL25583279M",
+      "year": 1867,
+      "sourceUrl": "https://openlibrary.org/books/OL25583279M/Lectures_on_English_literature_from_Chaucer_to_Tennyson",
+      "archiveUrl": "https://archive.org/details/lecturesonenglis00reed_1",
+      "snippetLength": 305,
+      "snippets": [
+        "remove them — All books not literature — Accurate definition of literature — Its universality — Izaak",
+        "Browning 215 LECTURE VIII. LITERATURE OP THE NINETEENTH CENTURY. Literature of our own times— Influence"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "lecturesonenglis00reed_1_djvu.txt",
+        "passageCandidateChars": 1804
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "historyofpsychol00klemuoft",
+      "title": "A history of psychology",
+      "author": "Klemm, Otto, 1884-",
+      "topic": "psychology",
+      "olid": "/books/OL7083190M",
+      "year": 1914,
+      "sourceUrl": "https://openlibrary.org/books/OL7083190M/A_history_of_psychology",
+      "archiveUrl": "https://archive.org/details/historyofpsychol00klemuoft",
+      "snippetLength": 289,
+      "snippets": [
+        "TENDENCIES OF PSYCHOLOGY I. METAPHYSICAL PSYCHOLOGY Chapter I. Dualism in Psychology 1. Relation",
+        "TENDENCIES OF PSYCHOLOGY I. METAPHYSICAL PSYCHOLOGY CHAPTER I DUALISM IN PSYCHOLOGY I. Relation"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "historyofpsychol00klemuoft_djvu.txt",
+        "passageCandidateChars": 1877
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "voicesofoctober0000unse",
+      "title": "Voices of October, art and literature in soviet Russia",
+      "author": "Freeman, Joseph, 1897-1965",
+      "topic": "literature",
+      "olid": "/books/OL6742845M",
+      "year": 1930,
+      "sourceUrl": "https://openlibrary.org/books/OL6742845M/Voices_of_October",
+      "archiveUrl": "https://archive.org/details/voicesofoctober0000unse",
+      "snippetLength": 285,
+      "snippets": [
+        "art and literature. ART AND LITERATURE IN SOVIET RUSSIA 59 RESOLUTION ON LITERATURE ADOPTED",
+        "Communist Party on Literature — Chaotic Ferment — Communist Resolution on Literature n. MEN AND WOMEN"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "voicesofoctober0000unse_djvu.txt",
+        "passageCandidateChars": 1851
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "briefhistoryofgr00burt",
+      "title": "A brief history of Greek philosophy",
+      "author": "Burt, Benjamin Chapman, 1852-1915",
+      "topic": "philosophy",
+      "olid": "/books/OL24605951M",
+      "year": 1889,
+      "sourceUrl": "https://openlibrary.org/books/OL24605951M/A_brief_history_of_Greek_philosophy",
+      "archiveUrl": "https://archive.org/details/briefhistoryofgr00burt",
+      "snippetLength": 283,
+      "snippets": [
+        "Subsequent History of Greek Philosophy, pp. 45-47; Philosophy of Socrates, p. 47; Spirit",
+        "146) ; Practical Philosophy, p. 147; Method of Practical Philosophy, p. 147 ; End of Practical"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "briefhistoryofgr00burt_djvu.txt",
+        "passageCandidateChars": 1766
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "ancienteuropeanp00snid",
+      "title": "Ancient European philosophy; the history of Greek philosophy psychologically treated",
+      "author": "Snider, Denton Jaques, 1841-1925",
+      "topic": "philosophy",
+      "olid": "/books/OL13504299M",
+      "year": 1903,
+      "sourceUrl": "https://openlibrary.org/books/OL13504299M/Ancient_European_philosophy",
+      "archiveUrl": "https://archive.org/details/ancienteuropeanp00snid",
+      "snippetLength": 282,
+      "snippets": [
+        "Ancient European Philosophy . . . 1 50 6. Modern European Philosophy (in prejyaration)",
+        "Publishing Co. ANCIENT European Philosophy The History of Greek Philosophy Psychologically Treated. BY"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "ancienteuropeanp00snid_djvu.txt",
+        "passageCandidateChars": 1700
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "cu31924087727065",
+      "title": "The German classics of the nineteenth and twentieth centuries: masterpieces of German literature, tr. into English",
+      "author": "Francke, Kuno, 1855-1930, ed",
+      "topic": "classics",
+      "olid": "/books/OL24155144M",
+      "year": 1913,
+      "sourceUrl": "https://openlibrary.org/books/OL24155144M/The_German_classics_of_the_nineteenth_and_twentieth_centuries",
+      "archiveUrl": "https://archive.org/details/cu31924087727065",
+      "snippetLength": 281,
+      "snippets": [
+        "power of assimilating the Greek and Latin classics, and of reproducing their figures with renewed",
+        "in preparing it. Vol. XVI— 1 2 THE GERMAN CLASSICS patriotism I became a journalist, from natural"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "cu31924087727065_djvu.txt",
+        "passageCandidateChars": 1794
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "histphilosophy00schwrich",
+      "title": "A history of philosophy in epitome",
+      "author": "Schwegler, Albert, 1819-1857",
+      "topic": "philosophy",
+      "olid": "/books/OL14013488M",
+      "year": 1856,
+      "sourceUrl": "https://openlibrary.org/books/OL14013488M/A_history_of_philosophy_in_epitome",
+      "archiveUrl": "https://archive.org/details/histphilosophy00schwrich",
+      "snippetLength": 278,
+      "snippets": [
+        "Transcendental Philosophy . • (1.) The Theoretical Philosophy (2.) The Practical Philosophy (8.) Philosophy",
+        "SOPHISTIC PHILOSOPHY ... 43 1. The Relation of the Sophistic Philosophy to the Anaxagorcan"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "histphilosophy00schwrich_djvu.txt",
+        "passageCandidateChars": 1785
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "introductiontos00stu",
+      "title": "Introduction to the study of philosophy",
+      "author": "Stuckenberg, John Henry Wilburn, 1835-1903. [from old catalog]",
+      "topic": "philosophy",
+      "olid": "/books/OL25388661M",
+      "year": 1888,
+      "sourceUrl": "https://openlibrary.org/books/OL25388661M/Introduction_to_the_study_of_philosophy",
+      "archiveUrl": "https://archive.org/details/introductiontos00stu",
+      "snippetLength": 272,
+      "snippets": [
+        "Definition of Philosophy 11 II. Relation of Philosophy to Religion 57 III. Philosophy and Natural",
+        "93 IV. Philosophy and Empirical Psychology .... 129 V. Division of Philosophy 159 VI"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "introductiontos00stu_djvu.txt",
+        "passageCandidateChars": 1801
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "suggestionsforte00kreyrich",
+      "title": "Suggestions for the teaching of history and civics in the high school",
+      "author": "Krey, August C. (August Charles), 1887-1961",
+      "topic": "history",
+      "olid": "/books/OL7175660M",
+      "year": 1915,
+      "sourceUrl": "https://openlibrary.org/books/OL7175660M/Suggestions_for_the_teaching_of_history_and_civics_in_the_high_school",
+      "archiveUrl": "https://archive.org/details/suggestionsforte00kreyrich",
+      "snippetLength": 268,
+      "snippets": [
+        "States History or to a combination of United States History and Civics, the history being",
+        "sity: Ancient History, 1 unit; Medieval and Modern History, 1 unit; English History, 1 unit;"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "suggestionsforte00kreyrich_djvu.txt",
+        "passageCandidateChars": 1719
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "rationalphilosop00frasrich",
+      "title": "Rational philosophy in history and in system: an introduction to a logical and metaphysical course",
+      "author": "Fraser, Alexander Campbell, 1819-1914",
+      "topic": "philosophy",
+      "olid": "/books/OL7167694M",
+      "year": 1858,
+      "sourceUrl": "https://openlibrary.org/books/OL7167694M/Rational_philosophy_in_history_and_in_system",
+      "archiveUrl": "https://archive.org/details/rationalphilosop00frasrich",
+      "snippetLength": 261,
+      "snippets": [
+        "Of San Francisco. 1873. RATIONAL PHILOSOPHY. RATIONAL PHILOSOPHY HISTORY AND IN SYSTEM AN",
+        "ACADEMICAL STUDY OF RATIONAL PHILOSOPHY, . 1 U. \\TIQNAL PHILOSOPHY IN HISTOKY, — 1. The"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "rationalphilosop00frasrich_djvu.txt",
+        "passageCandidateChars": 1675
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "philosophyofpres00kl",
+      "title": "The philosophy of the present in Germany",
+      "author": "Külpe, Oswald, 1862-1915",
+      "topic": "philosophy",
+      "olid": "/books/OL6561014M",
+      "year": 1913,
+      "sourceUrl": "https://openlibrary.org/books/OL6561014M/The_philosophy_of_the_present_in_Germany",
+      "archiveUrl": "https://archive.org/details/philosophyofpres00kl",
+      "snippetLength": 261,
+      "snippets": [
+        "J THE PHILOSOPHY OF THE PRESENT IN GERMANY BY OSWALD KULPE PROFESSOR OF PHILOSOPHY IN THE",
+        "is true if by the philosophy of the pre- sent we mean the philosophy of the moment — the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "philosophyofpres00kl_djvu.txt",
+        "passageCandidateChars": 1886
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "thephilosophyofh00flinuoft",
+      "title": "The philosophy of history in France and Germany",
+      "author": "Flint, Robert, 1838-1910",
+      "topic": "history",
+      "olid": "/books/OL7160316M",
+      "year": 1874,
+      "sourceUrl": "https://openlibrary.org/books/OL7160316M/The_philosophy_of_history_in_France_and_Germany",
+      "archiveUrl": "https://archive.org/details/thephilosophyofh00flinuoft",
+      "snippetLength": 257,
+      "snippets": [
+        "philosophy of history is a natural growth of history itself, . . 8 History in the great",
+        ". .11 History among the Greeks, . . . . . .12 The idea of a universal history was the"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "thephilosophyofh00flinuoft_djvu.txt",
+        "passageCandidateChars": 1798
+      },
+      "score": 88,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "de00cimalclassificdewerich",
+      "title": "Decimal classification and relative [sic] index for Libraries, clippings, notes, etc",
+      "author": "Dewey, Melvil, 1851-1931",
+      "topic": "history",
+      "olid": "/books/OL19375790M",
+      "year": null,
+      "sourceUrl": "https://openlibrary.org/books/OL19375790M/Decimal_classification_and_relative_sic_index_for_Libraries_clippings_notes_etc.",
+      "archiveUrl": "https://archive.org/details/de00cimalclassificdewerich",
+      "snippetLength": 282,
+      "snippets": [
+        "Political history .32 Diplomatic history See also 940.3 1-.3 14 Political history •33 Groups",
+        "simply class 9, History ; e. g. 942, history of England, analyzd is 9, history, 42, England"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": true,
+        "textFile": "de00cimalclassificdewerich_djvu.txt",
+        "passageCandidateChars": 1748
+      },
+      "score": 86,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "miraculouspitche00hawt",
+      "title": "The miraculous pitcher, and biographical stories",
+      "author": "Hawthorne, Nathaniel, 1804-1864",
+      "topic": "classics",
+      "olid": "/books/OL26257859M",
+      "year": 1905,
+      "sourceUrl": "https://openlibrary.org/books/OL26257859M/The_miraculous_pitcher_and_biographical_stories",
+      "archiveUrl": "https://archive.org/details/miraculouspitche00hawt",
+      "snippetLength": 288,
+      "snippets": [
+        "V ^JL'>.‘' ':■ W v/t.. % *.• THE CRANE CLASSICS THE MIRACULOUS PITCHER, AND BIOaEAPHICAL STOEIES",
+        "HaAvthorne’s mother removed (5) 6 THE CEAHE CLASSICS with her family to Raymond, Maine, near"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": false
+      },
+      "score": 58,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "publicationsoxf27oxfouoft",
+      "title": "[Publications]",
+      "author": "Oxford Historical Society",
+      "topic": "classics",
+      "olid": "/books/OL7068190M",
+      "year": 1885,
+      "sourceUrl": "https://openlibrary.org/books/OL7068190M/Publications",
+      "archiveUrl": "https://archive.org/details/publicationsoxf27oxfouoft",
+      "snippetLength": 270,
+      "snippets": [
+        "Rutland; 2 Classics 1819, B.A. i July 1820, M.A. 16 Feb. 1822, Examiner in Classics 1826, pres",
+        "Dec. 1838; 2 Classics 1819, Select Preacher 1828, 1839, Examiner in Classics 1828-29; vac"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": false
+      },
+      "score": 58,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    },
+    {
+      "identifier": "etonschoollistsf00lond",
+      "title": "Eton school lists from 1791 to 1877, with notes and index",
+      "author": "Unknown",
+      "topic": "classics",
+      "olid": "/books/OL24237980M",
+      "year": null,
+      "sourceUrl": "https://openlibrary.org/books/OL24237980M/Eton_school_lists_from_1791_to_1877_with_notes_and_index.",
+      "archiveUrl": "https://archive.org/details/etonschoollistsf00lond",
+      "snippetLength": 281,
+      "snippets": [
+        "1839-41. Student of Ch. Ch. Oxf. 1st cL classics 1807. Musgravo Sutton Moore Craeroft Hankey",
+        "Afterwards Bruce. Ch. Ch. Oxf., 1st cL classics, 1810. Resided in Fifeshire ; and d. lately"
+      ],
+      "readApi": {
+        "status": "open",
+        "isReadable": true,
+        "isPreviewable": true,
+        "isLendable": false,
+        "availableToBorrow": false,
+        "availableToBrowse": false
+      },
+      "evalTextFetch": {
+        "attempted": false
+      },
+      "score": 56,
+      "reviewed": false,
+      "reviewNote": "pending human review before IA OCR fetch"
+    }
+  ]
+}

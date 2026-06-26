@@ -119,6 +119,36 @@ Safety/rate limits:
 - No protected full-text caching, summaries, generic reader/feed scope, or
   production writes.
 
+## openlibrary-ia-candidate-queue.mjs — PLANET-3180
+
+Review-first queue builder for the Open Library → IA OCR path. It reads the
+Search Inside eval JSON, ranks openly readable IA identifiers, and writes
+metadata-only queue/review artifacts. It does **not** fetch OCR/plaintext and
+does not copy full passage text from the eval candidates. Rows default to
+`reviewed:false`; a human-reviewed allowlist is required before using
+`ingest:ia-ocr`.
+
+```bash
+pnpm --filter @randompage/app queue:ol-ia-candidates
+pnpm --filter @randompage/app check:ol-ia-queue
+pnpm --filter @randompage/app ingest:ia-ocr -- \
+  --reviewed docs/openlibrary-ia-reviewed-items.json \
+  --max-items 2 \
+  --max-passages-per-item 10
+```
+
+Outputs:
+- `apps/app/docs/openlibrary-ia-candidate-queue.md`
+- `apps/app/docs/openlibrary-ia-candidate-queue.json`
+- `apps/app/docs/openlibrary-ia-reviewed-items.json`
+
+Safety:
+- Search Inside remains discovery/ranking only.
+- The queue stores title/author/OLID/IA identifier/snippets/readability flags,
+  not full OCR text.
+- `ia-ocr-ingest.mjs` still gates production writes behind `--apply
+  --ack-reviewed` and the existing length/content filters.
+
 ## tag-passages.mjs — PLANET-1173
 
 Backfill `tags` for any passage where `tags IS NULL OR '' OR '[]'`.

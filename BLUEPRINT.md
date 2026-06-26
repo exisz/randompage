@@ -295,6 +295,8 @@ exisz/randompage (GitHub)
 | `ia-ocr-ingest.mjs` | PLANET-2508 | Reviewed tiny-batch IA OCR ingestion path; dry-run report by default, `--apply --ack-reviewed` required for Turso inserts with `tags='[]'` |
 | `page-photo-ocr-eval.mjs` | PLANET-2708 | Local single-image Tesseract OCR evaluation for user-provided physical book pages; outputs private/import-candidate passage samples and report, no production writes |
 | `openlibrary-search-inside-eval.mjs` | PLANET-3169 | Local Open Library Search Inside + IA OCR/plaintext fetchability evaluation; queries preference topics, records Read API availability, emits JSON/Markdown report with reviewed open direct-text passage candidates only, no production writes |
+| `openlibrary-ia-candidate-queue.mjs` | PLANET-3180 | Builds a metadata-only reviewed candidate queue from the Search Inside eval artifact; emits queue/report plus `openlibrary-ia-reviewed-items.json` with rows defaulting to `reviewed:false`; no OCR/plaintext fetch before human allowlist |
+| `check-openlibrary-ia-queue-policy.mjs` | PLANET-3180 | Static guard for the Open Library → IA OCR queue boundary: no network fetch in queue builder, no copied full passage text, package scripts present, and `ia-ocr-ingest` still gated by reviewed apply ack |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
 
 两个脚本都从 env 读 `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN`；`tag-passages` 还需要 `GEMINI_API_KEY`（fallback `GEMINI_API_KEY_IMAGE_GENERATION_ONLY`）。详见 `apps/app/scripts/README.md`。
@@ -305,6 +307,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-27 | PLANET-3180: Added reviewed Open Library → IA OCR candidate queue (`pnpm --filter @randompage/app queue:ol-ia-candidates`) that converts the Search Inside eval artifact into metadata-only queue/review files, keeps all rows `reviewed:false` by default, and adds `check:ol-ia-queue` to guard against OCR/plaintext fetch or copied full passage text before human allowlist. | Engineer Pod |
 | 2026-06-26 | PLANET-3169: Added local Open Library Search Inside passage-source evaluation (`pnpm --filter @randompage/app eval:ol-search-inside`) that queries five preference topics, records OLID/IA identifiers + Read API availability, attempts direct IA OCR/plaintext fetches for openly readable identifiers, and emits JSON/Markdown reports with RandomPage-style candidate passages without production writes. | Engineer Pod |
 | 2026-06-25 | PLANET-3146: Added private Active Recall Mastery cloze cards over saved RandomPage passages. Users can select an exact phrase in Bookmarks, create a private card linked to that bookmark/passage, practice with the phrase hidden in context, reveal the source, grade remembered/forgot/soon/later/someday, and schedule the next due date with bounded spaced-review direction. Added `check:active-recall`. | Engineer Pod |
 | 2026-06-25 | PLANET-3130: Added private Daily Review frequency tuning for global saved pages, book/source, and tag/topic scopes with pause/less/normal/more presets stored in `user_preferences` control rows; Daily Review excludes/ranks due saved passages by tuning and Bookmarks Themed Review applies the same controls. Added `check:review-tuning`. | Engineer Pod |

@@ -38,6 +38,7 @@
     "check:share-passage": "node scripts/check-share-passage-policy.mjs",
     "eval:page-ocr": "node scripts/page-photo-ocr-eval.mjs",
     "eval:ol-search-inside": "node scripts/openlibrary-search-inside-eval.mjs",
+    "queue:ol-ia-candidates": "node scripts/openlibrary-ia-candidate-queue.mjs",
     "check:reading-path": "node scripts/check-reading-path-policy.mjs",
     "check:daily-queue": "node scripts/check-daily-queue-policy.mjs",
     "check:reading-challenges": "node scripts/check-reading-challenges-policy.mjs",
@@ -49,7 +50,8 @@
     "check:review-tuning": "node scripts/check-review-tuning-policy.mjs",
     "check:recall-search": "tsx scripts/check-recall-search-policy.ts",
     "check:passage-annotations": "node scripts/check-passage-annotations-policy.mjs",
-    "check:active-recall": "node scripts/check-active-recall-policy.mjs"
+    "check:active-recall": "node scripts/check-active-recall-policy.mjs",
+    "check:ol-ia-queue": "node scripts/check-openlibrary-ia-queue-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
