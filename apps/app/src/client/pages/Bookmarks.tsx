@@ -97,6 +97,8 @@ export default function Bookmarks() {
   const [revealedActiveRecallIds, setRevealedActiveRecallIds] = useState<Set<string>>(() => new Set());
   const [activeRecallStatus, setActiveRecallStatus] = useState<string | null>(null);
   const [activeRecallBusyId, setActiveRecallBusyId] = useState<string | null>(null);
+  const [relatedSavedPages, setRelatedSavedPages] = useState<Record<string, RecallSearchResult[]>>({});
+  const [relatedStatus, setRelatedStatus] = useState<Record<string, string>>({});
   const [selectedThought, setSelectedThought] = useState<{ bookmarkId: string; quote: string; startOffset: number; endOffset: number } | null>(null);
   const [thoughtDraft, setThoughtDraft] = useState('');
   const [thoughtBusyId, setThoughtBusyId] = useState<string | null>(null);
@@ -215,6 +217,63 @@ export default function Bookmarks() {
       setRecallStatus('Saved passage to Bookmarks.');
     } finally { setBusy(false); }
   };
+  const loadRelatedSavedPages = async (bookmark: Bookmark) => {
+    if (offlineMode) return;
+    if (relatedSavedPages[bookmark.id]) {
+      setRelatedSavedPages(prev => {
+        const next = { ...prev };
+        delete next[bookmark.id];
+        return next;
+      });
+      return;
+    }
+    setRelatedStatus(prev => ({ ...prev, [bookmark.id]: 'Finding related saved pages…' }));
+    try {
+      const res = await apiFetch(`/bookmarks/${bookmark.id}/related`);
+      const data = await res.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      setRelatedSavedPages(prev => ({ ...prev, [bookmark.id]: results }));
+      setRelatedStatus(prev => ({ ...prev, [bookmark.id]: results.length ? '' : 'No related saved passages yet.' }));
+    } catch (error) {
+      setRelatedStatus(prev => ({ ...prev, [bookmark.id]: 'Could not load related saved pages right now.' }));
+    }
+  };
+
+  const renderRelatedSavedPages = (bookmark: Bookmark) => {
+    const results = relatedSavedPages[bookmark.id] || [];
+    const status = relatedStatus[bookmark.id];
+    if (!results.length && !status) return null;
+    return (
+      <div className="mt-3 rounded-box border border-secondary/20 bg-secondary/10 p-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-secondary">Related saved pages</p>
+        {status ? <p className="mt-1 text-xs opacity-70" role="status">{status}</p> : null}
+        {results.length > 0 ? (
+          <div className="mt-2 flex flex-col gap-2">
+            {results.map(result => (
+              <div key={`${bookmark.id}-related-${result.id}`} className="rounded-box border border-base-content/10 bg-base-100/80 p-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-65">
+                  <span>{result.matchReason}</span>
+                  <span>{result.sources?.join(' · ') || 'saved'}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 font-serif leading-relaxed">{result.snippet}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button className="btn btn-primary btn-xs" onClick={() => navigate(`/discover?passageId=${result.id}`)}>Open</button>
+                  <ListenControl text={result.text} title={`${result.bookTitle} related saved passage`} compact />
+                  <SharePassageButton passage={result} compact />
+                  <SharePassageImageButton passage={result} compact />
+                  <button className="btn btn-outline btn-xs" onClick={() => setReadingQueue(addPassageToReadingQueue(result))} disabled={readingQueue.some(item => item.passage.id === result.id)}>
+                    {readingQueue.some(item => item.passage.id === result.id) ? '✓ Queued' : 'Add to queue'}
+                  </button>
+                  <button className="btn btn-ghost btn-xs" disabled={!result.bookmarkId || busy || offlineMode} onClick={() => result.bookmarkId && markThemedReview(result.bookmarkId, 'review_later')}>Review later</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
 
   const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy' | 'email') => {
     if (filteredBookmarks.length === 0) return;
@@ -789,7 +848,9 @@ export default function Bookmarks() {
                             <ListenControl text={bookmark.passage.text} title={`${bookmark.passage.bookTitle} recall card`} compact />
                             <SharePassageButton passage={bookmark.passage} compact />
                             <SharePassageImageButton passage={bookmark.passage} compact />
+                            <button className="btn btn-outline btn-xs" disabled={offlineMode} onClick={() => loadRelatedSavedPages(bookmark)}>{relatedSavedPages[bookmark.id] ? 'Hide related' : 'Related saved pages'}</button>
                           </div>
+                          {renderRelatedSavedPages(bookmark)}
                         </div>
                       )}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
@@ -972,10 +1033,12 @@ export default function Bookmarks() {
                       </div>
                       <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={bookmark.passage.bookTitle} author={bookmark.passage.author} compact className="items-end opacity-60 hover:opacity-100" /></div>
                       {bmTags.length > 0 && <div className="flex flex-wrap gap-1 mt-2">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
-                      <div className="flex gap-2 justify-end mt-3">
+                      <div className="flex flex-wrap gap-2 justify-end mt-3">
+                        <button className="btn btn-outline btn-sm" disabled={offlineMode} onClick={() => loadRelatedSavedPages(bookmark)}>{relatedSavedPages[bookmark.id] ? 'Hide related' : 'Related saved pages'}</button>
                         <button className="btn btn-ghost btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'skip')}>Skip today</button>
                         <button className="btn btn-primary btn-sm" disabled={offlineMode || busy} onClick={() => markThemedReview(bookmark.id, 'reviewed')}>Reviewed</button>
                       </div>
+                      {renderRelatedSavedPages(bookmark)}
                     </div>
                   );
                 })}

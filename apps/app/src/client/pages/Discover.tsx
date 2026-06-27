@@ -91,6 +91,15 @@ interface DailyReview {
   generatedFor: string;
 }
 
+interface RelatedSavedPageResult extends Passage {
+  bookmarkId?: string;
+  score: number;
+  matchReason: string;
+  snippet: string;
+  matchedFields: string[];
+  sources?: string[];
+}
+
 interface UnreadPushSummary {
   count: number;
   latest: {
@@ -193,6 +202,8 @@ export default function Discover() {
   const [pathStatus, setPathStatus] = useState<string | null>(null);
   const [dailyReview, setDailyReview] = useState<DailyReview | null>(null);
   const [reviewStatus, setReviewStatus] = useState<string | null>(null);
+  const [relatedSavedPages, setRelatedSavedPages] = useState<Record<string, RelatedSavedPageResult[]>>({});
+  const [relatedStatus, setRelatedStatus] = useState<Record<string, string>>({});
   const [queuePlayback, setQueuePlayback] = useState<QueuePlaybackState>('idle');
   const [queueActiveIndex, setQueueActiveIndex] = useState<number | null>(null);
   const [queueNotice, setQueueNotice] = useState<string | null>(null);
@@ -526,6 +537,61 @@ export default function Discover() {
       setReviewStatus('Could not update review. Try again.');
     }
   };
+  const loadRelatedSavedPages = async (item: DailyReviewItem) => {
+    if (relatedSavedPages[item.bookmarkId]) {
+      setRelatedSavedPages(prev => {
+        const next = { ...prev };
+        delete next[item.bookmarkId];
+        return next;
+      });
+      return;
+    }
+    setRelatedStatus(prev => ({ ...prev, [item.bookmarkId]: 'Finding related saved pages…' }));
+    try {
+      const res = await apiFetch(`/bookmarks/${encodeURIComponent(item.bookmarkId)}/related`);
+      const data = await res.json();
+      const results = Array.isArray(data.results) ? data.results : [];
+      setRelatedSavedPages(prev => ({ ...prev, [item.bookmarkId]: results }));
+      setRelatedStatus(prev => ({ ...prev, [item.bookmarkId]: results.length ? '' : 'No related saved passages yet.' }));
+    } catch (e) {
+      console.error(e);
+      setRelatedStatus(prev => ({ ...prev, [item.bookmarkId]: 'Could not load related saved pages right now.' }));
+    }
+  };
+
+  const renderRelatedSavedPages = (item: DailyReviewItem) => {
+    const results = relatedSavedPages[item.bookmarkId] || [];
+    const status = relatedStatus[item.bookmarkId];
+    if (!results.length && !status) return null;
+    return (
+      <div className="mt-3 rounded-2xl border border-secondary/20 bg-secondary/10 p-3">
+        <p className="text-xs uppercase tracking-[0.18em] text-secondary">Related saved pages</p>
+        {status ? <p className="mt-1 text-xs opacity-70" role="status">{status}</p> : null}
+        {results.length > 0 ? (
+          <div className="mt-2 space-y-2">
+            {results.map(result => (
+              <div key={`${item.bookmarkId}-related-${result.id}`} className="rounded-xl border border-white/10 bg-base-100/70 p-2 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-65">
+                  <span>{result.matchReason}</span>
+                  <span>{result.sources?.join(' · ') || 'saved'}</span>
+                </div>
+                <p className="mt-1 line-clamp-2 font-serif leading-relaxed">{result.snippet}</p>
+                <p className="mt-1 text-xs opacity-50">{result.bookTitle} — {result.author}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button className="btn btn-primary btn-xs" onClick={() => fetchPassageById(result.id, 'discover')}>Open</button>
+                  <ListenControl text={result.text} title={`${result.bookTitle} related saved passage`} compact />
+                  <SharePassageButton passage={result} compact />
+                  <SharePassageImageButton passage={result} compact />
+                  <button className="btn btn-outline btn-xs" onClick={() => addPassageToReadingQueue(result)}>Add to queue</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
 
   const handleBookmark = async () => {
     if (!passage || !authed) return;
@@ -805,11 +871,13 @@ export default function Discover() {
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                         <SharePassageButton passage={item.passage} compact />
                         <SharePassageImageButton passage={item.passage} compact />
+                        <button className="btn btn-outline btn-sm rounded-xl" onClick={() => loadRelatedSavedPages(item)}>{relatedSavedPages[item.bookmarkId] ? 'Hide related' : 'Related saved pages'}</button>
                         <div className="grid flex-1 grid-cols-2 gap-2">
                           <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'reviewed')}>Reviewed</button>
                           <button className="btn btn-ghost btn-sm rounded-xl" onClick={() => handleReviewAction(item, 'skip')}>Skip today</button>
                         </div>
                       </div>
+                      {renderRelatedSavedPages(item)}
                     </div>
                   ))}
                 </div>

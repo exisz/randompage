@@ -4,7 +4,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { nanoid } from 'nanoid';
 import { parsePassageTags } from '../lib/passageTags.js';
 import { computeReviewSchedule, deriveBoxFromHistory, type ReviewAction } from '../lib/spacedReview.js';
-import { scoreRecallPassages, type RecallSearchPassageInput } from '../lib/recallSearch.js';
+import { scoreRecallPassages, scoreRelatedSavedPassages, type RecallSearchPassageInput } from '../lib/recallSearch.js';
 import { parseReviewTuning, tuneDueBookmarks } from '../lib/reviewTuning.js';
 
 export const bookmarksRouter = Router();
@@ -289,6 +289,53 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
 
     const results = scoreRecallPassages(q, Array.from(candidates.values()), 10);
     res.json({ query: q, results });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/bookmarks/:id/related — deterministic related saved passages from the current review card.
+bookmarksRouter.get('/bookmarks/:id/related', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+
+    const currentBookmark = await prisma.bookmark.findFirst({
+      where: { id: req.params.id, userId },
+      include: {
+        passage: true,
+        collectionItems: { include: { collection: true } },
+        annotations: { orderBy: { createdAt: 'asc' } },
+      },
+    });
+    if (!currentBookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+
+    const bookmarks = await prisma.bookmark.findMany({
+      where: { userId },
+      include: {
+        passage: true,
+        collectionItems: { include: { collection: true } },
+        annotations: { orderBy: { createdAt: 'asc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 240,
+    });
+
+    const toInput = (bookmark: typeof currentBookmark): RecallSearchPassageInput => ({
+      ...bookmark.passage,
+      bookmarkId: bookmark.id,
+      note: bookmark.note,
+      annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
+      collections: bookmark.collectionItems.map(item => item.collection.name),
+      sources: ['bookmark'],
+    });
+
+    const current = toInput(currentBookmark);
+    const candidates = bookmarks.map(toInput);
+    const results = scoreRelatedSavedPassages(current, candidates, 5);
+    res.json({ bookmarkId: currentBookmark.id, passageId: currentBookmark.passageId, results });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

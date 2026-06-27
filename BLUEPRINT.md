@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-26 — PLANET-3169 Open Library Search Inside passage-source evaluation
+> 最后更新: 2026-06-28 — PLANET-3205 Daily Review related saved pages
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -48,6 +48,7 @@
 │  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
+│  │    /api/bookmarks/:id/related → deterministic related saved pages for review cards │ │
 │  │    /api/bookmarks/:id/annotations → private line-level thoughts on saved passages │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
@@ -219,6 +220,7 @@ exisz/randompage (GitHub)
 
 ## Fuzzy Recall Search
 
+- Daily Review, Themed Review, and Recall Cards expose a “Related saved pages” branch from the current review card. `GET /api/bookmarks/:id/related` seeds deterministic matching from the owned bookmark’s title/author/tags/private note/line-level thoughts/excerpt, searches only the signed-in user’s saved RandomPage passages, excludes the current passage, and returns 3–5 results with match reasons/snippets plus existing open/listen/share/card/queue/review actions. No external LLM/embedding provider, summaries, or new content source is introduced.
 - Bookmarks exposes “Recall search / Find by idea” as a separate natural-language/fuzzy retrieval surface from exact saved-passage search. It is designed for remembered ideas (“power corrupting good intentions”) rather than exact words or tags.
 - `GET /api/bookmarks/recall-search?q=` searches only the signed-in user’s own RandomPage library graph: bookmarks (including private notes, line-level annotation quote/note text, and collection names), browsing history, and push inbox. It returns title/author, snippet, source badges, and match reasons; no query or passage text leaves RandomPage.
 - Results reuse existing passage actions where possible: open exact passage, Listen, Share, Card, Add to queue, and Save when the matching passage came from history/push rather than bookmarks.
@@ -285,6 +287,7 @@ exisz/randompage (GitHub)
 | `check-passage-feedback-policy.mjs` | PLANET-2934 | 静态回归检查 Discover + Push inbox feedback chips、`POST /api/passages/:id/feedback`、bounded preference updates 与 double-submit guard。 |
 | `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
 | `check-recall-search-policy.ts` | PLANET-3071 | 验证 deterministic fuzzy recall scorer：approximate idea query ranks the intended saved passage above unrelated passages and private notes/tags contribute to score. |
+| `check-related-saved-pages-policy.ts` | PLANET-3205 | 验证 review-card related saved pages seed from owned bookmark signals, exclude current passage, preserve bookmarkId, and rank deterministic saved matches. |
 | `check-passage-annotations-policy.mjs` | PLANET-3093 | 静态回归检查 passage_annotations inline DDL、owned bookmark/user-scoped edit/delete、offset/quote validation、quote/note caps、Bookmarks selection UI 与 recall-search indexing。 |
 | `check-active-recall-policy.mjs` | PLANET-3146 | 静态回归检查 active-recall cloze card inline DDL、owned bookmark scope、quote offset validation、hidden-before-reveal UI、remembered/forgot interval direction、original passage actions。 |
 | `check-review-tuning-policy.mjs` | PLANET-3130 | 静态回归检查 review tuning control rows、Daily Review tuned ranking/explanations、Themed Review filtering。 |
@@ -307,6 +310,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-28 | PLANET-3205: Added “Related saved pages” to Daily Review, Themed Review, and Recall Cards. The new `/api/bookmarks/:id/related` endpoint reuses deterministic recall-search scoring over user-owned saved RandomPage passages only, excludes the current card, returns match reasons/snippets, and keeps existing open/listen/share/card/queue/review actions; added `check:related-saved-pages`. | Engineer Pod |
 | 2026-06-27 | PLANET-3180: Added reviewed Open Library → IA OCR candidate queue (`pnpm --filter @randompage/app queue:ol-ia-candidates`) that converts the Search Inside eval artifact into metadata-only queue/review files, keeps all rows `reviewed:false` by default, and adds `check:ol-ia-queue` to guard against OCR/plaintext fetch or copied full passage text before human allowlist. | Engineer Pod |
 | 2026-06-26 | PLANET-3169: Added local Open Library Search Inside passage-source evaluation (`pnpm --filter @randompage/app eval:ol-search-inside`) that queries five preference topics, records OLID/IA identifiers + Read API availability, attempts direct IA OCR/plaintext fetches for openly readable identifiers, and emits JSON/Markdown reports with RandomPage-style candidate passages without production writes. | Engineer Pod |
 | 2026-06-25 | PLANET-3146: Added private Active Recall Mastery cloze cards over saved RandomPage passages. Users can select an exact phrase in Bookmarks, create a private card linked to that bookmark/passage, practice with the phrase hidden in context, reveal the source, grade remembered/forgot/soon/later/someday, and schedule the next due date with bounded spaced-review direction. Added `check:active-recall`. | Engineer Pod |

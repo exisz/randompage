@@ -9,6 +9,7 @@ export interface RecallSearchPassageInput {
   annotations?: { quote: string; note: string }[];
   collections?: string[];
   sources?: string[];
+  bookmarkId?: string;
 }
 
 export interface RecallSearchResult extends RecallSearchPassageInput {
@@ -74,6 +75,35 @@ function makeSnippet(text: string, tokens: string[]) {
   const end = Math.min(text.length, start + 220);
   const snippet = text.slice(start, end).trim();
   return `${start > 0 ? '…' : ''}${snippet}${end < text.length ? '…' : ''}`;
+}
+
+export function buildRelatedSavedPassageQuery(passage: RecallSearchPassageInput) {
+  const tags = parseRecallTags(passage.tags).slice(0, 8);
+  const annotationText = (passage.annotations ?? [])
+    .map(annotation => `${annotation.quote} ${annotation.note}`)
+    .join(' ')
+    .slice(0, 320);
+  const excerpt = passage.text.replace(/\s+/g, ' ').trim().slice(0, 360);
+  return [
+    passage.bookTitle,
+    passage.author,
+    tags.join(' '),
+    passage.note ?? '',
+    annotationText,
+    excerpt,
+  ].filter(Boolean).join(' ');
+}
+
+export function scoreRelatedSavedPassages(current: RecallSearchPassageInput, savedPassages: RecallSearchPassageInput[], limit = 5): RecallSearchResult[] {
+  const query = buildRelatedSavedPassageQuery(current);
+  if (!query.trim()) return [];
+  return scoreRecallPassages(query, savedPassages.filter(passage => passage.id !== current.id), limit)
+    .map(result => ({
+      ...result,
+      matchReason: result.matchedFields.length
+        ? `Related by ${result.matchedFields.slice(0, 3).join(', ')}`
+        : result.matchReason,
+    }));
 }
 
 export function scoreRecallPassages(query: string, passages: RecallSearchPassageInput[], limit = 8): RecallSearchResult[] {

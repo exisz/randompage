@@ -51,7 +51,8 @@
     "check:recall-search": "tsx scripts/check-recall-search-policy.ts",
     "check:passage-annotations": "node scripts/check-passage-annotations-policy.mjs",
     "check:active-recall": "node scripts/check-active-recall-policy.mjs",
-    "check:ol-ia-queue": "node scripts/check-openlibrary-ia-queue-policy.mjs"
+    "check:ol-ia-queue": "node scripts/check-openlibrary-ia-queue-policy.mjs",
+    "check:related-saved-pages": "tsx scripts/check-related-saved-pages-policy.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
