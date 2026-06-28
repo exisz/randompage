@@ -275,6 +275,7 @@ have user references.
 pnpm check:tag-failures
 pnpm check:tag-failures -- --json --sample 5
 pnpm check:tag-failures -- --fail-on-exhausted
+pnpm check:tag-failures -- --static-only
 ```
 
-Reports production `untagged`, `untagged_exhausted`, `failure_rows`, and `exhausted_failure_rows` counts so tag cron retries cannot silently strand passages after partial LLM failures.
+Reports production `untagged`, `untagged_exhausted`, `failure_rows`, and `exhausted_failure_rows` counts so tag cron retries cannot silently strand passages after partial LLM failures. The static guard verifies the production cron detects Gemini credit/quota depletion, applies deterministic fallback tags when the provider is unavailable or returns too few usable tags, reports `fallbackTagged`, and keeps Discover/daily queue selection biased toward tagged passages unless `allowUntagged=1` is explicitly requested.

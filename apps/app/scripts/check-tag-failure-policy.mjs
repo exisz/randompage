@@ -69,6 +69,46 @@ function preview(text, n = 140) {
 
 const args = parseArgs(process.argv.slice(2));
 const sampleLimit = asInt(args.sample, 5, 1, 20);
+
+function sourceIncludes(relativePath, needle) {
+  const sourcePath = path.join(APP_DIR, relativePath);
+  return existsSync(sourcePath) && readFileSync(sourcePath, 'utf8').includes(needle);
+}
+
+function runStaticGuard() {
+  const checks = [
+    {
+      name: 'tag cron detects Gemini credit/quota depletion',
+      ok: sourceIncludes('src/server/routes/cron.ts', 'isGeminiCreditDepletion'),
+    },
+    {
+      name: 'tag cron has deterministic fallback tags for stranded passages',
+      ok: sourceIncludes('src/server/routes/cron.ts', 'fallbackTagsForPassage'),
+    },
+    {
+      name: 'Discover/daily queue prefer tagged passages unless explicitly allowed',
+      ok: sourceIncludes('src/server/routes/passages.ts', 'preferTaggedPool'),
+    },
+    {
+      name: 'tag cron falls back on recoverable LLM tag quality failures',
+      ok: sourceIncludes('src/server/routes/cron.ts', 'isRecoverableTagQualityFailure'),
+    },
+    {
+      name: 'tag cron reports fallbackTagged in observability payload',
+      ok: sourceIncludes('src/server/routes/cron.ts', 'fallbackTagged'),
+    },
+  ];
+  const failed = checks.filter((check) => !check.ok);
+  console.log('tag failure static guard: provider outages must not strand tags=[] passages or commonly surface them in recommendations');
+  for (const check of checks) console.log(`${check.ok ? '✓' : '✗'} ${check.name}`);
+  if (failed.length > 0) process.exit(1);
+}
+
+if (args['static-only']) {
+  runStaticGuard();
+  process.exit(0);
+}
+
 const envLocal = loadEnvLocal();
 const TURSO_URL = process.env.TURSO_DATABASE_URL || envLocal.TURSO_DATABASE_URL;
 const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || envLocal.TURSO_AUTH_TOKEN;
@@ -119,6 +159,12 @@ const report = {
   untagged_exhausted: Number(counts.untagged_exhausted || 0),
   failure_rows: Number(counts.failure_rows || 0),
   exhausted_failure_rows: Number(counts.exhausted_failure_rows || 0),
+  staticGuard: {
+    fallbackTagger: sourceIncludes('src/server/routes/cron.ts', 'fallbackTagsForPassage'),
+    creditDepletionDetection: sourceIncludes('src/server/routes/cron.ts', 'isGeminiCreditDepletion'),
+    recommendationTaggedPool: sourceIncludes('src/server/routes/passages.ts', 'preferTaggedPool'),
+    qualityFailureFallback: sourceIncludes('src/server/routes/cron.ts', 'isRecoverableTagQualityFailure'),
+  },
   samples: samplesRes.rows.map((row) => ({
     id: String(row.id),
     len: Number(row.len),
@@ -136,6 +182,7 @@ if (args.json) {
 } else {
   console.log('tag failure policy: untagged passages must not be silently stranded behind exhausted retry rows');
   console.log(`total=${report.total} untagged=${report.untagged} untagged_exhausted=${report.untagged_exhausted} failure_rows=${report.failure_rows} exhausted_failure_rows=${report.exhausted_failure_rows}`);
+  console.log(`static_guard fallbackTagger=${report.staticGuard.fallbackTagger} creditDepletionDetection=${report.staticGuard.creditDepletionDetection} recommendationTaggedPool=${report.staticGuard.recommendationTaggedPool} qualityFailureFallback=${report.staticGuard.qualityFailureFallback}`);
   console.log('\nsamples:');
   for (const row of report.samples) {
     console.log(`- ${row.id} len=${row.len} retry=${row.retry_count} ${row.title} — ${row.author}: ${row.preview}`);

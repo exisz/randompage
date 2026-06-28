@@ -11,6 +11,7 @@ type CronSummary = {
   processed?: number;
   inserted?: number;
   tagged?: number;
+  fallbackTagged?: number;
   failed?: number;
   skipped?: number;
   durationMs: number;
@@ -110,13 +111,67 @@ function truncate(value: unknown, max = 1500) {
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
+function detectLanguage(text: string, fallback = 'en') {
+  const cjk = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+  if (cjk > text.length * 0.2) return 'zh';
+  return fallback || 'en';
+}
+
+const TAG_RULES: Array<{ tag: string; pattern: RegExp }> = [
+  { tag: 'philosophy', pattern: /\b(philosophy|soul|truth|virtue|morality|wisdom|reason|meaning|existence|conscience)\b/i },
+  { tag: 'psychology', pattern: /\b(mind|memory|dream|fear|desire|feeling|emotion|thought|habit|self)\b/i },
+  { tag: 'history', pattern: /\b(king|queen|empire|war|soldier|battle|revolution|ancient|century|nation)\b/i },
+  { tag: 'nature', pattern: /\b(sea|river|tree|forest|mountain|garden|sky|wind|sun|moon|rain)\b/i },
+  { tag: 'love', pattern: /\b(love|heart|marriage|wife|husband|lover|affection|kiss)\b/i },
+  { tag: 'power', pattern: /\b(power|law|command|authority|master|servant|slave|freedom)\b/i },
+  { tag: 'family', pattern: /\b(father|mother|child|sister|brother|family|home)\b/i },
+  { tag: 'death', pattern: /\b(death|dead|grave|die|dying|mortal|funeral)\b/i },
+  { tag: 'travel', pattern: /\b(road|journey|ship|horse|walk|travel|voyage|city)\b/i },
+];
+
+function fallbackTagsForPassage(passage: PassageForTagging) {
+  const text = `${passage.bookTitle ?? ''} ${passage.author ?? ''} ${passage.text ?? ''}`;
+  const lang = detectLanguage(passage.text ?? '', passage.language || 'en');
+  const tags = new Set<string>();
+  const lowerTitle = `${passage.bookTitle ?? ''} ${passage.author ?? ''}`.toLowerCase();
+
+  if (/poem|poetry|iliad|odyssey/.test(lowerTitle)) tags.add('poetry');
+  else if (/art of war|history|narrative|proposal/.test(lowerTitle)) tags.add('nonfiction');
+  else if (/zarathustra/.test(lowerTitle)) tags.add('philosophy');
+  else tags.add('fiction');
+
+  if (/\b(dark|death|fear|blood|grave|suffering|crime|punishment)\b/i.test(text)) tags.add('dark');
+  else if (/\b(peace|garden|serene|quiet|gentle|beauty)\b/i.test(text)) tags.add('serene');
+  else if (/\b(war|danger|cried|suddenly|terror|hurry)\b/i.test(text)) tags.add('tense');
+  else tags.add('reflective');
+
+  for (const rule of TAG_RULES) {
+    if (rule.pattern.test(text)) tags.add(rule.tag);
+    if (tags.size >= 6) break;
+  }
+  if (tags.size < 4) tags.add('literature');
+  if (tags.size < 4) tags.add('classic');
+  tags.add(lang);
+  return Array.from(tags).map((tag) => tag.toLowerCase().replace(/[^a-z0-9-]+/g, '-')).filter((tag) => /^[a-z0-9-]{2,32}$/.test(tag)).slice(0, 7);
+}
+
+function isGeminiCreditDepletion(err: unknown) {
+  const text = truncate(err, 4000).toLowerCase();
+  return text.includes('gemini 429') && (text.includes('prepayment') || text.includes('quota') || text.includes('resource_exhausted') || text.includes('billing'));
+}
+
+function isRecoverableTagQualityFailure(err: unknown) {
+  const text = truncate(err, 1000).toLowerCase();
+  return text.includes('too few tags') || text.includes('no tags') || text.includes('insufficient tags');
+}
+
 async function notifyPipeline(summary: CronSummary) {
   const webhook = process.env.RANDOMPAGE_DISCORD_WEBHOOK_URL || process.env.DISCORD_WEBHOOK_URL;
   if (!webhook) return;
 
   const lines = [
     `${summary.ok ? '✅' : '❌'} RandomPage ${summary.cron}`,
-    `processed=${summary.processed ?? 0} inserted=${summary.inserted ?? 0} tagged=${summary.tagged ?? 0} failed=${summary.failed ?? 0} skipped=${summary.skipped ?? 0}`,
+    `processed=${summary.processed ?? 0} inserted=${summary.inserted ?? 0} tagged=${summary.tagged ?? 0} fallbackTagged=${summary.fallbackTagged ?? 0} failed=${summary.failed ?? 0} skipped=${summary.skipped ?? 0}`,
     `duration=${summary.durationMs}ms`,
   ];
   if (summary.error) lines.push(`error=\`${summary.error.slice(0, 1500)}\``);
@@ -389,8 +444,22 @@ async function loadUntaggedPassages(prisma: PrismaClient, limit: number): Promis
     FROM passages p
     LEFT JOIN passage_tag_failures f ON f.passage_id = p.id
     WHERE (p.tags IS NULL OR p.tags = '' OR p.tags = '[]')
-      AND COALESCE(f.retry_count, 0) < 3
-    ORDER BY p.rowid ASC
+      AND (
+        COALESCE(f.retry_count, 0) < 3
+        OR (
+          lower(COALESCE(f.last_error, '')) LIKE '%gemini 429%'
+          AND (
+            lower(COALESCE(f.last_error, '')) LIKE '%prepayment%'
+            OR lower(COALESCE(f.last_error, '')) LIKE '%quota%'
+            OR lower(COALESCE(f.last_error, '')) LIKE '%billing%'
+            OR lower(COALESCE(f.last_error, '')) LIKE '%resource_exhausted%'
+          )
+        )
+        OR lower(COALESCE(f.last_error, '')) LIKE '%too few tags%'
+        OR lower(COALESCE(f.last_error, '')) LIKE '%no tags%'
+        OR lower(COALESCE(f.last_error, '')) LIKE '%insufficient tags%'
+      )
+    ORDER BY COALESCE(f.retry_count, 0) DESC, p.rowid ASC
     LIMIT ?
   `, limit) as PassageForTagging[];
 }
@@ -451,6 +520,7 @@ async function tagUntagged(req: Request, res: Response) {
   const batchSize = numericQuery(req, 'batch', Number(process.env.TAG_UNTAGGED_BATCH ?? 5), 1, 10);
   let processed = 0;
   let tagged = 0;
+  let fallbackTagged = 0;
   let failed = 0;
 
   try {
@@ -468,23 +538,57 @@ async function tagUntagged(req: Request, res: Response) {
             await prisma.$executeRawUnsafe('DELETE FROM passage_tag_failures WHERE passage_id = ?', passage.id);
             tagged++;
           } catch (err) {
-            failed++;
-            await recordTagFailure(prisma, passage.id, err);
-            console.log(`[cron/tag-untagged] passage ${passage.id} failed: ${truncate(err)}`);
+            if (isRecoverableTagQualityFailure(err)) {
+              try {
+                const fallbackTags = fallbackTagsForPassage(passage);
+                if (fallbackTags.length < 4) throw new Error(`fallback returned too few tags for ${passage.id}`);
+                await prisma.passage.update({ where: { id: passage.id }, data: { tags: JSON.stringify(fallbackTags), language: fallbackTags.includes('zh') ? 'zh' : passage.language || 'en' } });
+                await prisma.$executeRawUnsafe('DELETE FROM passage_tag_failures WHERE passage_id = ?', passage.id);
+                tagged++;
+                fallbackTagged++;
+                console.log(`[cron/tag-untagged] passage ${passage.id} used fallback tags after LLM quality failure`);
+              } catch (fallbackErr) {
+                failed++;
+                await recordTagFailure(prisma, passage.id, fallbackErr);
+                console.log(`[cron/tag-untagged] fallback failed for ${passage.id}: ${truncate(fallbackErr)}`);
+              }
+            } else {
+              failed++;
+              await recordTagFailure(prisma, passage.id, err);
+              console.log(`[cron/tag-untagged] passage ${passage.id} failed: ${truncate(err)}`);
+            }
           }
         }
       } catch (err) {
-        failed += batch.length;
-        for (const passage of batch) await recordTagFailure(prisma, passage.id, err);
-        console.log(`[cron/tag-untagged] batch request failed: ${truncate(err)}`);
+        if (isGeminiCreditDepletion(err)) {
+          console.log(`[cron/tag-untagged] Gemini credits/quota unavailable; applying deterministic fallback tags for ${batch.length} passages`);
+          for (const passage of batch) {
+            try {
+              const tags = fallbackTagsForPassage(passage);
+              if (tags.length < 4) throw new Error(`fallback returned too few tags for ${passage.id}`);
+              await prisma.passage.update({ where: { id: passage.id }, data: { tags: JSON.stringify(tags), language: tags.includes('zh') ? 'zh' : passage.language || 'en' } });
+              await prisma.$executeRawUnsafe('DELETE FROM passage_tag_failures WHERE passage_id = ?', passage.id);
+              tagged++;
+              fallbackTagged++;
+            } catch (fallbackErr) {
+              failed++;
+              await recordTagFailure(prisma, passage.id, fallbackErr);
+              console.log(`[cron/tag-untagged] fallback failed for ${passage.id}: ${truncate(fallbackErr)}`);
+            }
+          }
+        } else {
+          failed += batch.length;
+          for (const passage of batch) await recordTagFailure(prisma, passage.id, err);
+          console.log(`[cron/tag-untagged] batch request failed: ${truncate(err)}`);
+        }
       }
     }
 
-    const summary: CronSummary = { cron: 'tag-untagged', ok: failed === 0, processed, tagged, failed, skipped: limit - processed > 0 ? limit - processed : 0, durationMs: Date.now() - started };
+    const summary: CronSummary = { cron: 'tag-untagged', ok: failed === 0, processed, tagged, fallbackTagged, failed, skipped: limit - processed > 0 ? limit - processed : 0, durationMs: Date.now() - started };
     await notifyPipeline(summary);
     res.status(summary.ok ? 200 : 207).json(summary);
   } catch (err) {
-    const summary: CronSummary = { cron: 'tag-untagged', ok: false, processed, tagged, failed: failed + 1, durationMs: Date.now() - started, error: truncate(err) };
+    const summary: CronSummary = { cron: 'tag-untagged', ok: false, processed, tagged, fallbackTagged, failed: failed + 1, durationMs: Date.now() - started, error: truncate(err) };
     await notifyPipeline(summary);
     res.status(500).json(summary);
   }

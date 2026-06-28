@@ -278,6 +278,16 @@ function parseJsonArray(value: string | null | undefined): string[] {
   }
 }
 
+function hasPersonalizationTags(passage: { tags: string | null }) {
+  return parsePassageTags(passage.tags).length > 0;
+}
+
+function preferTaggedPool<T extends { tags: string | null }>(passages: T[], allowUntagged = false) {
+  if (allowUntagged) return passages;
+  const tagged = passages.filter(hasPersonalizationTags);
+  return tagged.length > 0 ? tagged : passages;
+}
+
 function normalizeBookSourceQuery(value: unknown) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 180) : '';
 }
@@ -347,6 +357,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     const preferUnread = req.query.preferUnread === '1';
     const skipPassageId = typeof req.query.skipPassageId === 'string' ? req.query.skipPassageId : undefined;
     const tagFilter = typeof req.query.tag === 'string' ? req.query.tag.toLowerCase().trim() : undefined;
+    const allowUntagged = req.query.allowUntagged === '1';
     let userId: string | null = null;
 
     // Try to get user (optional auth)
@@ -366,6 +377,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     // Discover and push entry points while repair work can handle the historical corpus.
     const allPassages = await prisma.passage.findMany();
     const readablePassages = filterReadablePassages(allPassages);
+    const discoverPassages = preferTaggedPool(readablePassages, allowUntagged);
     if (readablePassages.length === 0) {
       res.status(404).json({ error: 'No readable passages found' });
       return;
@@ -374,12 +386,12 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     // Apply tag filter — fall back to full pool if no passages match the selected tag.
     const tagFilteredPassages = tagFilter
       ? (() => {
-          const filtered = readablePassages.filter((p) =>
+          const filtered = discoverPassages.filter((p) =>
             parsePassageTags(p.tags).some((t) => t.toLowerCase() === tagFilter),
           );
-          return filtered.length > 0 ? filtered : readablePassages;
+          return filtered.length > 0 ? filtered : discoverPassages;
         })()
-      : readablePassages;
+      : discoverPassages;
 
     let passage = null;
 
@@ -681,6 +693,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     ]);
 
     const readablePassages = filterReadablePassages(allPassages);
+    const dailyReadablePassages = preferTaggedPool(readablePassages);
     const recentHistoryIds = historyEvents.slice(0, 30).map((event) => event.passageId);
     const recentPushIds = pushHistory.slice(0, 30).map((delivery) => delivery.passageId);
     const seenIds = new Set([
@@ -690,7 +703,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     const recentIds = new Set([...recentHistoryIds, ...recentPushIds]);
     const { avoidTags } = splitPreferenceControls(prefs);
     const prefMap = preferenceMapWithoutAvoids(prefs);
-    const poolChoice = chooseDailyQueuePool({ readablePassages, seenIds, recentIds, prefMap, avoidTags, limit });
+    const poolChoice = chooseDailyQueuePool({ readablePassages: dailyReadablePassages, seenIds, recentIds, prefMap, avoidTags, limit });
 
     const queue = poolChoice.pool
       .map((passage) => ({
@@ -698,7 +711,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
         queueScore: scoreDailyQueueCandidate(passage, prefMap, avoidTags, seed),
       }))
       .sort((a, b) => b.queueScore - a.queueScore)
-      .slice(0, Math.min(limit, readablePassages.length))
+      .slice(0, Math.min(limit, dailyReadablePassages.length))
       .map(({ passage }, index) => ({
         ...passage,
         queuePosition: index + 1,
@@ -720,6 +733,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       counts: {
         totalPassages: allPassages.length,
         readablePassages: readablePassages.length,
+        taggedReadablePassages: dailyReadablePassages.length,
         seenPassages: seenIds.size,
         recentPassages: recentIds.size,
         poolPassages: poolChoice.pool.length,
