@@ -136,6 +136,12 @@ interface ReadingChallengesResponse {
 
 type QueuePlaybackState = 'idle' | 'playing' | 'paused';
 
+interface SpeechTextChunk {
+  text: string;
+  start: number;
+  end: number;
+}
+
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 
 function parsePassageTags(raw: string | string[] | null | undefined): string[] {
@@ -164,6 +170,35 @@ function shortExcerpt(text: string) {
   return normalized.length > 220
     ? `${normalized.slice(0, 220).trim()}…`
     : normalized;
+}
+
+function splitSpeechText(text: string): SpeechTextChunk[] {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return [];
+
+  const sentenceMatches = normalized.match(/[^.!?。！？；;]+[.!?。！？；;”’"]*|[^.!?。！？；;]+$/g) || [normalized];
+  const chunks: SpeechTextChunk[] = [];
+  let cursor = 0;
+
+  for (const rawChunk of sentenceMatches) {
+    const chunkText = rawChunk.trim();
+    if (!chunkText) continue;
+    const start = normalized.indexOf(chunkText, cursor);
+    const safeStart = start >= 0 ? start : cursor;
+    const end = safeStart + chunkText.length;
+    chunks.push({ text: chunkText, start: safeStart, end });
+    cursor = end;
+  }
+
+  return chunks.length ? chunks : [{ text: normalized, start: 0, end: normalized.length }];
+}
+
+function speechChunkIndexForChar(chunks: SpeechTextChunk[], charIndex: number) {
+  if (!chunks.length) return null;
+  const index = chunks.findIndex((chunk) => charIndex >= chunk.start && charIndex < chunk.end);
+  if (index >= 0) return index;
+  if (charIndex >= chunks[chunks.length - 1].end) return chunks.length - 1;
+  return 0;
 }
 
 function passageErrorMessage(status: number) {
@@ -206,6 +241,7 @@ export default function Discover() {
   const [relatedStatus, setRelatedStatus] = useState<Record<string, string>>({});
   const [queuePlayback, setQueuePlayback] = useState<QueuePlaybackState>('idle');
   const [queueActiveIndex, setQueueActiveIndex] = useState<number | null>(null);
+  const [activeSpeechChunkIndex, setActiveSpeechChunkIndex] = useState<number | null>(null);
   const [queueNotice, setQueueNotice] = useState<string | null>(null);
   const [unreadPush, setUnreadPush] = useState<UnreadPushSummary>({ count: 0, latest: null });
   const [readingChallenges, setReadingChallenges] = useState<ReadingChallengesResponse | null>(null);
@@ -617,6 +653,7 @@ export default function Discover() {
     dailyQueueUtteranceRef.current = null;
     setQueuePlayback('idle');
     setQueueActiveIndex(null);
+    setActiveSpeechChunkIndex(null);
   }, []);
 
   const speakDailyQueueItem = useCallback((index: number) => {
@@ -640,7 +677,10 @@ export default function Discover() {
     setQueueNotice(null);
     void fetchPassageById(item.id, 'discover');
 
-    const textToRead = `${item.bookTitle}. ${item.author}. ${item.text}`.replace(/\s+/g, ' ').trim();
+    const speechChunks = splitSpeechText(item.text);
+    setActiveSpeechChunkIndex(speechChunks.length ? 0 : null);
+    const speechPrefix = `${item.bookTitle}. ${item.author}. `;
+    const textToRead = `${speechPrefix}${item.text}`.replace(/\s+/g, ' ').trim();
     const utterance = new SpeechSynthesisUtterance(textToRead);
     utterance.rate = 0.92;
     utterance.pitch = 1;
@@ -648,6 +688,12 @@ export default function Discover() {
     const voices = window.speechSynthesis.getVoices();
     const preferredVoice = voices.find((voice) => voice.lang?.toLowerCase().startsWith(utterance.lang.toLowerCase().slice(0, 2)));
     if (preferredVoice) utterance.voice = preferredVoice;
+
+    utterance.onboundary = (event) => {
+      if (dailyQueueUtteranceRef.current !== utterance) return;
+      const passageCharIndex = Math.max(0, event.charIndex - speechPrefix.length);
+      setActiveSpeechChunkIndex(speechChunkIndexForChar(speechChunks, passageCharIndex));
+    };
 
     utterance.onend = () => {
       if (dailyQueueUtteranceRef.current !== utterance) return;
@@ -658,6 +704,7 @@ export default function Discover() {
       } else {
         setQueuePlayback('idle');
         setQueueActiveIndex(null);
+        setActiveSpeechChunkIndex(null);
         setQueueNotice('Daily listening queue complete.');
       }
     };
@@ -665,6 +712,7 @@ export default function Discover() {
       if (dailyQueueUtteranceRef.current !== utterance) return;
       dailyQueueUtteranceRef.current = null;
       setQueuePlayback('idle');
+      setActiveSpeechChunkIndex(null);
       setQueueNotice('Could not play this daily queue on this device. Reading mode is still available.');
     };
 
@@ -696,6 +744,9 @@ export default function Discover() {
     if (nextIndex >= 0) speakDailyQueueItem(nextIndex);
   }, [dailyQueue?.queue, queueActiveIndex, speakDailyQueueItem]);
 
+  const activeQueueItem = queueActiveIndex !== null ? dailyQueue?.queue[queueActiveIndex] : null;
+  const isCurrentPassageSpeaking = Boolean(passage && activeQueueItem?.id === passage.id && queuePlayback !== 'idle');
+  const activePassageSpeechChunks = passage ? splitSpeechText(passage.text) : [];
   const tags = parsePassageTags(passage?.tags);
   const accent = passageAccent(tags);
 
@@ -1044,8 +1095,28 @@ export default function Discover() {
 
                   <blockquote className="relative rounded-[1.5rem] border border-white/10 bg-base-100/55 p-5 font-serif text-lg leading-8 shadow-inner sm:p-6 sm:text-xl sm:leading-9">
                     <span className="absolute -left-1 -top-6 font-serif text-7xl text-primary/25">“</span>
-                    <span className="relative">{passage.text}</span>
+                    {isCurrentPassageSpeaking && activePassageSpeechChunks.length ? (
+                      <span className="relative" aria-label="Listening-highlighted passage text">
+                        {activePassageSpeechChunks.map((chunk, index) => (
+                          <span
+                            key={`${chunk.start}-${chunk.end}`}
+                            data-speaking-chunk={index === activeSpeechChunkIndex ? 'active' : 'inactive'}
+                            className={index === activeSpeechChunkIndex ? 'rounded-lg bg-primary/25 px-1 text-primary-content shadow-[0_0_0_1px_rgba(255,255,255,0.12)] transition-colors' : 'transition-colors'}
+                          >
+                            {chunk.text}{' '}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="relative">{passage.text}</span>
+                    )}
                   </blockquote>
+
+                  {isCurrentPassageSpeaking && (
+                    <p className="mt-2 text-xs text-primary/80" role="status">
+                      Listening highlight: following the spoken sentence/paragraph while today&apos;s queue plays.
+                    </p>
+                  )}
 
                   <div className="mt-5 flex flex-wrap gap-2">
                     {tags.slice(0, 5).map(tag => (

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-28 — PLANET-3205 Daily Review related saved pages
+> 最后更新: 2026-06-28 — PLANET-3233 Daily listening spoken-text highlight
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -251,7 +251,7 @@ exisz/randompage (GitHub)
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
-- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, opens each active passage through `/api/passages/:id?source=discover`, and therefore records the existing Discover view interaction instead of introducing a new audio/content model.
+- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, opens each active passage through `/api/passages/:id?source=discover`, and highlights the currently spoken sentence/paragraph on the active card using speech boundary events with a first-chunk fallback, therefore recording the existing Discover view interaction instead of introducing a new audio/content model.
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regressions: `pnpm --filter @randompage/app check:listen-control` and `pnpm --filter @randompage/app check:daily-queue`.
 - Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
