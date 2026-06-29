@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-28 — PLANET-3233 Daily listening spoken-text highlight
+> 最后更新: 2026-06-30 — PLANET-3275 Media Session lock-screen controls for listening
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -251,7 +251,8 @@ exisz/randompage (GitHub)
 ## Passage Listen Controls
 
 - `apps/app/src/client/components/ListenControl.tsx` uses the browser Web Speech API (`speechSynthesis` + `SpeechSynthesisUtterance`) for v1 read-aloud; no paid TTS backend, generated audio storage, or content pipeline is introduced.
-- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, opens each active passage through `/api/passages/:id?source=discover`, and highlights the currently spoken sentence/paragraph on the active card using speech boundary events with a first-chunk fallback, therefore recording the existing Discover view interaction instead of introducing a new audio/content model.
+- `apps/app/src/client/lib/mediaSession.ts` bridges active passage listening to the browser Media Session API when available: metadata uses existing passage title/author plus RandomPage artwork, action handlers are best-effort (`play`/`pause`/`stop`/`previous`/`next`), and unsupported browsers silently keep in-app controls.
+- Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, updates Media Session metadata as the active passage changes, opens each active passage through `/api/passages/:id?source=discover`, and highlights the currently spoken sentence/paragraph on the active card using speech boundary events with a first-chunk fallback, therefore recording the existing Discover view interaction instead of introducing a new audio/content model.
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regressions: `pnpm --filter @randompage/app check:listen-control` and `pnpm --filter @randompage/app check:daily-queue`.
 - Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
@@ -310,6 +311,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-06-30 | PLANET-3275: Added best-effort browser Media Session metadata and lock-screen action handlers for active passage Listen controls and Discover daily listening queue. Metadata follows the active existing RandomPage passage title/author, play/pause/stop/previous/next reuse existing Web Speech queue controls where supported, and `check:listen-control` now guards the integration without adding native CarPlay/Android Auto, generated audio, summaries, or new content sources. | Engineer Pod |
 | 2026-06-28 | PLANET-3240: Hardened tag cron against depleted Gemini credits and low-quality tag responses. `tag-untagged` now detects Gemini credit/quota/billing 429 or too-few-tags rows, applies deterministic local fallback tags with `fallbackTagged` observability, clears recovered failure rows, and Discover/daily queue default to tagged readable pools unless `allowUntagged=1` or no tagged fallback exists; expanded `check:tag-failures --static-only`. | Engineer Pod |
 | 2026-06-28 | PLANET-3205: Added “Related saved pages” to Daily Review, Themed Review, and Recall Cards. The new `/api/bookmarks/:id/related` endpoint reuses deterministic recall-search scoring over user-owned saved RandomPage passages only, excludes the current card, returns match reasons/snippets, and keeps existing open/listen/share/card/queue/review actions; added `check:related-saved-pages`. | Engineer Pod |
 | 2026-06-27 | PLANET-3180: Added reviewed Open Library → IA OCR candidate queue (`pnpm --filter @randompage/app queue:ol-ia-candidates`) that converts the Search Inside eval artifact into metadata-only queue/review files, keeps all rows `reviewed:false` by default, and adds `check:ol-ia-queue` to guard against OCR/plaintext fetch or copied full passage text before human allowlist. | Engineer Pod |

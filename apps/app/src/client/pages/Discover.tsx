@@ -8,6 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import PassageFeedbackChips from '../components/PassageFeedbackChips';
 import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
+import { clearPassageMediaSession, setMediaSessionPlaybackState, setPassageMediaSession } from '../lib/mediaSession';
 import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 import BookSourceLink from '../components/BookSourceLink';
 
@@ -654,6 +655,7 @@ export default function Discover() {
     setQueuePlayback('idle');
     setQueueActiveIndex(null);
     setActiveSpeechChunkIndex(null);
+    clearPassageMediaSession();
   }, []);
 
   const speakDailyQueueItem = useCallback((index: number) => {
@@ -705,6 +707,7 @@ export default function Discover() {
         setQueuePlayback('idle');
         setQueueActiveIndex(null);
         setActiveSpeechChunkIndex(null);
+        clearPassageMediaSession();
         setQueueNotice('Daily listening queue complete.');
       }
     };
@@ -713,10 +716,32 @@ export default function Discover() {
       dailyQueueUtteranceRef.current = null;
       setQueuePlayback('idle');
       setActiveSpeechChunkIndex(null);
+      clearPassageMediaSession();
       setQueueNotice('Could not play this daily queue on this device. Reading mode is still available.');
     };
 
     dailyQueueUtteranceRef.current = utterance;
+    setPassageMediaSession({
+      title: item.bookTitle || 'RandomPage daily passage',
+      artist: item.author || 'RandomPage',
+      album: 'RandomPage Daily Listening',
+      handlers: {
+        play: () => {
+          window.speechSynthesis.resume();
+          setQueuePlayback('playing');
+          setMediaSessionPlaybackState('playing');
+        },
+        pause: () => {
+          window.speechSynthesis.pause();
+          setQueuePlayback('paused');
+          setMediaSessionPlaybackState('paused');
+        },
+        stop: stopDailyQueue,
+        previoustrack: () => speakDailyQueueItem(Math.max(index - 1, 0)),
+        nexttrack: () => speakDailyQueueItem(Math.min(index + 1, queue.length - 1)),
+      },
+    });
+    setMediaSessionPlaybackState('playing');
     if (voices.length === 0) setQueueNotice('Using your browser default voice. If you hear nothing, this device may not have a speech voice installed.');
     window.speechSynthesis.speak(utterance);
   }, [dailyQueue?.queue, fetchPassageById, stopDailyQueue]);
@@ -730,12 +755,14 @@ export default function Discover() {
     if (!speechQueueAvailable()) return;
     window.speechSynthesis.pause();
     setQueuePlayback('paused');
+    setMediaSessionPlaybackState('paused');
   }, []);
 
   const resumeDailyQueue = useCallback(() => {
     if (!speechQueueAvailable()) return;
     window.speechSynthesis.resume();
     setQueuePlayback('playing');
+    setMediaSessionPlaybackState('playing');
   }, []);
 
   const nextDailyQueue = useCallback(() => {

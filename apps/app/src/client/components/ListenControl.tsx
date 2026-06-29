@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { clearPassageMediaSession, setMediaSessionPlaybackState, setPassageMediaSession } from '../lib/mediaSession';
 
 type ListenState = 'idle' | 'speaking' | 'paused';
 
@@ -25,6 +26,7 @@ export default function ListenControl({ text, title = 'passage', compact = false
     if (utteranceRef.current && speechAvailable()) {
       window.speechSynthesis.cancel();
     }
+    clearPassageMediaSession();
   }, []);
 
   if (!textToRead) return null;
@@ -36,6 +38,7 @@ export default function ListenControl({ text, title = 'passage', compact = false
     window.speechSynthesis.cancel();
     utteranceRef.current = null;
     setState('idle');
+    clearPassageMediaSession();
   };
 
   const start = () => {
@@ -47,6 +50,7 @@ export default function ListenControl({ text, title = 'passage', compact = false
     if (state === 'paused') {
       window.speechSynthesis.resume();
       setState('speaking');
+      setMediaSessionPlaybackState('playing');
       return;
     }
 
@@ -62,16 +66,32 @@ export default function ListenControl({ text, title = 'passage', compact = false
     utterance.onend = () => {
       utteranceRef.current = null;
       setState('idle');
+      clearPassageMediaSession();
     };
     utterance.onerror = () => {
       utteranceRef.current = null;
       setState('idle');
+      clearPassageMediaSession();
       setNotice('Could not start speech on this device. Reading mode is still available.');
     };
 
     utteranceRef.current = utterance;
     setState('speaking');
     setNotice(voices.length === 0 ? 'Using your browser default voice. If you hear nothing, this device has no speech voice installed.' : null);
+    setPassageMediaSession({
+      title,
+      artist: 'RandomPage',
+      handlers: {
+        play: () => {
+          window.speechSynthesis.resume();
+          setState('speaking');
+          setMediaSessionPlaybackState('playing');
+        },
+        pause,
+        stop,
+      },
+    });
+    setMediaSessionPlaybackState('playing');
     window.speechSynthesis.speak(utterance);
   };
 
@@ -79,6 +99,7 @@ export default function ListenControl({ text, title = 'passage', compact = false
     if (!speechAvailable()) return;
     window.speechSynthesis.pause();
     setState('paused');
+    setMediaSessionPlaybackState('paused');
   };
 
   const primaryLabel = state === 'speaking' ? 'Pause' : state === 'paused' ? 'Resume' : 'Listen';
