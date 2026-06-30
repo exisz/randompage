@@ -8,7 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
-import { copyPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
+import { copyMarkdownPassageExport, copyPassageExport, downloadMarkdownPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
 import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 
 interface Passage {
@@ -274,6 +274,25 @@ export default function Bookmarks() {
     );
   };
 
+
+  const markdownPayloadForBookmark = (bookmark: Bookmark) => ({
+    ...bookmark.passage,
+    note: bookmark.note,
+    collections: bookmark.collectionItems?.map(item => item.collection.name) ?? [],
+    annotations: bookmark.annotations?.map(annotation => ({ quote: annotation.quote, note: annotation.note })) ?? [],
+  });
+
+  const exportBookmarkMarkdown = async (bookmark: Bookmark) => {
+    const payload = markdownPayloadForBookmark(bookmark);
+    try {
+      await copyMarkdownPassageExport(payload);
+      setExportStatus(`Copied Markdown export for ${bookmark.passage.bookTitle}.`);
+    } catch {
+      downloadMarkdownPassageExport(payload);
+      setExportStatus(`Clipboard unavailable; downloaded Markdown for ${bookmark.passage.bookTitle}.`);
+    }
+    window.setTimeout(() => setExportStatus(null), 3500);
+  };
 
   const exportFilteredBookmarks = async (format: 'html' | 'txt' | 'copy' | 'email') => {
     if (filteredBookmarks.length === 0) return;
@@ -1116,6 +1135,7 @@ export default function Bookmarks() {
                       <ListenControl text={bm.passage.text} title={`${bm.passage.bookTitle} saved passage`} compact />
                       <SharePassageButton passage={bm.passage} compact />
                       <SharePassageImageButton passage={bm.passage} compact />
+                      <button className="btn btn-outline btn-xs" onClick={() => exportBookmarkMarkdown(bm)}>Export Markdown</button>
                       <button
                         className="btn btn-outline btn-xs"
                         onClick={() => addBookmarkToQueue(bm)}
