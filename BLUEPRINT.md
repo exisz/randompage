@@ -176,8 +176,8 @@ exisz/randompage (GitHub)
 
 - Service worker `apps/app/src/client/public/sw.js` caches navigations/app shell and static assets so `/discover`, `/bookmarks`, `/history`, `/settings` can render offline after a successful online session.
 - Client offline helper `apps/app/src/client/lib/offline.ts` persists the last 30 bookmarks and last 30 browsing/push history entries in localStorage after authenticated online loads.
-- Offline Bookmarks/History are read-only and show explicit cached/offline banners; Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
-- Static regression: `pnpm --filter @randompage/app check:offline-cache`.
+- Offline Bookmarks/History are read-only and show explicit cached/offline banners; cached saved/queued/history/push-inbox passage cards explicitly keep browser Web Speech Listen controls available offline (device voice permitting, no downloaded audio), while Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
+- Static regression: `pnpm --filter @randompage/app check:offline-cache` (covers cached listening copy and no-audio-download browser-speech notice).
 
 ## Saved-Passage Private Notes
 
@@ -312,6 +312,7 @@ exisz/randompage (GitHub)
 | 日期 | 变更 | 作者 |
 |------|------|------|
 | 2026-06-30 | PLANET-3275: Added best-effort browser Media Session metadata and lock-screen action handlers for active passage Listen controls and Discover daily listening queue. Metadata follows the active existing RandomPage passage title/author, play/pause/stop/previous/next reuse existing Web Speech queue controls where supported, and `check:listen-control` now guards the integration without adding native CarPlay/Android Auto, generated audio, summaries, or new content sources. | Engineer Pod |
+| 2026-06-30 | PLANET-3295: Made offline cached-passage listening an explicit supported path. Bookmarks/History offline banners now tell users cached saved/queued/history/push-inbox cards can still use browser Web Speech with no downloaded audio, Discover offline copy points fresh recommendations back to cached Bookmarks/History listening, and `check:offline-cache` guards the copy + offline ListenControl notice. | Engineer Pod |
 | 2026-06-28 | PLANET-3240: Hardened tag cron against depleted Gemini credits and low-quality tag responses. `tag-untagged` now detects Gemini credit/quota/billing 429 or too-few-tags rows, applies deterministic local fallback tags with `fallbackTagged` observability, clears recovered failure rows, and Discover/daily queue default to tagged readable pools unless `allowUntagged=1` or no tagged fallback exists; expanded `check:tag-failures --static-only`. | Engineer Pod |
 | 2026-06-28 | PLANET-3205: Added “Related saved pages” to Daily Review, Themed Review, and Recall Cards. The new `/api/bookmarks/:id/related` endpoint reuses deterministic recall-search scoring over user-owned saved RandomPage passages only, excludes the current card, returns match reasons/snippets, and keeps existing open/listen/share/card/queue/review actions; added `check:related-saved-pages`. | Engineer Pod |
 | 2026-06-27 | PLANET-3180: Added reviewed Open Library → IA OCR candidate queue (`pnpm --filter @randompage/app queue:ol-ia-candidates`) that converts the Search Inside eval artifact into metadata-only queue/review files, keeps all rows `reviewed:false` by default, and adds `check:ol-ia-queue` to guard against OCR/plaintext fetch or copied full passage text before human allowlist. | Engineer Pod |

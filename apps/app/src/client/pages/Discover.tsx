@@ -495,7 +495,7 @@ export default function Discover() {
       console.error(e);
       setPassage(null);
       setLoadError(isOfflineError(e)
-        ? 'You are offline. Fresh Discover recommendations need the network; saved passages and push inbox can be read from cached Bookmarks/History after a prior online sync.'
+        ? 'You are offline. Fresh Discover recommendations need the network; saved passages and push inbox can be read or listened to from cached Bookmarks/History after a prior online sync.'
         : e instanceof Error ? e.message : 'Could not load passage. Try again.');
     } finally {
       setLoading(false);
@@ -534,7 +534,7 @@ export default function Discover() {
       console.error(e);
       if (isOfflineError(e)) {
         setPassage(null);
-        setLoadError('You are offline. Reconnect to open and mark this pushed passage read, or use History to read cached push-inbox cards from your last online session.');
+        setLoadError('You are offline. Reconnect to open and mark this pushed passage read, or use History to read and listen to cached push-inbox cards from your last online session.');
       } else {
         setLoadError('Could not load the pushed passage. Showing another passage instead.');
         await fetchPassage(true);

@@ -626,7 +626,7 @@ export default function Bookmarks() {
 
         {(!online || offlineMode) && (
           <div className="alert alert-info mb-4 shadow">
-            <span>Offline library mode — showing cached saved passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Reconnect to edit collections or sync fresh bookmarks.</span>
+            <span>Offline library mode — showing cached saved passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Cached saved and queued passages can still be listened to with your browser voice; no audio is downloaded. Reconnect to edit collections or sync fresh bookmarks.</span>
           </div>
         )}
 

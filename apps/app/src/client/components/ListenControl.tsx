@@ -77,7 +77,10 @@ export default function ListenControl({ text, title = 'passage', compact = false
 
     utteranceRef.current = utterance;
     setState('speaking');
-    setNotice(voices.length === 0 ? 'Using your browser default voice. If you hear nothing, this device has no speech voice installed.' : null);
+    const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    setNotice(isOffline
+      ? 'Offline cached listening uses your browser’s built-in speech voice; no audio file is downloaded.'
+      : voices.length === 0 ? 'Using your browser default voice. If you hear nothing, this device has no speech voice installed.' : null);
     setPassageMediaSession({
       title,
       artist: 'RandomPage',

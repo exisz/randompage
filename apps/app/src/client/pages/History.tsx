@@ -169,7 +169,7 @@ export default function History() {
         </div>
         {(!online || offlineMode) && (
           <div className="alert alert-info mb-4 shadow">
-            <span>Offline inbox mode — showing cached browsing and push-inbox passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Reconnect to mark pushed passages read or load fresh history.</span>
+            <span>Offline inbox mode — showing cached browsing and push-inbox passages{offlineCachedAt ? ` from ${new Date(offlineCachedAt).toLocaleString()}` : ''}. Cached history and push-inbox cards can still be listened to with your browser voice; no audio is downloaded. Reconnect to mark pushed passages read or load fresh history.</span>
           </div>
         )}
         <div className="tabs tabs-boxed mb-4">
