@@ -1,0 +1,951 @@
+{
+  "generatedAt": "2026-07-01T18:17:52.687Z",
+  "policy": "local evaluation only; no production writes; no protected full-text import; bounded serial metadata/page OCR probes",
+  "pageProbes": [
+    1,
+    5,
+    10,
+    25
+  ],
+  "summary": {
+    "seedsTested": 15,
+    "metadataSuccesses": 15,
+    "volumesTested": 13,
+    "fullViewLikely": 6,
+    "pageTextSuccesses": 0,
+    "accessFailures": 13,
+    "usablePassageCandidates": 0,
+    "verdict": "B: viable for metadata/access discovery; direct OCR/page text is not reliably obtainable unauthenticated in this environment"
+  },
+  "seeds": [
+    {
+      "topic": "philosophy",
+      "label": "Meditations / Marcus Aurelius",
+      "idType": "isbn",
+      "id": "0140449337",
+      "metadataSuccess": true,
+      "recordId": "005229117",
+      "recordUrl": "https://catalog.hathitrust.org/Record/005229117",
+      "title": "Meditations",
+      "author": null,
+      "publishDates": [
+        "2006"
+      ],
+      "itemCount": 1,
+      "sampledItems": [
+        {
+          "htid": "hvd.32044050117126",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=hvd.32044050117126",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        }
+      ]
+    },
+    {
+      "topic": "philosophy",
+      "label": "Republic / Plato",
+      "idType": "isbn",
+      "id": "0872201368",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Republic / Plato",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "philosophy",
+      "label": "Beyond Good and Evil / Nietzsche",
+      "idType": "isbn",
+      "id": "014044923X",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Beyond Good and Evil / Nietzsche",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "psychology",
+      "label": "Principles of Psychology / William James",
+      "idType": "oclc",
+      "id": "1029815",
+      "metadataSuccess": true,
+      "recordId": "000317313",
+      "recordUrl": "https://catalog.hathitrust.org/Record/000317313",
+      "title": "Josiah Bushnell Grinnell",
+      "author": null,
+      "publishDates": [
+        "1938"
+      ],
+      "itemCount": 1,
+      "sampledItems": [
+        {
+          "htid": "mdp.39015022468816",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=mdp.39015022468816",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        }
+      ]
+    },
+    {
+      "topic": "psychology",
+      "label": "Interpretation of Dreams / Freud",
+      "idType": "isbn",
+      "id": "0380010003",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Interpretation of Dreams / Freud",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "psychology",
+      "label": "Talks to Teachers on Psychology / William James",
+      "idType": "oclc",
+      "id": "271802",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Talks to Teachers on Psychology / William James",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "history",
+      "label": "Peloponnesian War / Thucydides",
+      "idType": "isbn",
+      "id": "0140440399",
+      "metadataSuccess": true,
+      "recordId": "002995429",
+      "recordUrl": "https://catalog.hathitrust.org/Record/002995429",
+      "title": "History of the Peloponnesian War",
+      "author": null,
+      "publishDates": [
+        "1972"
+      ],
+      "itemCount": 1,
+      "sampledItems": [
+        {
+          "htid": "ucbk.ark:/28722/h2jd4q483",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=ucbk.ark:/28722/h2jd4q483",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        }
+      ]
+    },
+    {
+      "topic": "history",
+      "label": "Decline and Fall / Gibbon",
+      "idType": "oclc",
+      "id": "2217038",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Decline and Fall / Gibbon",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "history",
+      "label": "French Revolution / Carlyle",
+      "idType": "oclc",
+      "id": "1328095",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "French Revolution / Carlyle",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "literature",
+      "label": "Pride and Prejudice / Austen",
+      "idType": "oclc",
+      "id": "3865959",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Pride and Prejudice / Austen",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "literature",
+      "label": "Hamlet / Shakespeare",
+      "idType": "oclc",
+      "id": "1716920",
+      "metadataSuccess": true,
+      "recordId": "000598798",
+      "recordUrl": "https://catalog.hathitrust.org/Record/000598798",
+      "title": "Modern drama",
+      "author": null,
+      "publishDates": [
+        "1958"
+      ],
+      "itemCount": 27,
+      "sampledItems": [
+        {
+          "htid": "uc1.31175000452303",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uc1.31175000452303",
+          "rightsCode": "und",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        },
+        {
+          "htid": "uc1.l0054596499",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uc1.l0054596499",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        },
+        {
+          "htid": "ufl.31262074536656",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=ufl.31262074536656",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        },
+        {
+          "htid": "uc1.31175000452311",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uc1.31175000452311",
+          "rightsCode": "und",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        },
+        {
+          "htid": "ufl.31262051958006",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=ufl.31262051958006",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        },
+        {
+          "htid": "uc1.31175000452329",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uc1.31175000452329",
+          "rightsCode": "und",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        }
+      ]
+    },
+    {
+      "topic": "literature",
+      "label": "Moby-Dick / Melville",
+      "idType": "oclc",
+      "id": "270685",
+      "metadataSuccess": true,
+      "recordId": "009775845",
+      "recordUrl": "https://catalog.hathitrust.org/Record/009775845",
+      "title": "The midge",
+      "author": null,
+      "publishDates": [
+        "1902"
+      ],
+      "itemCount": 1,
+      "sampledItems": [
+        {
+          "htid": "uva.x002111831",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uva.x002111831",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        }
+      ]
+    },
+    {
+      "topic": "classics",
+      "label": "Iliad / Homer",
+      "idType": "oclc",
+      "id": "1934975",
+      "metadataSuccess": true,
+      "recordId": null,
+      "recordUrl": null,
+      "title": "Iliad / Homer",
+      "author": null,
+      "publishDates": [],
+      "itemCount": 0,
+      "sampledItems": []
+    },
+    {
+      "topic": "classics",
+      "label": "Odyssey / Homer",
+      "idType": "oclc",
+      "id": "1775384",
+      "metadataSuccess": true,
+      "recordId": "007958133",
+      "recordUrl": "https://catalog.hathitrust.org/Record/007958133",
+      "title": "Bulletin du Comité des travaux historiques et scientifiques. Section des sciences économiques et sociales",
+      "author": null,
+      "publishDates": [
+        "1883"
+      ],
+      "itemCount": 115,
+      "sampledItems": [
+        {
+          "htid": "umn.31951001915271g",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=umn.31951001915271g",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        },
+        {
+          "htid": "njp.32101065210898",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=njp.32101065210898",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        },
+        {
+          "htid": "uc1.b2897057",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=uc1.b2897057",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        },
+        {
+          "htid": "wu.89008108904",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=wu.89008108904",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        },
+        {
+          "htid": "ien.35556002050763",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=ien.35556002050763",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        },
+        {
+          "htid": "umn.31951001915272e",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=umn.31951001915272e",
+          "rightsCode": "pd",
+          "usRightsString": "Full view",
+          "fullViewLikely": true,
+          "limitedSearchOnlyLikely": false
+        }
+      ]
+    },
+    {
+      "topic": "classics",
+      "label": "Divine Comedy / Dante",
+      "idType": "oclc",
+      "id": "732919",
+      "metadataSuccess": true,
+      "recordId": "101043463",
+      "recordUrl": "https://catalog.hathitrust.org/Record/101043463",
+      "title": "Los intelectuales y la política en México",
+      "author": null,
+      "publishDates": [
+        "1971"
+      ],
+      "itemCount": 1,
+      "sampledItems": [
+        {
+          "htid": "txu.059173027073247",
+          "itemURL": "https://babel.hathitrust.org/cgi/pt?id=txu.059173027073247",
+          "rightsCode": "ic",
+          "usRightsString": "Limited (search-only)",
+          "fullViewLikely": false,
+          "limitedSearchOnlyLikely": true
+        }
+      ]
+    }
+  ],
+  "volumes": [
+    {
+      "topic": "philosophy",
+      "title": "Meditations",
+      "author": null,
+      "seedLabel": "Meditations / Marcus Aurelius",
+      "recordId": "005229117",
+      "htid": "hvd.32044050117126",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=hvd.32044050117126",
+      "access": {
+        "rightsCode": "ic",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/hvd.32044050117126/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/hvd.32044050117126/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/hvd.32044050117126/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/hvd.32044050117126/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "psychology",
+      "title": "Josiah Bushnell Grinnell",
+      "author": null,
+      "seedLabel": "Principles of Psychology / William James",
+      "recordId": "000317313",
+      "htid": "mdp.39015022468816",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=mdp.39015022468816",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/mdp.39015022468816/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/mdp.39015022468816/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/mdp.39015022468816/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/mdp.39015022468816/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "history",
+      "title": "History of the Peloponnesian War",
+      "author": null,
+      "seedLabel": "Peloponnesian War / Thucydides",
+      "recordId": "002995429",
+      "htid": "ucbk.ark:/28722/h2jd4q483",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=ucbk.ark:/28722/h2jd4q483",
+      "access": {
+        "rightsCode": "ic",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ucbk.ark%3A%2F28722%2Fh2jd4q483/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ucbk.ark%3A%2F28722%2Fh2jd4q483/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ucbk.ark%3A%2F28722%2Fh2jd4q483/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ucbk.ark%3A%2F28722%2Fh2jd4q483/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "literature",
+      "title": "Modern drama",
+      "author": null,
+      "seedLabel": "Hamlet / Shakespeare",
+      "recordId": "000598798",
+      "htid": "uc1.31175000452303",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=uc1.31175000452303",
+      "access": {
+        "rightsCode": "und",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452303/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452303/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452303/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452303/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "literature",
+      "title": "Modern drama",
+      "author": null,
+      "seedLabel": "Hamlet / Shakespeare",
+      "recordId": "000598798",
+      "htid": "uc1.l0054596499",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=uc1.l0054596499",
+      "access": {
+        "rightsCode": "ic",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.l0054596499/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.l0054596499/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.l0054596499/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.l0054596499/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "literature",
+      "title": "Modern drama",
+      "author": null,
+      "seedLabel": "Hamlet / Shakespeare",
+      "recordId": "000598798",
+      "htid": "ufl.31262074536656",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=ufl.31262074536656",
+      "access": {
+        "rightsCode": "ic",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ufl.31262074536656/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ufl.31262074536656/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ufl.31262074536656/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/ufl.31262074536656/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "literature",
+      "title": "Modern drama",
+      "author": null,
+      "seedLabel": "Hamlet / Shakespeare",
+      "recordId": "000598798",
+      "htid": "uc1.31175000452311",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=uc1.31175000452311",
+      "access": {
+        "rightsCode": "und",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452311/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452311/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452311/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.31175000452311/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "literature",
+      "title": "The midge",
+      "author": null,
+      "seedLabel": "Moby-Dick / Melville",
+      "recordId": "009775845",
+      "htid": "uva.x002111831",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=uva.x002111831",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uva.x002111831/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uva.x002111831/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uva.x002111831/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uva.x002111831/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "classics",
+      "title": "Bulletin du Comité des travaux historiques et scientifiques. Section des sciences économiques et sociales",
+      "author": null,
+      "seedLabel": "Odyssey / Homer",
+      "recordId": "007958133",
+      "htid": "umn.31951001915271g",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=umn.31951001915271g",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/umn.31951001915271g/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/umn.31951001915271g/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/umn.31951001915271g/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/umn.31951001915271g/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "classics",
+      "title": "Bulletin du Comité des travaux historiques et scientifiques. Section des sciences économiques et sociales",
+      "author": null,
+      "seedLabel": "Odyssey / Homer",
+      "recordId": "007958133",
+      "htid": "njp.32101065210898",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=njp.32101065210898",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/njp.32101065210898/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/njp.32101065210898/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/njp.32101065210898/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/njp.32101065210898/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "classics",
+      "title": "Bulletin du Comité des travaux historiques et scientifiques. Section des sciences économiques et sociales",
+      "author": null,
+      "seedLabel": "Odyssey / Homer",
+      "recordId": "007958133",
+      "htid": "uc1.b2897057",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=uc1.b2897057",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.b2897057/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.b2897057/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.b2897057/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/uc1.b2897057/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "classics",
+      "title": "Bulletin du Comité des travaux historiques et scientifiques. Section des sciences économiques et sociales",
+      "author": null,
+      "seedLabel": "Odyssey / Homer",
+      "recordId": "007958133",
+      "htid": "wu.89008108904",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=wu.89008108904",
+      "access": {
+        "rightsCode": "pd",
+        "usRightsString": "Full view",
+        "fullViewLikely": true,
+        "limitedSearchOnlyLikely": false
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/wu.89008108904/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/wu.89008108904/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/wu.89008108904/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/wu.89008108904/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    },
+    {
+      "topic": "classics",
+      "title": "Los intelectuales y la política en México",
+      "author": null,
+      "seedLabel": "Divine Comedy / Dante",
+      "recordId": "101043463",
+      "htid": "txu.059173027073247",
+      "itemUrl": "https://babel.hathitrust.org/cgi/pt?id=txu.059173027073247",
+      "access": {
+        "rightsCode": "ic",
+        "usRightsString": "Limited (search-only)",
+        "fullViewLikely": false,
+        "limitedSearchOnlyLikely": true
+      },
+      "pageTextChars": 0,
+      "pageAttempts": [
+        {
+          "seq": 1,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/txu.059173027073247/1",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 5,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/txu.059173027073247/5",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 10,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/txu.059173027073247/10",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        },
+        {
+          "seq": 25,
+          "url": "https://babel.hathitrust.org/htd/volume/pageocr/txu.059173027073247/25",
+          "success": false,
+          "error": "HTTP 403 Forbidden — <!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/htm"
+        }
+      ],
+      "passageCandidate": null
+    }
+  ],
+  "candidates": []
+}

@@ -38,6 +38,7 @@
     "check:share-passage": "node scripts/check-share-passage-policy.mjs",
     "eval:page-ocr": "node scripts/page-photo-ocr-eval.mjs",
     "eval:ol-search-inside": "node scripts/openlibrary-search-inside-eval.mjs",
+    "eval:hathitrust-page-access": "node scripts/hathitrust-page-access-eval.mjs",
     "queue:ol-ia-candidates": "node scripts/openlibrary-ia-candidate-queue.mjs",
     "check:reading-path": "node scripts/check-reading-path-policy.mjs",
     "check:daily-queue": "node scripts/check-daily-queue-policy.mjs",

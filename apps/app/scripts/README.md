@@ -119,6 +119,36 @@ Safety/rate limits:
 - No protected full-text caching, summaries, generic reader/feed scope, or
   production writes.
 
+
+## hathitrust-page-access-eval.mjs — PLANET-3364
+
+Local evaluation for HathiTrust Bibliographic API coverage plus page-level OCR
+access. It probes 10–20 Exis-aligned candidate volumes across philosophy,
+psychology, history, literature, and classics; records title/author/HTID,
+rights/access flags, metadata success, page OCR response status/errors, and
+normalizes obtainable page text into RandomPage-sized candidate passages when
+possible. It never writes Turso or production tables.
+
+```bash
+pnpm --filter @randompage/app eval:hathitrust-page-access -- \
+  --max-seeds 15 \
+  --max-volumes 15 \
+  --max-page-probes 4
+```
+
+Outputs:
+- `apps/app/docs/hathitrust-page-access-eval-report.md`
+- `apps/app/docs/hathitrust-page-access-eval-samples.json`
+
+Safety/rate limits:
+- Serial requests only, descriptive User-Agent, short delays between calls.
+- Metadata/access discovery is separated from production import.
+- Page OCR candidates are local evaluation artifacts only; no protected
+  full-text caching, summaries, generic reader/feed scope, or production writes.
+- If HathiTrust page OCR is blocked or requires institutional/authenticated
+  access, the report records concrete failures and returns a metadata-only /
+  not-directly-viable verdict.
+
 ## openlibrary-ia-candidate-queue.mjs — PLANET-3180
 
 Review-first queue builder for the Open Library → IA OCR path. It reads the
