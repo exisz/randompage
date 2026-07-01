@@ -10,11 +10,14 @@ export interface ExportPassage {
   annotations?: { quote: string; note: string }[];
 }
 
+export type MarkdownExportVariant = 'plain' | 'obsidian';
+
 export interface ExportBundleOptions {
   title: string;
   description?: string;
   passages: ExportPassage[];
   format?: 'html' | 'txt' | 'md';
+  markdownVariant?: MarkdownExportVariant;
 }
 
 export interface EmailPassageExportResult {
@@ -61,8 +64,16 @@ function safeFileName(title: string, extension: 'html' | 'txt' | 'md') {
   return `${base}.${extension}`;
 }
 
+function yamlString(value: string) {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
 
-export function buildPassageMarkdownExport(passage: ExportPassage) {
+function yamlArray(values: string[]) {
+  return `[${values.map(yamlString).join(', ')}]`;
+}
+
+
+export function buildPassageMarkdownExport(passage: ExportPassage, variant: MarkdownExportVariant = 'plain') {
   const title = clean(passage.bookTitle) || 'Untitled RandomPage passage';
   const author = clean(passage.author) || 'Unknown author';
   const tags = parseTags(passage.tags);
@@ -73,17 +84,21 @@ export function buildPassageMarkdownExport(passage: ExportPassage) {
   const url = canonicalUrl(passage.id);
   const quoteBlock = clean(passage.text).split(/\n+/).map(line => `> ${line}`).join('\n');
 
-  const frontmatter = [
-    '---',
-    'source: RandomPage',
-    `randompage_url: ${url}`,
-    `title: "${title.replace(/"/g, '\\"')}"`,
-    `author: "${author.replace(/"/g, '\\"')}"`,
-    passage.chapter ? `chapter: "${clean(passage.chapter).replace(/"/g, '\\"')}"` : '',
-    tags.length ? `tags: [${tags.map(tag => `"${tag.replace(/"/g, '\\"')}"`).join(', ')}]` : 'tags: []',
-    collections.length ? `collections: [${collections.map(collection => `"${collection.replace(/"/g, '\\"')}"`).join(', ')}]` : 'collections: []',
-    '---',
-  ].filter(Boolean).join('\n');
+  const frontmatter = variant === 'obsidian'
+    ? [
+      '---',
+      'source: RandomPage',
+      `sourceurl: ${url}`,
+      `randompageurl: ${url}`,
+      `title: ${yamlString(title)}`,
+      `author: ${yamlString(author)}`,
+      passage.chapter ? `chapter: ${yamlString(clean(passage.chapter))}` : '',
+      `tags: ${yamlArray(tags)}`,
+      `collections: ${yamlArray(collections)}`,
+      `exported_at: ${yamlString(new Date().toISOString())}`,
+      '---',
+    ].filter(Boolean).join('\n')
+    : '';
 
   const body = [
     `# ${escapeMarkdown(title)}`,
@@ -104,7 +119,7 @@ export function buildPassageMarkdownExport(passage: ExportPassage) {
     '_Exported from RandomPage. This file contains only your saved passage excerpt, private note, and line-level thoughts — no summaries or new content._',
   ].filter(line => line !== '').join('\n');
 
-  return `${frontmatter}\n\n${body}\n`;
+  return frontmatter ? `${frontmatter}\n\n${body}\n` : `${body}\n`;
 }
 
 export function buildPassageExportText({ title, description, passages }: ExportBundleOptions) {
@@ -180,7 +195,7 @@ export function buildPassageExportHtml({ title, description, passages }: ExportB
 export function downloadPassageExport(options: ExportBundleOptions) {
   const format = options.format ?? 'html';
   const content = format === 'md' && options.passages[0]
-    ? buildPassageMarkdownExport(options.passages[0])
+    ? buildPassageMarkdownExport(options.passages[0], options.markdownVariant)
     : format === 'txt'
       ? buildPassageExportText(options)
       : buildPassageExportHtml(options);
@@ -200,12 +215,12 @@ export async function copyPassageExport(options: ExportBundleOptions) {
   await navigator.clipboard.writeText(text);
 }
 
-export function downloadMarkdownPassageExport(passage: ExportPassage) {
-  downloadPassageExport({ title: `${clean(passage.bookTitle) || 'RandomPage'} Markdown export`, passages: [passage], format: 'md' });
+export function downloadMarkdownPassageExport(passage: ExportPassage, variant: MarkdownExportVariant = 'plain') {
+  downloadPassageExport({ title: `${clean(passage.bookTitle) || 'RandomPage'} ${variant === 'obsidian' ? 'Obsidian Markdown' : 'Markdown'} export`, passages: [passage], format: 'md', markdownVariant: variant });
 }
 
-export async function copyMarkdownPassageExport(passage: ExportPassage) {
-  await navigator.clipboard.writeText(buildPassageMarkdownExport(passage));
+export async function copyMarkdownPassageExport(passage: ExportPassage, variant: MarkdownExportVariant = 'plain') {
+  await navigator.clipboard.writeText(buildPassageMarkdownExport(passage, variant));
 }
 
 export async function emailPassageExport(options: ExportBundleOptions, destinationEmail: string): Promise<EmailPassageExportResult> {

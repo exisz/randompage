@@ -8,7 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import BookSourceLink from '../components/BookSourceLink';
 import { addPassageToReadingQueue, clearReadingQueue, readReadingQueue, removePassageFromReadingQueue, type QueuedPassage } from '../lib/readingQueue';
-import { copyMarkdownPassageExport, copyPassageExport, downloadMarkdownPassageExport, downloadPassageExport, emailPassageExport } from '../lib/passageExport';
+import { copyMarkdownPassageExport, copyPassageExport, downloadMarkdownPassageExport, downloadPassageExport, emailPassageExport, type MarkdownExportVariant } from '../lib/passageExport';
 import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 
 interface Passage {
@@ -282,14 +282,15 @@ export default function Bookmarks() {
     annotations: bookmark.annotations?.map(annotation => ({ quote: annotation.quote, note: annotation.note })) ?? [],
   });
 
-  const exportBookmarkMarkdown = async (bookmark: Bookmark) => {
+  const exportBookmarkMarkdown = async (bookmark: Bookmark, variant: MarkdownExportVariant = 'plain') => {
     const payload = markdownPayloadForBookmark(bookmark);
+    const label = variant === 'obsidian' ? 'Obsidian Markdown' : 'plain Markdown';
     try {
-      await copyMarkdownPassageExport(payload);
-      setExportStatus(`Copied Markdown export for ${bookmark.passage.bookTitle}.`);
+      await copyMarkdownPassageExport(payload, variant);
+      setExportStatus(`Copied ${label} export for ${bookmark.passage.bookTitle}.`);
     } catch {
-      downloadMarkdownPassageExport(payload);
-      setExportStatus(`Clipboard unavailable; downloaded Markdown for ${bookmark.passage.bookTitle}.`);
+      downloadMarkdownPassageExport(payload, variant);
+      setExportStatus(`Clipboard unavailable; downloaded ${label} for ${bookmark.passage.bookTitle}.`);
     }
     window.setTimeout(() => setExportStatus(null), 3500);
   };
@@ -1136,6 +1137,7 @@ export default function Bookmarks() {
                       <SharePassageButton passage={bm.passage} compact />
                       <SharePassageImageButton passage={bm.passage} compact />
                       <button className="btn btn-outline btn-xs" onClick={() => exportBookmarkMarkdown(bm)}>Export Markdown</button>
+                      <button className="btn btn-outline btn-xs" onClick={() => exportBookmarkMarkdown(bm, 'obsidian')}>Obsidian MD</button>
                       <button
                         className="btn btn-outline btn-xs"
                         onClick={() => addBookmarkToQueue(bm)}

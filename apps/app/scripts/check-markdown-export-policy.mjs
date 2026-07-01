@@ -16,7 +16,12 @@ const checks = [
       'annotations?: { quote: string; note: string }[]',
       '## Private note',
       '## Line-level thoughts',
-      'randompage_url',
+      'MarkdownExportVariant',
+      "variant === 'obsidian'",
+      'sourceurl',
+      'randompageurl',
+      'exported_at',
+      'yamlArray(tags)',
       'no summaries or new content',
     ],
   },
@@ -24,12 +29,14 @@ const checks = [
     file: 'src/client/pages/Bookmarks.tsx',
     patterns: [
       'Export Markdown',
+      'Obsidian MD',
       'exportBookmarkMarkdown',
+      "variant: MarkdownExportVariant = 'plain'",
       'copyMarkdownPassageExport',
       'downloadMarkdownPassageExport',
       'collections: bookmark.collectionItems?.map(item => item.collection.name)',
       'annotations: bookmark.annotations?.map(annotation => ({ quote: annotation.quote, note: annotation.note }))',
-      'Clipboard unavailable; downloaded Markdown',
+      'Clipboard unavailable; downloaded',
     ],
   },
 ];
@@ -48,4 +55,4 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log('[check:markdown-export] PASS — Bookmarks saved-passage Markdown export preserves excerpt, metadata, private notes, line-level thoughts, collections, tags, canonical URL, clipboard copy, and download fallback.');
+console.log('[check:markdown-export] PASS — Bookmarks saved-passage Markdown export preserves plain Markdown plus Obsidian YAML frontmatter with metadata, notes, annotations, collections, tags, canonical URL, clipboard copy, and download fallback.');
