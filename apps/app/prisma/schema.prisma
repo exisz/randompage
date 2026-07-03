@@ -89,6 +89,7 @@ model BookmarkCollection {
   id        String   @id
   userId    String   @map("user_id")
   name      String
+  purpose   String?
   createdAt DateTime @map("created_at")
   updatedAt DateTime @map("updated_at")
 

@@ -15,11 +15,16 @@ async function ensureBookmarkCollectionTables(prisma: ReturnType<typeof getPrism
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
+      purpose TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE
     )
   `);
+  const collectionColumns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(bookmark_collections)');
+  if (!collectionColumns.some((column) => column.name === 'purpose')) {
+    await prisma.$executeRawUnsafe('ALTER TABLE bookmark_collections ADD COLUMN purpose TEXT');
+  }
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS bookmark_collections_user_updated_idx ON bookmark_collections(user_id, updated_at)');
   await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS bookmark_collections_user_name_key ON bookmark_collections(user_id, name)');
   await prisma.$executeRawUnsafe(`
@@ -154,6 +159,13 @@ function normalizeCollectionName(value: unknown) {
   return typeof value === 'string' ? value.trim().replace(/\s+/g, ' ').slice(0, 40) : '';
 }
 
+function normalizeCollectionPurpose(value: unknown) {
+  if (value === null) return null;
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  return trimmed ? trimmed.slice(0, 160) : null;
+}
+
 async function requireOwnedBookmark(prisma: ReturnType<typeof getPrisma>, userId: string, bookmarkId: string) {
   const bookmark = await prisma.bookmark.findFirst({ where: { id: bookmarkId, userId } });
   return bookmark;
@@ -267,10 +279,12 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
       if (!existing) { candidates.set(input.id, input); return; }
       const sources = Array.from(new Set([...(existing.sources ?? []), ...(input.sources ?? [])]));
       const collections = Array.from(new Set([...(existing.collections ?? []), ...(input.collections ?? [])]));
+      const collectionPurposes = Array.from(new Set([...(existing.collectionPurposes ?? []), ...(input.collectionPurposes ?? [])]));
       candidates.set(input.id, {
         ...existing,
         note: existing.note ?? input.note,
         collections,
+        collectionPurposes,
         sources,
       });
     };
@@ -281,6 +295,7 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
         note: bookmark.note,
         annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
         collections: bookmark.collectionItems.map(item => item.collection.name),
+        collectionPurposes: bookmark.collectionItems.map(item => item.collection.purpose).filter((purpose): purpose is string => Boolean(purpose)),
         sources: ['bookmark'],
       });
     }
@@ -329,6 +344,7 @@ bookmarksRouter.get('/bookmarks/:id/related', async (req: Request, res: Response
       note: bookmark.note,
       annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
       collections: bookmark.collectionItems.map(item => item.collection.name),
+      collectionPurposes: bookmark.collectionItems.map(item => item.collection.purpose).filter((purpose): purpose is string => Boolean(purpose)),
       sources: ['bookmark'],
     });
 
@@ -363,6 +379,7 @@ bookmarksRouter.post('/bookmark-collections', async (req: Request, res: Response
   try {
     const claims = await verifyBearer(req.header('authorization'));
     const name = normalizeCollectionName(req.body?.name);
+    const purpose = normalizeCollectionPurpose(req.body?.purpose) ?? null;
     if (!name) { res.status(400).json({ error: 'name required' }); return; }
     const prisma = getPrisma();
     await ensureBookmarkCollectionTables(prisma);
@@ -370,7 +387,7 @@ bookmarksRouter.post('/bookmark-collections', async (req: Request, res: Response
     const now = new Date();
     await ensureUserRow(prisma, userId);
     const collection = await prisma.bookmarkCollection.create({
-      data: { id: nanoid(), userId, name, createdAt: now, updatedAt: now },
+      data: { id: nanoid(), userId, name, purpose, createdAt: now, updatedAt: now },
       include: { items: { select: { bookmarkId: true } } },
     });
     res.json({ collection });
@@ -384,6 +401,7 @@ bookmarksRouter.patch('/bookmark-collections/:id', async (req: Request, res: Res
   try {
     const claims = await verifyBearer(req.header('authorization'));
     const name = normalizeCollectionName(req.body?.name);
+    const requestedPurpose = normalizeCollectionPurpose(req.body?.purpose);
     if (!name) { res.status(400).json({ error: 'name required' }); return; }
     const prisma = getPrisma();
     await ensureBookmarkCollectionTables(prisma);
@@ -392,7 +410,7 @@ bookmarksRouter.patch('/bookmark-collections/:id', async (req: Request, res: Res
     if (!collection) { res.status(404).json({ error: 'Collection not found' }); return; }
     const updated = await prisma.bookmarkCollection.update({
       where: { id: collection.id },
-      data: { name, updatedAt: new Date() },
+      data: { name, purpose: requestedPurpose === undefined ? collection.purpose : requestedPurpose, updatedAt: new Date() },
       include: { items: { select: { bookmarkId: true } } },
     });
     res.json({ collection: updated });

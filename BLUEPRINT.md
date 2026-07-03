@@ -105,7 +105,7 @@ exisz/randompage (GitHub)
 | sessions | 登录会话 (passkey 用) |
 | passages | 片段库 (543 条, EN+CN, 100% tagged, boilerplate-free) |
 | bookmarks | 用户收藏；`note` 字段保存该用户对 saved passage 的私密笔记/反思（user-passage relationship，不写到 passages 全局内容） |
-| bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离） |
+| bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离）；`purpose` 可选私密用途/场景说明，用于 saved-passage pack 的 Bookmarks 展示与 Recall Search deterministic matching |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after、box），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现；box 支持 increasing-interval ladder |
 | passage_annotations | 用户对 saved passage 内具体选中文本的私密 line-level thoughts；保存 quote、start_offset/end_offset、note，按 user_id + bookmark_id 隔离，可独立 edit/delete |
@@ -222,7 +222,7 @@ exisz/randompage (GitHub)
 
 - Daily Review, Themed Review, and Recall Cards expose a “Related saved pages” branch from the current review card. `GET /api/bookmarks/:id/related` seeds deterministic matching from the owned bookmark’s title/author/tags/private note/line-level thoughts/excerpt, searches only the signed-in user’s saved RandomPage passages, excludes the current passage, and returns 3–5 results with match reasons/snippets plus existing open/listen/share/card/queue/review actions. No external LLM/embedding provider, summaries, or new content source is introduced.
 - Bookmarks exposes “Recall search / Find by idea” as a separate natural-language/fuzzy retrieval surface from exact saved-passage search. It is designed for remembered ideas (“power corrupting good intentions”) rather than exact words or tags.
-- `GET /api/bookmarks/recall-search?q=` searches only the signed-in user’s own RandomPage library graph: bookmarks (including private notes, line-level annotation quote/note text, and collection names), browsing history, and push inbox. It returns title/author, snippet, source badges, and match reasons; no query or passage text leaves RandomPage.
+- `GET /api/bookmarks/recall-search?q=` searches only the signed-in user’s own RandomPage library graph: bookmarks (including private notes, line-level annotation quote/note text, collection names, and private collection purpose text), browsing history, and push inbox. It returns title/author, snippet, source badges, and match reasons; no query or passage text leaves RandomPage.
 - Results reuse existing passage actions where possible: open exact passage, Listen, Share, Card, Add to queue, and Save when the matching passage came from history/push rather than bookmarks.
 - Offline/cached Bookmarks remains graceful: the exact client-side search still works over cached saved passages when the recall endpoint is unavailable.
 - Static regression: `pnpm --filter @randompage/app check:recall-search`.
@@ -314,6 +314,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-03 | PLANET-3383: Bookmarks collections now support an optional private purpose/context field for saved-passage packs. The purpose is shown near collection cards, can be edited/cleared with the collection, is stored on `bookmark_collections.purpose`, and deterministic Recall Search indexes it as a distinct `collection purpose` match reason without public sharing, external LLMs, or new content sources; added `check:collection-purpose`. | Engineer Pod |
 | 2026-07-02 | PLANET-3364: Added local HathiTrust OCR/page-access passage-source evaluation (`pnpm --filter @randompage/app eval:hathitrust-page-access`) that uses HathiTrust Bibliographic API metadata/access flags, probes bounded page OCR endpoints for 10–20 Exis-aligned candidate volumes, and emits JSON/Markdown verdict/counts without Turso or production writes. | Engineer Pod |
 | 2026-07-01 | PLANET-3345: Split single saved-passage Markdown export into plain Markdown plus an Obsidian-friendly Markdown option. The Obsidian option adds YAML frontmatter with title, author, sourceurl/randompageurl, tags, collections, and exported_at, then preserves the existing excerpt/private note/line-level thoughts body. Expanded `check:markdown-export`. | Engineer Pod |
 | 2026-07-01 | PLANET-3329: Added single saved-passage Markdown export on Bookmarks cards for Obsidian/Notion-style vaults. Export copies Markdown first and falls back to `.md` download, preserving saved excerpt, title/author/chapter, canonical RandomPage URL, tags, collection names, bookmark private note, and line-level private thoughts/annotations without external integrations, summaries, sync, social highlights, or new content sources. Added `check:markdown-export`. | Engineer Pod |

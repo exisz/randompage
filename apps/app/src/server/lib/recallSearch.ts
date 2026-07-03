@@ -8,6 +8,7 @@ export interface RecallSearchPassageInput {
   note?: string | null;
   annotations?: { quote: string; note: string }[];
   collections?: string[];
+  collectionPurposes?: string[];
   sources?: string[];
   bookmarkId?: string;
 }
@@ -120,6 +121,7 @@ export function scoreRecallPassages(query: string, passages: RecallSearchPassage
         { name: 'author', value: passage.author, weight: 4 },
         { name: 'tag', value: tags.join(' '), weight: 6 },
         { name: 'collection', value: (passage.collections ?? []).join(' '), weight: 5 },
+        { name: 'collection purpose', value: (passage.collectionPurposes ?? []).join(' '), weight: 8 },
         { name: 'passage text', value: passage.text, weight: 3 },
       ];
       let score = 0;

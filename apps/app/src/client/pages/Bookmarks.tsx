@@ -14,7 +14,7 @@ import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
 }
-interface BookmarkCollectionItem { collection: { id: string; name: string } }
+interface BookmarkCollectionItem { collection: { id: string; name: string; purpose?: string | null } }
 interface PassageReview {
   reviewedAt: string;
   dueAfter: string;
@@ -27,7 +27,7 @@ interface Bookmark {
   id: string; createdAt: string; note?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[]; annotations?: PassageAnnotation[];
 }
 interface Collection {
-  id: string; name: string; updatedAt: string; items: { bookmarkId: string }[];
+  id: string; name: string; purpose?: string | null; updatedAt: string; items: { bookmarkId: string }[];
 }
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
 type ReviewTuningPreset = 'pause' | 'less' | 'normal' | 'more';
@@ -35,7 +35,7 @@ type ReviewTuningScope = 'global' | 'source' | 'tag';
 interface ReviewTuningRule { scope: ReviewTuningScope; value: string; preset: ReviewTuningPreset; label: string; }
 interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
-  note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
+  note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; collectionPurposes?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
 }
 interface ActiveRecallCard {
   id: string; bookmarkId: string; passageId: string; quote: string; startOffset: number; endOffset: number; contextBefore: string; contextAfter: string; dueAfter: string; box?: number | null; passage: Passage;
@@ -53,7 +53,7 @@ function parseTags(tags: string) {
 
 function passageSearchText(bookmark: Bookmark) {
   const tags = parseTags(bookmark.passage.tags).join(' ');
-  const collections = bookmark.collectionItems?.map(item => item.collection.name).join(' ') ?? '';
+  const collections = bookmark.collectionItems?.map(item => `${item.collection.name} ${item.collection.purpose ?? ''}`).join(' ') ?? '';
   const annotations = bookmark.annotations?.map(annotation => `${annotation.quote} ${annotation.note}`).join(' ') ?? '';
   return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, bookmark.note ?? '', annotations, tags, collections]
     .join(' ')
@@ -69,6 +69,7 @@ export default function Bookmarks() {
   const [activeTag, setActiveTag] = useState('all');
   const [activeCollection, setActiveCollection] = useState('all');
   const [newCollectionName, setNewCollectionName] = useState('');
+  const [newCollectionPurpose, setNewCollectionPurpose] = useState('');
   const [busy, setBusy] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [offlineCachedAt, setOfflineCachedAt] = useState<string | null>(null);
@@ -564,18 +565,25 @@ export default function Bookmarks() {
     if (!name || offlineMode) return;
     setBusy(true);
     try {
-      await apiFetch('/bookmark-collections', { method: 'POST', body: JSON.stringify({ name }) });
+      const purpose = newCollectionPurpose.trim();
+      await apiFetch('/bookmark-collections', { method: 'POST', body: JSON.stringify({ name, purpose: purpose || null }) });
       setNewCollectionName('');
+      setNewCollectionPurpose('');
       await refresh();
     } finally { setBusy(false); }
   };
 
-  const renameCollection = async (collection: Collection) => {
-    const name = window.prompt('Rename collection', collection.name)?.trim();
-    if (!name || name === collection.name || offlineMode) return;
+  const editCollection = async (collection: Collection) => {
+    const name = window.prompt('Collection name', collection.name)?.trim();
+    if (!name || offlineMode) return;
+    const currentPurpose = collection.purpose ?? '';
+    const purposePrompt = window.prompt('Purpose/context for this saved-passage pack (blank clears it)', currentPurpose);
+    if (purposePrompt === null) return;
+    const purpose = purposePrompt.trim();
+    if (name === collection.name && purpose === currentPurpose) return;
     setBusy(true);
     try {
-      await apiFetch(`/bookmark-collections/${collection.id}`, { method: 'PATCH', body: JSON.stringify({ name }) });
+      await apiFetch(`/bookmark-collections/${collection.id}`, { method: 'PATCH', body: JSON.stringify({ name, purpose: purpose || null }) });
       await refresh();
     } finally { setBusy(false); }
   };
@@ -669,7 +677,7 @@ export default function Bookmarks() {
                   {recallSearching ? <span className="loading loading-spinner loading-xs" /> : 'Find ideas'}
                 </button>
               </div>
-              <p className="mt-2 text-xs opacity-65">Fuzzy recall searches your saved passages, private notes, collections, History, and Push inbox only. No query or passage text leaves RandomPage.</p>
+              <p className="mt-2 text-xs opacity-65">Fuzzy recall searches your saved passages, private notes, collection names/purposes, History, and Push inbox only. No query or passage text leaves RandomPage.</p>
               {recallStatus && <p className="mt-2 text-xs opacity-70" role="status">{recallStatus}</p>}
               {recallResults.length > 0 && (
                 <div className="mt-3 flex flex-col gap-3">
@@ -715,7 +723,7 @@ export default function Bookmarks() {
             <div className="flex gap-2 overflow-x-auto pb-1">
               <button className={`btn btn-xs ${activeCollection === 'all' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setActiveCollection('all')}>All collections</button>
               <button className={`btn btn-xs ${activeCollection === 'unfiled' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setActiveCollection('unfiled')}>Unfiled</button>
-              {collections.map(collection => <button key={collection.id} className={`btn btn-xs whitespace-nowrap ${activeCollection === collection.id ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setActiveCollection(collection.id)}>{collection.name}</button>)}
+              {collections.map(collection => <button key={collection.id} title={collection.purpose ? `Purpose: ${collection.purpose}` : undefined} className={`btn btn-xs whitespace-nowrap ${activeCollection === collection.id ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setActiveCollection(collection.id)}>{collection.name}</button>)}
             </div>
             {(query || activeTag !== 'all' || activeCollection !== 'all') && (
               <button className="btn btn-link btn-xs self-start" onClick={() => { setQuery(''); setActiveTag('all'); setActiveCollection('all'); }}>Clear filters</button>
@@ -795,16 +803,21 @@ export default function Bookmarks() {
         <div className="card bg-base-200/70 shadow mb-4">
           <div className="card-body gap-3 p-4">
             <h3 className="font-serif text-lg">Collections</h3>
-            <div className="join w-full">
-              <input className="input input-bordered join-item flex-1" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} placeholder="New collection, e.g. Philosophy" />
-              <button className="btn btn-primary join-item" disabled={offlineMode || busy || !newCollectionName.trim()} onClick={createCollection}>Create</button>
+            <p className="text-sm opacity-70">Group saved passages into private packs for a purpose — presentation, writing, interview, decision, comfort reading.</p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input className="input input-bordered flex-1" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} placeholder="New collection, e.g. Philosophy" />
+              <input className="input input-bordered flex-1" value={newCollectionPurpose} onChange={e => setNewCollectionPurpose(e.target.value)} placeholder="Optional purpose, e.g. presentation" />
+              <button className="btn btn-primary" disabled={offlineMode || busy || !newCollectionName.trim()} onClick={createCollection}>Create</button>
             </div>
             {collections.length > 0 && <div className="flex flex-wrap gap-2">
               {collections.map(collection => (
-                <div key={collection.id} className="badge badge-lg gap-2 py-4">
-                  <span>{collection.name}</span><span className="opacity-50">{collection.items.length}</span>
-                  <button className="link" onClick={() => renameCollection(collection)}>rename</button>
-                  <button className="link text-error" onClick={() => deleteCollection(collection)}>delete</button>
+                <div key={collection.id} className="rounded-box border border-base-content/10 bg-base-100 px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{collection.name}</span><span className="badge badge-ghost badge-sm">{collection.items.length}</span>
+                    <button className="link" onClick={() => editCollection(collection)}>edit</button>
+                    <button className="link text-error" onClick={() => deleteCollection(collection)}>delete</button>
+                  </div>
+                  {collection.purpose ? <p className="mt-1 text-xs opacity-70">Purpose: {collection.purpose}</p> : <p className="mt-1 text-xs opacity-45">No purpose set yet</p>}
                 </div>
               ))}
             </div>}
