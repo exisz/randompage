@@ -11,6 +11,7 @@ import { addPassageToReadingQueue, isPassageQueued } from '../lib/readingQueue';
 import { clearPassageMediaSession, setMediaSessionPlaybackState, setPassageMediaSession } from '../lib/mediaSession';
 import { formatReviewScheduleFeedback, type ReviewSchedulePayload } from '../lib/reviewScheduleFeedback';
 import BookSourceLink from '../components/BookSourceLink';
+import { PassageDwellTracker } from '../lib/dwell';
 
 interface Passage {
   id: string;
@@ -25,6 +26,10 @@ interface Passage {
 interface ReadingStats {
   todayCount: number;
   streakDays: number;
+  todayEngagedCount: number;
+  sevenDayEngagedCount: number;
+  todayReadingMinutes: number;
+  sevenDayReadingMinutes: number;
 }
 
 interface RecommendationExplanation {
@@ -433,7 +438,14 @@ export default function Discover() {
       const res = await apiFetch('/reading/stats');
       if (!res.ok) throw new Error(`Reading stats returned ${res.status}`);
       const data = await res.json();
-      setStats({ todayCount: data.todayCount ?? 0, streakDays: data.streakDays ?? 0 });
+      setStats({
+        todayCount: data.todayCount ?? 0,
+        streakDays: data.streakDays ?? 0,
+        todayEngagedCount: data.todayEngagedCount ?? 0,
+        sevenDayEngagedCount: data.sevenDayEngagedCount ?? 0,
+        todayReadingMinutes: data.todayReadingMinutes ?? 0,
+        sevenDayReadingMinutes: data.sevenDayReadingMinutes ?? 0,
+      });
     } catch (e) {
       console.error(e);
       setStats(null);
@@ -849,6 +861,14 @@ export default function Discover() {
                     <div className="text-3xl font-semibold">{stats?.streakDays ?? '—'}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.2em] opacity-60">day streak</div>
                   </div>
+                  <div className="rounded-3xl border border-white/10 bg-base-200/70 p-4 shadow-xl backdrop-blur">
+                    <div className="text-3xl font-semibold">{stats?.todayReadingMinutes ?? '—'}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.2em] opacity-60">min today</div>
+                  </div>
+                  <div className="rounded-3xl border border-white/10 bg-base-200/70 p-4 shadow-xl backdrop-blur">
+                    <div className="text-3xl font-semibold">{stats?.sevenDayEngagedCount ?? '—'}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.2em] opacity-60">engaged / 7d</div>
+                  </div>
                 </>
               ) : (
                 <div className="col-span-2 rounded-3xl border border-primary/20 bg-primary/10 p-4 shadow-xl backdrop-blur">
@@ -1150,6 +1170,13 @@ export default function Discover() {
                       <span key={tag} className="badge badge-outline border-primary/30 bg-base-100/40 text-xs">{tag}</span>
                     ))}
                   </div>
+
+                  {authed && passage && (
+                    <PassageDwellTracker
+                      passageId={passage.id}
+                      source={pushSource === 'push' || pushSource === 'push_inbox' ? 'push_inbox' : 'discover'}
+                    />
+                  )}
 
                   {authed && whyPersonalized && (
                     <div className="mt-4 rounded-2xl border border-primary/25 bg-primary/10 p-3">

@@ -44,7 +44,8 @@
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action; applies per-user review tuning controls │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
-│  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences │ │
+│  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences
+│ │    POST /api/passages/:id/dwell → signed-in passage dwell / engaged-read events with bounded dwell_ms │ │
 │  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
@@ -116,7 +117,7 @@ exisz/randompage (GitHub)
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)，push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view 事件计算 today count / UTC streak；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制，不参与 Discover 推荐打分） |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
@@ -161,7 +162,7 @@ exisz/randompage (GitHub)
 - IA OCR reviewed ingest (PLANET-2508): `pnpm --filter @randompage/app ingest:ia-ocr` reads an explicit reviewed item list, serially fetches IA metadata + reviewed OCR/plaintext files, applies 180–800 char length/content checks, and dry-runs by default with report/sample output. `--apply --ack-reviewed` is required for tiny Turso inserts; rows enter `passages` with `tags='[]'` for later tag cron.
 - Telegram EPUB handoff POC (PLANET-1966): `POST /api/import/telegram-epub-handoff` accepts only secret-protected metadata/file references and rejects raw text/base64 payloads; it returns whether a licensed worker may fetch and process the EPUB.
 - Protected-source regression guard (PLANET-2101/2000): `pnpm check:source-policy` checks production Turso for known blocked modern-book full-text sources (currently Colleen Hoover / *It Ends With Us*) and fails if they reappear; `--apply` is reviewed cleanup only and refuses user-referenced rows.
-- Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed.
+- Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed. PLANET-3433 adds `pnpm check:passage-dwell` to guard signed-in dwell/engaged-read capture, short-bounce filtering, `dwell_ms`, and private reading-minute stats.
 - Push subscription timestamp guard (PLANET-2517): `push_subscriptions.created_at` is a legacy INTEGER unix-seconds column in production. `/api/push/subscribe`, `/api/push/send`, and `/api/cron/daily-push` normalize accidental ISO text rows before Prisma reads and write new subscription rows via raw SQL with unix seconds; `pnpm check:push-policy` guards this path.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
 
@@ -277,6 +278,7 @@ exisz/randompage (GitHub)
 | `cleanup-boilerplate.mjs` | PLANET-1172 | 删除 Standard Ebooks / Project Gutenberg 版权/前言 boilerplate 行（DRY-RUN by default，`--apply` 才真删） |
 | `check-source-policy.mjs` | PLANET-2101/2000 | 生产库 known protected-source 回归检查；review 后可 `--apply` 删除无用户引用违规行 |
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
+| `check-passage-dwell-policy.mjs` | PLANET-3433 | 静态回归检查 signed-in passage dwell / engaged-read endpoint、`dwell_ms`、Discover/History/Push card tracking、reading-minute stats |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-passage-content-policy.mjs` | PLANET-2139/2227/2522/2948 | 生产 corpus reference-note/footnote/chapter-list/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts、TOC/chapter lists 与 non-terminal endings）；`--apply` 只删除无 bookmarks/push_history/browsing_events/passage_reviews 引用的 unreadable rows，保留已投递/收藏的用户归属记录 |
 | `check-tag-failure-policy.mjs` | PLANET-2263/3240 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，并有 `--static-only` guard 验证 Gemini quota fallback、fallbackTagged observability、Discover/daily queue tagged-pool preference，防止 retry 耗尽或 provider billing 后静默滞留 |

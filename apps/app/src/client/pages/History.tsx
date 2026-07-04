@@ -8,6 +8,7 @@ import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
 import PassageFeedbackChips from '../components/PassageFeedbackChips';
 import BookSourceLink from '../components/BookSourceLink';
+import { VisiblePassageDwellTracker } from '../lib/dwell';
 
 interface Passage {
   id: string; text: string; bookTitle: string; author: string; tags?: string;
@@ -22,7 +23,7 @@ interface PushHistoryEntry {
   id: string; sentAt: string; readAt: string | null; passage: Passage; whyPersonalized?: RecommendationExplanation | null;
 }
 interface BrowsingHistoryEntry {
-  id: string; createdAt: string; action: 'view' | 'skip'; source: string; passage: Passage; whyPersonalized?: RecommendationExplanation | null;
+  id: string; createdAt: string; action: 'view' | 'skip' | 'dwell' | 'engaged_read'; source: string; passage: Passage; whyPersonalized?: RecommendationExplanation | null;
 }
 
 type HistoryItem = (BrowsingHistoryEntry & { kind: 'browsing' }) | (PushHistoryEntry & { kind: 'push' });
@@ -213,15 +214,17 @@ export default function History() {
                 {group.items.map(h => {
                   const isBrowsing = h.kind === 'browsing';
                   const isSkip = isBrowsing && h.action === 'skip';
+                  const isEngaged = isBrowsing && h.action === 'engaged_read';
                   const isUnreadPush = h.kind === 'push' && !h.readAt;
                   const itemDate = historyItemDate(h);
                   const tagsForItem = parseTags(h.passage.tags).slice(0, 4);
                   return (
                     <div key={`${h.kind}-${h.id}`} className={`card shadow ${isSkip ? 'bg-base-200 opacity-70' : isUnreadPush ? 'bg-base-300 border border-primary' : 'bg-base-300'}`}>
+                  <VisiblePassageDwellTracker passageId={h.passage.id} source={h.kind === 'push' || h.source === 'push_inbox' ? 'push_inbox' : 'discover'} />
                   <div className="card-body py-3 gap-2">
                     <div className="flex items-center gap-2">
                       {isBrowsing ? (
-                        <span className={`badge badge-xs ${isSkip ? 'badge-ghost' : 'badge-primary'}`}>{isSkip ? 'Skipped' : h.source === 'push_inbox' ? 'Read from push' : 'Viewed'}</span>
+                        <span className={`badge badge-xs ${isSkip ? 'badge-ghost' : isEngaged ? 'badge-success' : 'badge-primary'}`}>{isSkip ? 'Skipped' : isEngaged ? 'Engaged read' : h.source === 'push_inbox' ? 'Read from push' : h.action === 'dwell' ? 'Reading time' : 'Viewed'}</span>
                       ) : !h.readAt ? <span className="badge badge-primary badge-xs">Unread</span> : <span className="badge badge-ghost badge-xs">Delivered</span>}
                       <span className="text-xs opacity-40">{new Date(itemDate).toLocaleString()}</span>
                     </div>

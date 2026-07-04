@@ -9,14 +9,19 @@ import { filterReadablePassages, isReadablePassage } from '../lib/passageLengthP
 
 export const passagesRouter = Router();
 
-const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip', 'more_like_this', 'less_like_this', 'too_dense', 'different_topic']);
+const VALID_INTERACTION_ACTIONS = new Set(['view', 'skip', 'dwell', 'engaged_read', 'more_like_this', 'less_like_this', 'too_dense', 'different_topic']);
 const VALID_INTERACTION_SOURCES = new Set(['discover', 'push_inbox']);
 const FEEDBACK_DELTAS: Record<string, number> = {
+  dwell: 0,
+  engaged_read: 1,
   more_like_this: 2,
   less_like_this: -2,
   too_dense: 0,
   different_topic: -1,
 };
+const MIN_DWELL_EVENT_MS = 3_000;
+const ENGAGED_READ_MS = 20_000;
+const MAX_DWELL_EVENT_MS = 10 * 60_000;
 const MIN_PREFERENCE_WEIGHT = 1;
 const MAX_PREFERENCE_WEIGHT = 12;
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
@@ -154,8 +159,19 @@ async function ensureBrowsingEventsTable(prisma: ReturnType<typeof getPrisma>) {
       FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE RESTRICT ON UPDATE CASCADE
     )
   `);
+  try {
+    await prisma.$executeRawUnsafe('ALTER TABLE browsing_events ADD COLUMN dwell_ms INTEGER');
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.toLowerCase().includes('duplicate column')) throw error;
+  }
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS browsing_events_user_created_idx ON browsing_events(user_id, created_at)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS browsing_events_user_passage_idx ON browsing_events(user_id, passage_id)');
+}
+
+function normalizeDwellMs(value: unknown) {
+  const raw = typeof value === 'number' ? value : typeof value === 'string' ? Number.parseInt(value, 10) : 0;
+  if (!Number.isFinite(raw)) return 0;
+  return Math.min(MAX_DWELL_EVENT_MS, Math.max(0, Math.round(raw)));
 }
 
 function epochSeconds(date: Date) {
@@ -304,15 +320,23 @@ async function recordInteraction(
   passageId: string | undefined,
   action: string,
   source = 'discover',
+  dwellMs = 0,
 ) {
   if (!passageId || !VALID_INTERACTION_ACTIONS.has(action)) return;
   const safeSource = VALID_INTERACTION_SOURCES.has(source) ? source : 'discover';
   const now = new Date();
   await ensureBrowsingEventsTable(prisma);
   await upsertReader(prisma, userId, now);
-  await prisma.browsingEvent.create({
-    data: { id: nanoid(), userId, passageId, action, source: safeSource, createdAt: now },
-  });
+  if (dwellMs > 0) {
+    await prisma.$executeRaw`
+      INSERT INTO browsing_events (id, user_id, passage_id, action, source, created_at, dwell_ms)
+      VALUES (${nanoid()}, ${userId}, ${passageId}, ${action}, ${safeSource}, ${now}, ${dwellMs})
+    `;
+  } else {
+    await prisma.browsingEvent.create({
+      data: { id: nanoid(), userId, passageId, action, source: safeSource, createdAt: now },
+    });
+  }
   const feedbackDelta = FEEDBACK_DELTAS[action];
   const delta = typeof feedbackDelta === 'number' ? feedbackDelta : action === 'skip' ? -1 : 1;
   if (delta !== 0) await updatePreferencesForPassage(prisma, userId, passageId, delta, now);
@@ -455,6 +479,34 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e);
     res.status(500).json({ error: msg });
+  }
+});
+
+
+// POST /api/passages/:id/dwell — bounded signed-in reading-session dwell tracking.
+passagesRouter.post('/passages/:id/dwell', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const userId = claims.sub as string;
+    const dwellMs = normalizeDwellMs(req.body?.dwellMs);
+    const source = typeof req.body?.source === 'string' ? req.body.source : 'discover';
+    if (dwellMs < MIN_DWELL_EVENT_MS) {
+      res.json({ ok: true, recorded: false, reason: 'below_minimum_dwell', dwellMs });
+      return;
+    }
+
+    const prisma = getPrisma();
+    const passage = await prisma.passage.findUnique({ where: { id: req.params.id }, select: { id: true } });
+    if (!passage) {
+      res.status(404).json({ error: 'Passage not found' });
+      return;
+    }
+
+    const action = dwellMs >= ENGAGED_READ_MS ? 'engaged_read' : 'dwell';
+    await recordInteraction(prisma, userId, passage.id, action, source, dwellMs);
+    res.json({ ok: true, recorded: true, action, source: VALID_INTERACTION_SOURCES.has(source) ? source : 'discover', passageId: passage.id, dwellMs });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
@@ -880,7 +932,8 @@ passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
     const lookbackStart = addUtcDays(todayStart, -90);
     const userId = claims.sub as string;
 
-    const [todayCount, recentViews] = await Promise.all([
+    const sevenDayStart = addUtcDays(todayStart, -6);
+    const [todayCount, recentViews, todayDwellRows, sevenDayDwellRows] = await Promise.all([
       prisma.browsingEvent.count({
         where: {
           userId,
@@ -897,13 +950,33 @@ passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
         select: { createdAt: true },
         orderBy: { createdAt: 'desc' },
       }),
+      prisma.$queryRaw<Array<{ engaged_count: number; dwell_ms: number | null }>>`
+        SELECT COUNT(DISTINCT passage_id) AS engaged_count, SUM(COALESCE(dwell_ms, 0)) AS dwell_ms
+        FROM browsing_events
+        WHERE user_id = ${userId}
+          AND action IN ('dwell', 'engaged_read')
+          AND created_at >= ${todayStart}
+      `,
+      prisma.$queryRaw<Array<{ engaged_count: number; dwell_ms: number | null }>>`
+        SELECT COUNT(DISTINCT passage_id) AS engaged_count, SUM(COALESCE(dwell_ms, 0)) AS dwell_ms
+        FROM browsing_events
+        WHERE user_id = ${userId}
+          AND action IN ('dwell', 'engaged_read')
+          AND created_at >= ${sevenDayStart}
+      `,
     ]);
 
+    const todayDwellMs = Number(todayDwellRows[0]?.dwell_ms ?? 0);
+    const sevenDayDwellMs = Number(sevenDayDwellRows[0]?.dwell_ms ?? 0);
     const activeDays = Array.from(new Set(recentViews.map((event) => utcDayKey(event.createdAt)))).sort().reverse();
     res.json({
       todayCount,
       streakDays: calculateCurrentStreak(recentViews.map((event) => event.createdAt), now),
       activeDays,
+      todayEngagedCount: Number(todayDwellRows[0]?.engaged_count ?? 0),
+      sevenDayEngagedCount: Number(sevenDayDwellRows[0]?.engaged_count ?? 0),
+      todayReadingMinutes: Math.round(todayDwellMs / 60_000),
+      sevenDayReadingMinutes: Math.round(sevenDayDwellMs / 60_000),
       timezone: 'UTC',
     });
   } catch (e: unknown) {
