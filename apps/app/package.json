@@ -56,7 +56,8 @@
     "check:ol-ia-queue": "node scripts/check-openlibrary-ia-queue-policy.mjs",
     "check:related-saved-pages": "tsx scripts/check-related-saved-pages-policy.ts",
     "check:collection-purpose": "node scripts/check-collection-purpose-policy.mjs",
-    "check:passage-dwell": "node scripts/check-passage-dwell-policy.mjs"
+    "check:passage-dwell": "node scripts/check-passage-dwell-policy.mjs",
+    "check:saved-books": "node scripts/check-saved-books-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

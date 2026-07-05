@@ -233,6 +233,8 @@ export default function Discover() {
   const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookmarked, setBookmarked] = useState(false);
+  const [bookSaved, setBookSaved] = useState(false);
+  const [bookSaveStatus, setBookSaveStatus] = useState<string | null>(null);
   const [queued, setQueued] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
@@ -455,6 +457,8 @@ export default function Discover() {
   const fetchPassage = useCallback(async (preferUnread = false, skippedPassageId?: string) => {
     setLoading(true);
     setBookmarked(false);
+    setBookSaved(false);
+    setBookSaveStatus(null);
     setQueued(false);
     setWhyPersonalized(null);
     setLoadError(null);
@@ -517,6 +521,8 @@ export default function Discover() {
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
     setBookmarked(false);
+    setBookSaved(false);
+    setBookSaveStatus(null);
     setQueued(false);
     setWhyPersonalized(null);
     setLoadError(null);
@@ -652,6 +658,23 @@ export default function Discover() {
       setBookmarked(true);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+
+  const handleSaveBook = async () => {
+    if (!passage || !authed) return;
+    setBookSaveStatus('Saving book…');
+    try {
+      const res = await apiFetch('/saved-books', {
+        method: 'POST',
+        body: JSON.stringify({ passageId: passage.id, title: passage.bookTitle, author: passage.author }),
+      });
+      if (!res.ok) throw new Error(`Save book failed (${res.status}).`);
+      setBookSaved(true);
+      setBookSaveStatus('Saved to your private want-to-read shelf.');
+    } catch (e) {
+      setBookSaveStatus(e instanceof Error ? e.message : 'Could not save this book right now.');
     }
   };
 
@@ -1224,19 +1247,30 @@ export default function Discover() {
                       {queued ? '✓ Queued' : 'Add to queue'}
                     </button>
                     {authed ? (
-                      <button
-                        className={`btn rounded-2xl ${bookmarked ? 'btn-success' : 'btn-ghost'}`}
-                        onClick={handleBookmark}
-                        disabled={bookmarked}
-                      >
-                        {bookmarked ? '✓ Saved' : 'Bookmark'}
-                      </button>
+                      <>
+                        <button
+                          className={`btn rounded-2xl ${bookSaved ? 'btn-success' : 'btn-ghost'}`}
+                          onClick={handleSaveBook}
+                          disabled={bookSaved}
+                          title="Save this title/author to your private want-to-read shelf"
+                        >
+                          {bookSaved ? '✓ Book saved' : 'Want to read book'}
+                        </button>
+                        <button
+                          className={`btn rounded-2xl ${bookmarked ? 'btn-success' : 'btn-ghost'}`}
+                          onClick={handleBookmark}
+                          disabled={bookmarked}
+                        >
+                          {bookmarked ? '✓ Saved' : 'Bookmark'}
+                        </button>
+                      </>
                     ) : (
                       <Link to="/signin" className="btn btn-ghost rounded-2xl opacity-70">
                         Sign in to save
                       </Link>
                     )}
                   </div>
+                  {bookSaveStatus && <p className="mt-2 text-xs opacity-65" role="status">{bookSaveStatus}</p>}
                 </div>
                 </article>
               </div>

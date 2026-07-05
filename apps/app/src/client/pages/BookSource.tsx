@@ -63,6 +63,7 @@ export default function BookSource() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<Record<string, string>>({});
+  const [bookSaveStatus, setBookSaveStatus] = useState<string | null>(null);
   const [queuedIds, setQueuedIds] = useState<Set<string>>(() => new Set());
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
@@ -83,10 +84,22 @@ export default function BookSource() {
     setError(null);
     try {
       const authed = await logtoClient.isAuthenticated();
-      const [res, preferencesRes] = await Promise.all([
-        authed ? apiFetch(`/book-source?${query}`) : fetch(`/api/book-source?${query}`),
-        authed ? apiFetch('/preferences') : Promise.resolve(null),
-      ]);
+      let res: Response;
+      let preferencesRes: Response | null = null;
+      if (authed) {
+        try {
+          [res, preferencesRes] = await Promise.all([
+            apiFetch(`/book-source?${query}`),
+            apiFetch('/preferences'),
+          ]);
+        } catch (authError) {
+          console.error(authError);
+          res = await fetch(`/api/book-source?${query}`);
+          preferencesRes = null;
+        }
+      } else {
+        res = await fetch(`/api/book-source?${query}`);
+      }
       if (!res.ok) throw new Error(`Book source returned HTTP ${res.status}`);
       const data = await res.json() as BookSourcePayload;
       if (preferencesRes) {
@@ -120,6 +133,27 @@ export default function BookSource() {
       setSaveStatus((prev) => ({ ...prev, [passage.id]: 'Saved to Bookmarks.' }));
     } catch (e) {
       setSaveStatus((prev) => ({ ...prev, [passage.id]: e instanceof Error ? e.message : String(e) }));
+    }
+  };
+
+
+  const saveBook = async (passage?: Passage) => {
+    if (!payload) return;
+    setBookSaveStatus('Saving book…');
+    try {
+      const res = await apiFetch('/saved-books', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: payload.source.title,
+          author: payload.source.author,
+          passageId: passage?.id ?? payload.passages[0]?.id,
+          sourceUrl: window.location.href,
+        }),
+      });
+      if (!res.ok) throw new Error(res.status === 401 ? 'Sign in to save this book.' : `Book save failed (${res.status}).`);
+      setBookSaveStatus('Saved to your private want-to-read shelf.');
+    } catch (e) {
+      setBookSaveStatus(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -186,6 +220,11 @@ export default function BookSource() {
             {payload.source.savedCount !== null && <span className="badge badge-success badge-outline">{payload.source.savedCount} saved</span>}
             <span className="badge badge-ghost">Unread pages appear first when signed in</span>
           </div>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button className="btn btn-primary btn-sm rounded-xl" onClick={() => saveBook()}>Want to read book</button>
+            <Link to="/bookmarks" className="btn btn-ghost btn-sm rounded-xl">Open private shelf</Link>
+            {bookSaveStatus && <span className="text-xs opacity-70" role="status">{bookSaveStatus}</span>}
+          </div>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed opacity-70">
             Continue from one good passage into more existing RandomPage pages from the same book. This stays inside your personal book-passage discovery graph — no new summaries, feeds, or social layer.
           </p>
@@ -246,6 +285,7 @@ export default function BookSource() {
                   <SharePassageButton passage={passage} compact />
                   <SharePassageImageButton passage={passage} compact />
                   <button className="btn btn-outline btn-sm rounded-xl" disabled={queued} onClick={() => queuePassage(passage)}>{queued ? '✓ Queued' : 'Add to queue'}</button>
+                  <button className="btn btn-secondary btn-sm rounded-xl" onClick={() => saveBook(passage)}>Want to read book</button>
                   <button className="btn btn-ghost btn-sm rounded-xl" disabled={passage.isSaved} onClick={() => savePassage(passage)}>{passage.isSaved ? '✓ Saved' : 'Save'}</button>
                 </div>
                 {saveStatus[passage.id] && <p className="text-xs opacity-60" role="status">{saveStatus[passage.id]}</p>}

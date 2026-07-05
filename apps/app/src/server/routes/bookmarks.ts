@@ -41,6 +41,65 @@ async function ensureBookmarkCollectionTables(prisma: ReturnType<typeof getPrism
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS bookmark_collection_items_bookmark_idx ON bookmark_collection_items(bookmark_id)');
 }
 
+
+// PLANET-3477: private book-level want-to-read shelf over discovered RandomPage sources.
+async function ensureSavedBookTable(prisma: ReturnType<typeof getPrisma>) {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS saved_books (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      author TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'want_to_read',
+      saved_from_passage_id TEXT,
+      source_url TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      saved_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (saved_from_passage_id) REFERENCES passages(id) ON DELETE SET NULL ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS saved_books_user_source_key ON saved_books(user_id, title, author)');
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS saved_books_user_saved_idx ON saved_books(user_id, saved_at)');
+}
+
+function normalizeSavedBookText(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim().replace(/\s+/g, ' ');
+  return trimmed ? trimmed.slice(0, maxLength) : undefined;
+}
+
+function normalizeSavedBookStatus(value: unknown) {
+  return value === 'read' ? 'read' : 'want_to_read';
+}
+
+function savedBookRowToJson(row: {
+  id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+  passage_text?: string | null; passage_title?: string | null; passage_author?: string | null; passage_chapter?: string | null; passage_tags?: string | null; passage_language?: string | null;
+}) {
+  return {
+    id: row.id,
+    title: row.title,
+    author: row.author,
+    status: row.status,
+    savedFromPassageId: row.saved_from_passage_id,
+    sourceUrl: row.source_url,
+    tags: row.tags ?? '[]',
+    savedAt: row.saved_at,
+    updatedAt: row.updated_at,
+    savedFromPassage: row.saved_from_passage_id && row.passage_text ? {
+      id: row.saved_from_passage_id,
+      text: row.passage_text,
+      bookTitle: row.passage_title ?? row.title,
+      author: row.passage_author ?? row.author,
+      chapter: row.passage_chapter ?? undefined,
+      tags: row.passage_tags ?? row.tags ?? '[]',
+      language: row.passage_language ?? 'en',
+    } : null,
+  };
+}
+
 async function ensureBookmarkNotesColumn(prisma: ReturnType<typeof getPrisma>) {
   const columns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(bookmarks)');
   if (!columns.some((column) => column.name === 'note')) {
@@ -239,6 +298,135 @@ bookmarksRouter.get('/bookmarks', async (req: Request, res: Response) => {
     res.json({ bookmarks });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+// GET /api/saved-books — private want-to-read shelf for discovered books/sources.
+bookmarksRouter.get('/saved-books', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    const userId = claims.sub as string;
+    const rows = await prisma.$queryRaw<Array<{
+      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+      passage_text: string | null; passage_title: string | null; passage_author: string | null; passage_chapter: string | null; passage_tags: string | null; passage_language: string | null;
+    }>>`
+      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.tags, sb.saved_at, sb.updated_at,
+             p.text AS passage_text, p.book_title AS passage_title, p.author AS passage_author, p.chapter AS passage_chapter, p.tags AS passage_tags, p.language AS passage_language
+      FROM saved_books sb
+      LEFT JOIN passages p ON p.id = sb.saved_from_passage_id
+      WHERE sb.user_id = ${userId}
+      ORDER BY CASE WHEN sb.status = 'want_to_read' THEN 0 ELSE 1 END, sb.saved_at DESC
+      LIMIT 100
+    `;
+    res.json({ savedBooks: rows.map(savedBookRowToJson) });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/saved-books — idempotently save a title/author to the signed-in user's want-to-read shelf.
+bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    const userId = claims.sub as string;
+    await ensureUserRow(prisma, userId);
+
+    let title = normalizeSavedBookText(req.body?.title, 180);
+    let author = normalizeSavedBookText(req.body?.author, 120) ?? '';
+    const passageId = normalizeSavedBookText(req.body?.passageId, 80);
+    const sourceUrl = normalizeSavedBookText(req.body?.sourceUrl, 500) ?? null;
+    let tags = '[]';
+
+    if (passageId) {
+      const passage = await prisma.passage.findUnique({ where: { id: passageId } });
+      if (!passage) { res.status(404).json({ error: 'Passage not found' }); return; }
+      title = title ?? passage.bookTitle;
+      author = author || passage.author || '';
+      tags = JSON.stringify(parsePassageTags(passage.tags));
+    }
+    if (!title) { res.status(400).json({ error: 'title required' }); return; }
+
+    const now = new Date().toISOString();
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id FROM saved_books WHERE user_id = ${userId} AND title = ${title} AND author = ${author} LIMIT 1
+    `;
+    const existing = rows[0];
+    const id = existing?.id ?? nanoid();
+    if (existing) {
+      await prisma.$executeRaw`
+        UPDATE saved_books
+        SET status = 'want_to_read', saved_from_passage_id = COALESCE(${passageId ?? null}, saved_from_passage_id), source_url = COALESCE(${sourceUrl}, source_url), tags = ${tags}, saved_at = ${now}, updated_at = ${now}
+        WHERE id = ${id} AND user_id = ${userId}
+      `;
+    } else {
+      await prisma.$executeRaw`
+        INSERT INTO saved_books (id, user_id, title, author, status, saved_from_passage_id, source_url, tags, saved_at, updated_at)
+        VALUES (${id}, ${userId}, ${title}, ${author}, 'want_to_read', ${passageId ?? null}, ${sourceUrl}, ${tags}, ${now}, ${now})
+      `;
+    }
+
+    const parsedTags = JSON.parse(tags) as string[];
+    const updatedAt = epochSeconds(new Date(now));
+    for (const tag of parsedTags.slice(0, 8)) {
+      const preferenceTag = `book:${tag}`;
+      const existingPref = await prisma.$queryRaw<Array<{ id: string; weight: number }>>`
+        SELECT id, weight FROM user_preferences WHERE user_id = ${userId} AND tag = ${preferenceTag} LIMIT 1
+      `;
+      if (existingPref[0]) {
+        await prisma.$executeRaw`UPDATE user_preferences SET weight = ${Math.min(Number(existingPref[0].weight) + 1, 12)}, updated_at = ${updatedAt} WHERE id = ${existingPref[0].id}`;
+      } else {
+        await prisma.$executeRaw`INSERT INTO user_preferences (id, user_id, tag, weight, updated_at) VALUES (${nanoid()}, ${userId}, ${preferenceTag}, ${2}, ${updatedAt})`;
+      }
+    }
+
+    const savedRows = await prisma.$queryRaw<Array<{
+      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+      passage_text: string | null; passage_title: string | null; passage_author: string | null; passage_chapter: string | null; passage_tags: string | null; passage_language: string | null;
+    }>>`
+      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.tags, sb.saved_at, sb.updated_at,
+             p.text AS passage_text, p.book_title AS passage_title, p.author AS passage_author, p.chapter AS passage_chapter, p.tags AS passage_tags, p.language AS passage_language
+      FROM saved_books sb LEFT JOIN passages p ON p.id = sb.saved_from_passage_id
+      WHERE sb.id = ${id} AND sb.user_id = ${userId}
+      LIMIT 1
+    `;
+    res.json({ savedBook: savedBookRowToJson(savedRows[0]) });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// PATCH /api/saved-books/:id — mark a saved book as read or back to want-to-read.
+bookmarksRouter.patch('/saved-books/:id', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    const userId = claims.sub as string;
+    const status = normalizeSavedBookStatus(req.body?.status);
+    const now = new Date().toISOString();
+    const result = await prisma.$executeRaw`UPDATE saved_books SET status = ${status}, updated_at = ${now} WHERE id = ${req.params.id} AND user_id = ${userId}`;
+    if (Number(result) === 0) { res.status(404).json({ error: 'Saved book not found' }); return; }
+    res.json({ ok: true, status });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// DELETE /api/saved-books/:id — remove a private saved-book row.
+bookmarksRouter.delete('/saved-books/:id', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    await prisma.$executeRaw`DELETE FROM saved_books WHERE id = ${req.params.id} AND user_id = ${claims.sub as string}`;
+    res.json({ ok: true });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 

@@ -30,6 +30,7 @@ interface Collection {
   id: string; name: string; purpose?: string | null; updatedAt: string; items: { bookmarkId: string }[];
 }
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
+interface SavedBook { id: string; title: string; author: string; status: 'want_to_read' | 'read'; savedFromPassageId?: string | null; sourceUrl?: string | null; tags: string; savedAt: string; updatedAt: string; savedFromPassage?: Passage | null; }
 type ReviewTuningPreset = 'pause' | 'less' | 'normal' | 'more';
 type ReviewTuningScope = 'global' | 'source' | 'tag';
 interface ReviewTuningRule { scope: ReviewTuningScope; value: string; preset: ReviewTuningPreset; label: string; }
@@ -64,6 +65,8 @@ export default function Bookmarks() {
   const navigate = useNavigate();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [savedBooks, setSavedBooks] = useState<SavedBook[]>([]);
+  const [savedBookStatus, setSavedBookStatus] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTag, setActiveTag] = useState('all');
@@ -120,21 +123,24 @@ export default function Bookmarks() {
 
   const refresh = async () => {
     try {
-      const [bookmarksRes, collectionsRes, preferencesRes, recallCardsRes] = await Promise.all([
+      const [bookmarksRes, collectionsRes, preferencesRes, recallCardsRes, savedBooksRes] = await Promise.all([
         apiFetch('/bookmarks'),
         apiFetch('/bookmark-collections'),
         apiFetch('/preferences'),
         apiFetch('/bookmarks/recall-cards'),
+        apiFetch('/saved-books'),
       ]);
       const bookmarksData = await bookmarksRes.json();
       const collectionsData = await collectionsRes.json();
       const preferencesData = await preferencesRes.json();
       const recallCardsData = await recallCardsRes.json();
+      const savedBooksData = await savedBooksRes.json();
       const nextBookmarks = bookmarksData.bookmarks || [];
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
       setNoteDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, bookmark.note ?? ''])));
       setCollections(nextCollections);
+      setSavedBooks(Array.isArray(savedBooksData.savedBooks) ? savedBooksData.savedBooks : []);
       setReadLaterDestination(preferencesData.readLaterDestination || null);
       setReviewTuning(Array.isArray(preferencesData.reviewTuning) ? preferencesData.reviewTuning : []);
       setActiveRecallCards(Array.isArray(recallCardsData.cards) ? recallCardsData.cards : []);
@@ -190,6 +196,33 @@ export default function Bookmarks() {
     ].filter(Boolean);
     return filters.length ? `Filtered export: ${filters.join(', ')}.` : 'All saved RandomPage passages in your Bookmarks.';
   }, [activeCollection, activeTag, collections, query]);
+
+
+  const updateSavedBook = async (book: SavedBook, status: 'want_to_read' | 'read') => {
+    if (offlineMode) return;
+    setSavedBookStatus(null);
+    try {
+      const res = await apiFetch(`/saved-books/${encodeURIComponent(book.id)}`, { method: 'PATCH', body: JSON.stringify({ status }) });
+      if (!res.ok) throw new Error(`Update failed (${res.status}).`);
+      await refresh();
+      setSavedBookStatus(status === 'read' ? `Marked ${book.title} as read.` : `Moved ${book.title} back to want-to-read.`);
+    } catch (e) {
+      setSavedBookStatus(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const removeSavedBook = async (book: SavedBook) => {
+    if (offlineMode) return;
+    setSavedBookStatus(null);
+    try {
+      const res = await apiFetch(`/saved-books/${encodeURIComponent(book.id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`Remove failed (${res.status}).`);
+      await refresh();
+      setSavedBookStatus(`Removed ${book.title} from your saved books.`);
+    } catch (e) {
+      setSavedBookStatus(e instanceof Error ? e.message : String(e));
+    }
+  };
 
   const runRecallSearch = async () => {
     const q = recallQuery.trim();
@@ -749,6 +782,56 @@ export default function Bookmarks() {
           </div>
         </div>
 
+
+
+        <div className="card bg-gradient-to-br from-secondary/10 via-base-200 to-primary/10 shadow mb-4" id="saved-books">
+          <div className="card-body gap-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] opacity-50">Want-to-read shelf</p>
+                <h3 className="font-serif text-lg">Private saved books</h3>
+                <p className="text-sm opacity-70">Books you save from a passage or source detail live here as title-level intentions, separate from passage bookmarks.</p>
+              </div>
+              <span className="badge badge-secondary badge-outline shrink-0">{savedBooks.filter(book => book.status === 'want_to_read').length} open</span>
+            </div>
+            {savedBookStatus && <div className="alert alert-success py-2 text-sm"><span>{savedBookStatus}</span></div>}
+            {savedBooks.length === 0 ? (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">No saved books yet.</p>
+                <p className="opacity-70 mt-1">Use “Want to read book” on Discover or a source page when a passage sells you on the full title.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {savedBooks.map(book => {
+                  const tags = parseTags(book.tags).slice(0, 4);
+                  const passage = book.savedFromPassage;
+                  return (
+                    <div key={book.id} className="rounded-box border border-base-content/10 bg-base-100/85 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-serif text-lg">{book.title}</h4>
+                          <p className="text-sm opacity-70">{book.author || 'Unknown author'}</p>
+                          <p className="text-xs opacity-55">saved {new Date(book.savedAt).toLocaleDateString()}</p>
+                        </div>
+                        <span className={`badge ${book.status === 'read' ? 'badge-success' : 'badge-secondary'} badge-outline`}>{book.status === 'read' ? 'read' : 'want to read'}</span>
+                      </div>
+                      {passage && <p className="mt-2 text-sm opacity-75">Saved from: “{passage.text.replace(/\s+/g, ' ').slice(0, 140)}{passage.text.length > 140 ? '…' : ''}”</p>}
+                      {tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{tags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link className="btn btn-primary btn-xs" to={`/source?title=${encodeURIComponent(book.title)}&author=${encodeURIComponent(book.author || '')}`}>Open source</Link>
+                        {passage && <button className="btn btn-ghost btn-xs" onClick={() => navigate(`/discover?passageId=${passage.id}`)}>Open saved-from passage</button>}
+                        {book.status === 'read'
+                          ? <button className="btn btn-outline btn-xs" disabled={offlineMode} onClick={() => updateSavedBook(book, 'want_to_read')}>Want to read again</button>
+                          : <button className="btn btn-success btn-xs" disabled={offlineMode} onClick={() => updateSavedBook(book, 'read')}>Mark read</button>}
+                        <button className="btn btn-ghost btn-xs text-error" disabled={offlineMode} onClick={() => removeSavedBook(book)}>Remove</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="card bg-gradient-to-br from-primary/10 via-base-200 to-accent/10 shadow mb-4" id="my-queue">
           <div className="card-body gap-3 p-4">
