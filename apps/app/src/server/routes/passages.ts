@@ -342,6 +342,12 @@ async function recordInteraction(
   if (delta !== 0) await updatePreferencesForPassage(prisma, userId, passageId, delta, now);
 }
 
+
+function isPublicDiscoverPassage(passage: { tags: string; id?: string }) {
+  const tags = parsePassageTags(passage.tags).map((tag) => tag.toLowerCase());
+  return !tags.includes('private') && !tags.includes('import-candidate') && !String(passage.id || '').startsWith('private-ocr-');
+}
+
 function normalizeFeedbackAction(value: unknown) {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK_DELTAS, value)
     ? value
@@ -400,7 +406,7 @@ passagesRouter.get('/passages/random', async (req: Request, res: Response) => {
     // Runtime filtering keeps legacy quote-sized / overlong / reference-note rows out of
     // Discover and push entry points while repair work can handle the historical corpus.
     const allPassages = await prisma.passage.findMany();
-    const readablePassages = filterReadablePassages(allPassages);
+    const readablePassages = filterReadablePassages(allPassages).filter(isPublicDiscoverPassage);
     const discoverPassages = preferTaggedPool(readablePassages, allowUntagged);
     if (readablePassages.length === 0) {
       res.status(404).json({ error: 'No readable passages found' });
@@ -744,7 +750,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       }),
     ]);
 
-    const readablePassages = filterReadablePassages(allPassages);
+    const readablePassages = filterReadablePassages(allPassages).filter(isPublicDiscoverPassage);
     const dailyReadablePassages = preferTaggedPool(readablePassages);
     const recentHistoryIds = historyEvents.slice(0, 30).map((event) => event.passageId);
     const recentPushIds = pushHistory.slice(0, 30).map((delivery) => delivery.passageId);

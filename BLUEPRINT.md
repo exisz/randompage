@@ -62,6 +62,8 @@
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
 │  │    /api/cron/fetch-new-books → 每周拉书切片入库 (Sun UTC) │ │
 │  │    /api/import/telegram-epub-handoff → Telegram EPUB 元数据 POC   │ │
+│  │    /api/import/page-photo-ocr/preview → signed-in private page-photo OCR candidate preview │ │
+│  │    /api/import/page-photo-ocr/accept → save accepted private OCR candidate to user Bookmarks │ │
 │  │    /manifest.json + /manifest.webmanifest → PWA manifest + Today shortcut │ │
 │  │    /sw.js          → offline shell/static cache + push click handler │ │
 │  └────────────────────────────────────────────────────────────┘ │
@@ -282,6 +284,7 @@ exisz/randompage (GitHub)
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-dwell-policy.mjs` | PLANET-3433 | 静态回归检查 signed-in passage dwell / engaged-read endpoint、`dwell_ms`、Discover/History/Push card tracking、reading-minute stats |
 | `check-saved-books-policy.mjs` | PLANET-3477 | 静态回归检查 saved_books 私有书级 shelf、Discover/Source save action、Bookmarks shelf controls、idempotent unique key 与 book:<tag> 偏好信号 |
+| `check-page-photo-ocr-import-policy.mjs` | PLANET-3501 | 静态回归检查 Settings 私有 page-photo OCR preview/save UI、`/api/import/page-photo-ocr/*` 鉴权、fixture success/unreadable failure copy，以及 private/import-candidate 不进入 public Discover sampling |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-passage-content-policy.mjs` | PLANET-2139/2227/2522/2948 | 生产 corpus reference-note/footnote/chapter-list/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts、TOC/chapter lists 与 non-terminal endings）；`--apply` 只删除无 bookmarks/push_history/browsing_events/passage_reviews 引用的 unreadable rows，保留已投递/收藏的用户归属记录 |
 | `check-tag-failure-policy.mjs` | PLANET-2263/3240 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，并有 `--static-only` guard 验证 Gemini quota fallback、fallbackTagged observability、Discover/daily queue tagged-pool preference，防止 retry 耗尽或 provider billing 后静默滞留 |
@@ -319,6 +322,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-07 | PLANET-3501: Added a signed-in Settings page-photo import flow. Users can choose one page photo, preview 1–3 private/import-candidate snippets from OCR text, save accepted snippets as private Bookmarks, and private/import-candidate passages are excluded from public Discover/daily queue sampling. Added `check:page-photo-ocr-import`; existing CLI `eval:page-ocr` remains unchanged. | Engineer Pod |
 | 2026-07-06 | PLANET-3477: Added a private want-to-read book shelf. Discover and source detail can save the current title/author to `saved_books`, Bookmarks shows want-to-read/read rows with saved-from passage, mark-read/remove controls, duplicate user/title/author saves are idempotent, and saved books add lightweight `book:<tag>` preference signals without Goodreads-style social/reviews/feed or new content sources. Added `check:saved-books`. | Engineer Pod |
 | 2026-07-03 | PLANET-3383: Bookmarks collections now support an optional private purpose/context field for saved-passage packs. The purpose is shown near collection cards, can be edited/cleared with the collection, is stored on `bookmark_collections.purpose`, and deterministic Recall Search indexes it as a distinct `collection purpose` match reason without public sharing, external LLMs, or new content sources; added `check:collection-purpose`. | Engineer Pod |
 | 2026-07-02 | PLANET-3364: Added local HathiTrust OCR/page-access passage-source evaluation (`pnpm --filter @randompage/app eval:hathitrust-page-access`) that uses HathiTrust Bibliographic API metadata/access flags, probes bounded page OCR endpoints for 10–20 Exis-aligned candidate volumes, and emits JSON/Markdown verdict/counts without Turso or production writes. | Engineer Pod |

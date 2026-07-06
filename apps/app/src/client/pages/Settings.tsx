@@ -34,6 +34,17 @@ type ReadLaterDestination = {
   configured: boolean;
 };
 
+type OcrCandidate = {
+  previewId: string;
+  text: string;
+  charCount: number;
+  title: string;
+  author: string;
+  source: string;
+  tags: string[];
+  qualityNote: string;
+};
+
 const FALLBACK_READING_GOALS: ReadingGoal[] = [
   {
     id: 'reflective-philosophy',
@@ -87,6 +98,13 @@ export default function Settings() {
   const [avoidStatus, setAvoidStatus] = useState('');
   const [scheduleStatus, setScheduleStatus] = useState('');
   const [readLaterStatus, setReadLaterStatus] = useState('');
+  const [ocrImageDataUrl, setOcrImageDataUrl] = useState('');
+  const [ocrTitle, setOcrTitle] = useState('');
+  const [ocrAuthor, setOcrAuthor] = useState('');
+  const [ocrText, setOcrText] = useState('');
+  const [ocrCandidates, setOcrCandidates] = useState<OcrCandidate[]>([]);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState('');
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -284,6 +302,76 @@ export default function Settings() {
       setScheduleStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setScheduleLoading(false);
+    }
+  };
+
+
+  const onOcrPhotoChange = (file: File | null) => {
+    setOcrStatus('');
+    setOcrCandidates([]);
+    if (!file) {
+      setOcrImageDataUrl('');
+      return;
+    }
+    if (!file.type.startsWith('image/')) {
+      setOcrStatus('Choose a PNG, JPEG, or WebP page photo.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setOcrImageDataUrl(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => setOcrStatus('Could not read that image file.');
+    reader.readAsDataURL(file);
+  };
+
+  const previewPagePhotoOcr = async () => {
+    if (!ocrImageDataUrl) {
+      setOcrStatus('Choose one book-page photo first.');
+      return;
+    }
+    setOcrLoading(true);
+    setOcrStatus('');
+    setOcrCandidates([]);
+    try {
+      const response = await apiFetch('/import/page-photo-ocr/preview', {
+        method: 'POST',
+        body: JSON.stringify({
+          imageDataUrl: ocrImageDataUrl,
+          title: ocrTitle,
+          author: ocrAuthor,
+          source: 'Private page photo',
+          ocrText,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Preview failed');
+      setOcrCandidates(Array.isArray(data.candidates) ? data.candidates : []);
+      if (data.status === 'candidate_preview') setOcrStatus('Preview ready — save only candidates you want in your private library.');
+      else setOcrStatus(data.failure?.message || 'No readable candidates yet.');
+    } catch (e) {
+      console.error(e);
+      setOcrStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const acceptOcrCandidate = async (candidate: OcrCandidate) => {
+    setOcrLoading(true);
+    setOcrStatus('');
+    try {
+      const response = await apiFetch('/import/page-photo-ocr/accept', {
+        method: 'POST',
+        body: JSON.stringify(candidate),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setOcrStatus(`Saved privately to Bookmarks (${data.passage?.id || 'candidate'}). It will not enter public Discover automatically.`);
+      setOcrCandidates(current => current.filter(item => item.previewId !== candidate.previewId));
+    } catch (e) {
+      console.error(e);
+      setOcrStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setOcrLoading(false);
     }
   };
 
@@ -496,6 +584,52 @@ export default function Settings() {
                 <p className="text-xs opacity-60">No destination saved yet. Existing HTML/TXT/Copy export still works.</p>
               )}
               {readLaterStatus ? <p className="text-xs opacity-70">{readLaterStatus}</p> : null}
+            </div>
+          </div>
+        )}
+        {authed && (
+          <div className="card bg-base-200 shadow mb-4">
+            <div className="card-body gap-3">
+              <div>
+                <h3 className="card-title text-base">Page photo import (private)</h3>
+                <p className="text-sm opacity-70">Upload one physical book-page photo, preview 1–3 RandomPage-shaped candidates, then save only reviewed snippets to your private Bookmarks. Private OCR candidates are tagged out of public Discover.</p>
+              </div>
+              <input
+                className="file-input file-input-bordered file-input-sm w-full"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => onOcrPhotoChange(event.target.files?.[0] || null)}
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input className="input input-bordered input-sm" placeholder="Book title" value={ocrTitle} onChange={(event) => setOcrTitle(event.target.value)} />
+                <input className="input input-bordered input-sm" placeholder="Author" value={ocrAuthor} onChange={(event) => setOcrAuthor(event.target.value)} />
+              </div>
+              <textarea
+                className="textarea textarea-bordered min-h-28 text-sm"
+                placeholder="Optional OCR text from your device/browser. If the photo is unreadable, paste extracted text here to generate private candidates."
+                value={ocrText}
+                onChange={(event) => setOcrText(event.target.value)}
+              />
+              <button className="btn btn-primary btn-sm" onClick={previewPagePhotoOcr} disabled={ocrLoading || !ocrImageDataUrl}>
+                {ocrLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                Preview private candidates
+              </button>
+              {ocrStatus ? <p className="text-xs opacity-70">{ocrStatus}</p> : null}
+              {ocrCandidates.length > 0 ? (
+                <div className="grid gap-3">
+                  {ocrCandidates.map(candidate => (
+                    <div key={candidate.previewId} className="rounded-box border border-base-300 bg-base-100 p-3">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="badge badge-primary badge-outline">private/import-candidate</span>
+                        <span className="text-xs opacity-60">{candidate.charCount} chars</span>
+                      </div>
+                      <p className="font-serif text-sm leading-relaxed">{candidate.text}</p>
+                      <p className="mt-2 text-xs opacity-60">{candidate.title} · {candidate.author} · {candidate.qualityNote}</p>
+                      <button className="btn btn-secondary btn-xs mt-3" onClick={() => acceptOcrCandidate(candidate)} disabled={ocrLoading}>Save to private Bookmarks</button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           </div>
         )}
