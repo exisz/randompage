@@ -207,6 +207,13 @@ function speechChunkIndexForChar(chunks: SpeechTextChunk[], charIndex: number) {
   return 0;
 }
 
+function isAuthBoundaryError(error: unknown) {
+  const details = error instanceof Error
+    ? `${error.name} ${error.message}`
+    : String(error ?? '');
+  return /auth|token|login|session|unauthori|forbidden|invalid_grant|invalid grant/i.test(details);
+}
+
 function passageErrorMessage(status: number) {
   if (status === 401 || status === 403) return 'Session expired — sign in again or continue with public passages.';
   if (status >= 500) return 'Could not load your personalized passage. Showing the public feed instead.';
@@ -303,6 +310,11 @@ export default function Discover() {
         return;
       }
       const res = await apiFetch('/passages/daily-queue?limit=5');
+      if (res.status === 401 || res.status === 403) {
+        setAuthed(false);
+        setDailyQueue(null);
+        return;
+      }
       if (!res.ok) throw new Error(`Daily queue returned ${res.status}`);
       const data = await res.json();
       setDailyQueue({
@@ -315,6 +327,11 @@ export default function Discover() {
       });
     } catch (e) {
       console.error(e);
+      if (isAuthBoundaryError(e)) {
+        setAuthed(false);
+        setDailyQueue(null);
+        return;
+      }
       setDailyQueue({
         queue: [],
         generatedFor: '',
@@ -1062,7 +1079,18 @@ export default function Discover() {
               </div>
             )}
 
-            {authed && (
+            {!authed ? (
+              <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
+                    <p className="mt-1 text-sm opacity-70">Sign in to get your daily personalized queue; the public feed is available below.</p>
+                  </div>
+                  <span className="badge badge-primary badge-outline">Public</span>
+                </div>
+                <Link to="/signin" className="btn btn-primary btn-sm mt-3 rounded-xl">Sign in for personalized queue</Link>
+              </div>
+            ) : (
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">
                 <div className="flex items-start justify-between gap-3">
                   <div>

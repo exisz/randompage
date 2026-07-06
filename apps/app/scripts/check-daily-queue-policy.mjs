@@ -8,6 +8,8 @@ const checks = [
   ['Discover does not show stale sign-in sync empty copy', 'src/client/pages/Discover.tsx', 'Refresh queue'],
   ['Discover explains fallback queue state', 'src/client/pages/Discover.tsx', 'Fresh unread pool is low'],
   ['Discover surfaces API empty reason', 'src/client/pages/Discover.tsx', 'dailyQueue?.emptyReason'],
+  ['Discover treats daily queue auth failures as anonymous state', 'src/client/pages/Discover.tsx', 'res.status === 401 || res.status === 403'],
+  ['Discover shows anonymous daily queue sign-in copy', 'src/client/pages/Discover.tsx', 'Sign in to get your daily personalized queue; the public feed is available below.'],
 ];
 
 let failed = false;
