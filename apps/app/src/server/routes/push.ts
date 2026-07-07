@@ -43,6 +43,11 @@ type PushDeliveryStats = {
 
 const DAILY_PUSH_HOUR_TAG = 'control:daily-push:hour';
 const DAILY_PUSH_TZ_PREFIX = 'control:daily-push:tz:';
+const SOURCE_NOTICE_PREFIX = 'control:source-notify:';
+
+function sourceNoticeKey(title: string, author: string) {
+  return `${SOURCE_NOTICE_PREFIX}${encodeURIComponent(`${title.trim()}::${author.trim()}`)}`;
+}
 
 async function normalizePushSubscriptionCreatedAt(prisma: PrismaClient) {
   // Production legacy schema stores push_subscriptions.created_at as INTEGER unix seconds.
@@ -355,6 +360,87 @@ pushRouter.post('/push/send', async (req: Request, res: Response) => {
     const overrideSchedule = req.query.override_schedule === '1' || req.query.override_schedule === 'true' || req.header('x-push-override-schedule') === '1';
     const result = await sendPersonalizedPushes(prisma, subscriptions, passages, forceClean, 'push/send', !overrideSchedule);
     res.json({ ok: true, ...result });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// POST /api/push/source-notices
+// Auth: x-push-secret header == PUSH_SECRET. Sends at most one deterministic new-passage notice
+// per opted-in saved book/user and records the delivered passage in push_history.
+pushRouter.post('/push/source-notices', async (req: Request, res: Response) => {
+  try {
+    const secret = process.env.PUSH_SECRET;
+    const provided = req.header('x-push-secret');
+    if (!secret || provided !== secret) { res.status(403).json({ error: 'Forbidden' }); return; }
+    const dryRun = req.query.dry_run === '1' || req.query.dry_run === 'true';
+    const prisma = getPrisma();
+    const subscriptions = await getAllPushSubscriptions(prisma);
+    const subsByUser = groupSubscriptionsByUser(subscriptions);
+    const prefs = await prisma.userPreference.findMany({ where: { tag: { startsWith: SOURCE_NOTICE_PREFIX } }, select: { userId: true, tag: true } });
+    const prefsByUser = new Map<string, Set<string>>();
+    for (const pref of prefs) {
+      const set = prefsByUser.get(pref.userId) ?? new Set<string>();
+      set.add(pref.tag);
+      prefsByUser.set(pref.userId, set);
+    }
+
+    let sent = 0;
+    let failed = 0;
+    let removed = 0;
+    const personalized: { userId: string; passageId: string; savedBookId: string }[] = [];
+    const failures: PushFailure[] = [];
+
+    for (const [userId, prefTags] of prefsByUser.entries()) {
+      const userSubs = subsByUser.get(userId) ?? [];
+      if (userSubs.length === 0) continue;
+      const books = await prisma.$queryRaw<Array<{ id: string; title: string; author: string; saved_from_passage_id: string | null }>>`
+        SELECT id, title, author, saved_from_passage_id FROM saved_books WHERE user_id = ${userId} ORDER BY saved_at DESC LIMIT 100
+      `;
+      for (const book of books) {
+        if (!prefTags.has(sourceNoticeKey(book.title, book.author))) continue;
+        const matches = await prisma.$queryRaw<Array<{ id: string; text: string; book_title: string; author: string }>>`
+          SELECT p.id, p.text, p.book_title, p.author
+          FROM passages p
+          WHERE lower(p.book_title) = lower(${book.title})
+            AND lower(COALESCE(p.author, '')) = lower(${book.author})
+            AND (${book.saved_from_passage_id} IS NULL OR p.id != ${book.saved_from_passage_id})
+            AND NOT EXISTS (SELECT 1 FROM push_history ph WHERE ph.user_id = ${userId} AND ph.passage_id = p.id)
+          ORDER BY p.id
+          LIMIT 1
+        `;
+        const passage = matches[0];
+        if (!passage) continue;
+        let userSent = 0;
+        if (!dryRun) {
+          for (const sub of userSubs) {
+            try {
+              await webpush.sendNotification(
+                { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+                JSON.stringify({
+                  title: 'RandomPage',
+                  body: `New page from ${passage.book_title}: ${passage.text.slice(0, 80)}${passage.text.length > 80 ? '...' : ''}`,
+                  passageId: passage.id,
+                }),
+              );
+              userSent++;
+            } catch (err: unknown) {
+              failed++;
+              const { e, statusCode, errCode, deleted } = await deleteSubscriptionIfUnrecoverable(prisma, sub, err, false);
+              if (deleted) removed++;
+              failures.push({ subId: sub.id, endpoint: sub.endpoint.slice(0, 80), statusCode, name: e?.name ?? null, message: e?.message ?? null, code: errCode, deleted });
+            }
+          }
+          if (userSent > 0) {
+            await prisma.pushHistory.create({ data: { id: nanoid(), userId, passageId: passage.id, sentAt: new Date() } });
+            sent += userSent;
+          }
+        }
+        personalized.push({ userId, passageId: passage.id, savedBookId: book.id });
+        break;
+      }
+    }
+    res.json({ ok: true, dryRun, sent, failed, removed, personalized, failures });
   } catch (e: unknown) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }

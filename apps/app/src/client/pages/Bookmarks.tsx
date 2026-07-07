@@ -30,7 +30,7 @@ interface Collection {
   id: string; name: string; purpose?: string | null; updatedAt: string; items: { bookmarkId: string }[];
 }
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
-interface SavedBook { id: string; title: string; author: string; status: 'want_to_read' | 'read'; savedFromPassageId?: string | null; sourceUrl?: string | null; tags: string; savedAt: string; updatedAt: string; savedFromPassage?: Passage | null; }
+interface SavedBook { id: string; title: string; author: string; status: 'want_to_read' | 'read'; savedFromPassageId?: string | null; sourceUrl?: string | null; tags: string; savedAt: string; updatedAt: string; savedFromPassage?: Passage | null; notifyOnNewPassages?: boolean; newPassageNotice?: { count: number; passage: Passage } | null; }
 type ReviewTuningPreset = 'pause' | 'less' | 'normal' | 'more';
 type ReviewTuningScope = 'global' | 'source' | 'tag';
 interface ReviewTuningRule { scope: ReviewTuningScope; value: string; preset: ReviewTuningPreset; label: string; }
@@ -219,6 +219,20 @@ export default function Bookmarks() {
       if (!res.ok) throw new Error(`Remove failed (${res.status}).`);
       await refresh();
       setSavedBookStatus(`Removed ${book.title} from your saved books.`);
+    } catch (e) {
+      setSavedBookStatus(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const toggleSavedBookNotifications = async (book: SavedBook) => {
+    if (offlineMode) return;
+    setSavedBookStatus(null);
+    try {
+      const nextEnabled = !book.notifyOnNewPassages;
+      const res = await apiFetch(`/saved-books/${encodeURIComponent(book.id)}/notifications`, { method: 'PATCH', body: JSON.stringify({ enabled: nextEnabled }) });
+      if (!res.ok) throw new Error(`Notification update failed (${res.status}).`);
+      await refresh();
+      setSavedBookStatus(nextEnabled ? `New-passage notices enabled for ${book.title}.` : `New-passage notices disabled for ${book.title}.`);
     } catch (e) {
       setSavedBookStatus(e instanceof Error ? e.message : String(e));
     }
@@ -816,10 +830,17 @@ export default function Bookmarks() {
                         <span className={`badge ${book.status === 'read' ? 'badge-success' : 'badge-secondary'} badge-outline`}>{book.status === 'read' ? 'read' : 'want to read'}</span>
                       </div>
                       {passage && <p className="mt-2 text-sm opacity-75">Saved from: “{passage.text.replace(/\s+/g, ' ').slice(0, 140)}{passage.text.length > 140 ? '…' : ''}”</p>}
+                      {book.newPassageNotice && (
+                        <div className="mt-2 rounded-box border border-secondary/30 bg-secondary/10 p-2 text-sm">
+                          <p className="font-medium">New matching page available</p>
+                          <p className="opacity-75">{book.newPassageNotice.count} unnotified passage{book.newPassageNotice.count === 1 ? '' : 's'} from this saved book/source. Open the source to read the latest match.</p>
+                        </div>
+                      )}
                       {tags.length > 0 && <div className="mt-2 flex flex-wrap gap-1">{tags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
                       <div className="mt-3 flex flex-wrap items-center gap-2">
                         <Link className="btn btn-primary btn-xs" to={`/source?title=${encodeURIComponent(book.title)}&author=${encodeURIComponent(book.author || '')}`}>Open source</Link>
                         {passage && <button className="btn btn-ghost btn-xs" onClick={() => navigate(`/discover?passageId=${passage.id}`)}>Open saved-from passage</button>}
+                        <button className={`btn btn-xs ${book.notifyOnNewPassages ? 'btn-secondary' : 'btn-outline'}`} disabled={offlineMode} onClick={() => toggleSavedBookNotifications(book)}>{book.notifyOnNewPassages ? 'Notices on' : 'Notify on new pages'}</button>
                         {book.status === 'read'
                           ? <button className="btn btn-outline btn-xs" disabled={offlineMode} onClick={() => updateSavedBook(book, 'want_to_read')}>Want to read again</button>
                           : <button className="btn btn-success btn-xs" disabled={offlineMode} onClick={() => updateSavedBook(book, 'read')}>Mark read</button>}

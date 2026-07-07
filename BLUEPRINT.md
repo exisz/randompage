@@ -51,13 +51,14 @@
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
 │  │    /api/bookmarks/:id/related → deterministic related saved pages for review cards │ │
 │  │    /api/saved-books → private want-to-read book shelf CRUD        │ │
+│  │    /api/saved-books/:id/notifications + /api/saved-books/notices → private saved-source new-passage notices │ │
 │  │    /api/bookmarks/:id/annotations → private line-level thoughts on saved passages │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
 │    /api/reading/challenges → lightweight challenge/achievement progress derived from browsing_events, passage_reviews, reading_paths, push_history, user_preferences │ │
 │  │    /api/preferences → 读取偏好权重 + goals/avoid tags + daily push schedule + read-later email 控制     │ │
-│  │    /api/push/*    → 推送订阅/历史                          │ │
+│  │    /api/push/*    → 推送订阅/历史/source notices              │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
 │  │    /api/cron/tag-untagged → 每日 LLM 补打标 (03:00 UTC)   │ │
 │  │    /api/cron/fetch-new-books → 每周拉书切片入库 (Sun UTC) │ │
@@ -116,13 +117,13 @@ exisz/randompage (GitHub)
 | passage_recall_cards | 用户从 saved passage 选中短语创建的私密 active-recall cloze cards；保存 quote offsets、hidden context、due_after、box，按 user_id/bookmark_id 隔离 |
 | passage_recall_reviews | active-recall card grading history（remembered/forgot/soon/later/someday）与下次 due_after/box，用于调度方向验证 |
 | push_subscriptions | Web Push 订阅 |
-| push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录) |
+| push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录；source-notice push 也写入 user-specific delivered passage，防止重复通知) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
-| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制，不参与 Discover 推荐打分） |
-| saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove，Discover/Source detail 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
+| user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
+| saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -284,6 +285,7 @@ exisz/randompage (GitHub)
 | `check-browsing-events-policy.mjs` | PLANET-1985 | 静态回归检查 Discover / push-inbox telemetry 是否写入 `browsing_events` |
 | `check-passage-dwell-policy.mjs` | PLANET-3433 | 静态回归检查 signed-in passage dwell / engaged-read endpoint、`dwell_ms`、Discover/History/Push card tracking、reading-minute stats |
 | `check-saved-books-policy.mjs` | PLANET-3477 | 静态回归检查 saved_books 私有书级 shelf、Discover/Source save action、Bookmarks shelf controls、idempotent unique key 与 book:<tag> 偏好信号 |
+| `check-source-notices-policy.mjs` | PLANET-3521 | 静态回归检查 saved book/source 新 passage notice control rows、Bookmarks toggle/surface、secret-protected push helper 与 per-user push_history 归属 |
 | `check-page-photo-ocr-import-policy.mjs` | PLANET-3501 | 静态回归检查 Settings 私有 page-photo OCR preview/save UI、`/api/import/page-photo-ocr/*` 鉴权、fixture success/unreadable failure copy，以及 private/import-candidate 不进入 public Discover sampling |
 | `check-passage-length-policy.mjs` | PLANET-2037/2054 | 生产 corpus 长度 QA：p50/p90/p95/max、too-short/too-long samples、`--repair-plan` 分组 |
 | `check-passage-content-policy.mjs` | PLANET-2139/2227/2522/2948 | 生产 corpus reference-note/footnote/chapter-list/truncated-ending QA：count + samples by reason（含 `For …, see note …` cross-reference starts、TOC/chapter lists 与 non-terminal endings）；`--apply` 只删除无 bookmarks/push_history/browsing_events/passage_reviews 引用的 unreadable rows，保留已投递/收藏的用户归属记录 |
@@ -322,6 +324,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-08 | PLANET-3521: Added private saved book/source new-passage notices. Bookmarks saved_books rows can toggle “Notify on new pages”, source-notice preferences live in `user_preferences` `control:source-notify:*` rows, `/api/saved-books/notices` lists deterministic matching RandomPage passages not yet delivered to that user, and `/api/push/source-notices` sends secret-protected Web Push while recording user-specific `push_history`. Added `check:source-notices`. | Engineer Pod |
 | 2026-07-07 | PLANET-3501: Added a signed-in Settings page-photo import flow. Users can choose one page photo, preview 1–3 private/import-candidate snippets from OCR text, save accepted snippets as private Bookmarks, and private/import-candidate passages are excluded from public Discover/daily queue sampling. Added `check:page-photo-ocr-import`; existing CLI `eval:page-ocr` remains unchanged. | Engineer Pod |
 | 2026-07-06 | PLANET-3477: Added a private want-to-read book shelf. Discover and source detail can save the current title/author to `saved_books`, Bookmarks shows want-to-read/read rows with saved-from passage, mark-read/remove controls, duplicate user/title/author saves are idempotent, and saved books add lightweight `book:<tag>` preference signals without Goodreads-style social/reviews/feed or new content sources. Added `check:saved-books`. | Engineer Pod |
 | 2026-07-03 | PLANET-3383: Bookmarks collections now support an optional private purpose/context field for saved-passage packs. The purpose is shown near collection cards, can be edited/cleared with the collection, is stored on `bookmark_collections.purpose`, and deterministic Recall Search indexes it as a distinct `collection purpose` match reason without public sharing, external LLMs, or new content sources; added `check:collection-purpose`. | Engineer Pod |

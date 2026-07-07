@@ -74,8 +74,15 @@ function normalizeSavedBookStatus(value: unknown) {
   return value === 'read' ? 'read' : 'want_to_read';
 }
 
+const SOURCE_NOTICE_PREFIX = 'control:source-notify:';
+
+function sourceNoticeKey(title: string, author: string) {
+  return `${SOURCE_NOTICE_PREFIX}${encodeURIComponent(`${title.trim()}::${author.trim()}`)}`;
+}
+
 function savedBookRowToJson(row: {
   id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+  notify_enabled?: number | null; unnotified_count?: number | null; notice_passage_id?: string | null; notice_passage_text?: string | null; notice_passage_title?: string | null; notice_passage_author?: string | null; notice_passage_chapter?: string | null; notice_passage_tags?: string | null; notice_passage_language?: string | null;
   passage_text?: string | null; passage_title?: string | null; passage_author?: string | null; passage_chapter?: string | null; passage_tags?: string | null; passage_language?: string | null;
 }) {
   return {
@@ -88,6 +95,19 @@ function savedBookRowToJson(row: {
     tags: row.tags ?? '[]',
     savedAt: row.saved_at,
     updatedAt: row.updated_at,
+    notifyOnNewPassages: Number(row.notify_enabled ?? 0) > 0,
+    newPassageNotice: Number(row.notify_enabled ?? 0) > 0 && Number(row.unnotified_count ?? 0) > 0 && row.notice_passage_id ? {
+      count: Number(row.unnotified_count ?? 0),
+      passage: {
+        id: row.notice_passage_id,
+        text: row.notice_passage_text ?? '',
+        bookTitle: row.notice_passage_title ?? row.title,
+        author: row.notice_passage_author ?? row.author,
+        chapter: row.notice_passage_chapter ?? undefined,
+        tags: row.notice_passage_tags ?? '[]',
+        language: row.notice_passage_language ?? 'en',
+      },
+    } : null,
     savedFromPassage: row.saved_from_passage_id && row.passage_text ? {
       id: row.saved_from_passage_id,
       text: row.passage_text,
@@ -311,16 +331,36 @@ bookmarksRouter.get('/saved-books', async (req: Request, res: Response) => {
     const userId = claims.sub as string;
     const rows = await prisma.$queryRaw<Array<{
       id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+      notify_enabled: number | null; unnotified_count: number | null; notice_passage_id: string | null; notice_passage_text: string | null; notice_passage_title: string | null; notice_passage_author: string | null; notice_passage_chapter: string | null; notice_passage_tags: string | null; notice_passage_language: string | null;
       passage_text: string | null; passage_title: string | null; passage_author: string | null; passage_chapter: string | null; passage_tags: string | null; passage_language: string | null;
     }>>`
       SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.tags, sb.saved_at, sb.updated_at,
+             0 AS notify_enabled,
+             (SELECT COUNT(*) FROM passages np
+              WHERE lower(np.book_title) = lower(sb.title)
+                AND lower(COALESCE(np.author, '')) = lower(COALESCE(sb.author, ''))
+                AND (sb.saved_from_passage_id IS NULL OR np.id != sb.saved_from_passage_id)
+                AND NOT EXISTS (SELECT 1 FROM push_history ph WHERE ph.user_id = sb.user_id AND ph.passage_id = np.id)
+             ) AS unnotified_count,
+             npick.id AS notice_passage_id, npick.text AS notice_passage_text, npick.book_title AS notice_passage_title, npick.author AS notice_passage_author, npick.chapter AS notice_passage_chapter, npick.tags AS notice_passage_tags, npick.language AS notice_passage_language,
              p.text AS passage_text, p.book_title AS passage_title, p.author AS passage_author, p.chapter AS passage_chapter, p.tags AS passage_tags, p.language AS passage_language
       FROM saved_books sb
       LEFT JOIN passages p ON p.id = sb.saved_from_passage_id
+      LEFT JOIN passages npick ON npick.id = (
+        SELECT np.id FROM passages np
+        WHERE lower(np.book_title) = lower(sb.title)
+          AND lower(COALESCE(np.author, '')) = lower(COALESCE(sb.author, ''))
+          AND (sb.saved_from_passage_id IS NULL OR np.id != sb.saved_from_passage_id)
+          AND NOT EXISTS (SELECT 1 FROM push_history ph WHERE ph.user_id = sb.user_id AND ph.passage_id = np.id)
+        ORDER BY np.id LIMIT 1
+      )
       WHERE sb.user_id = ${userId}
       ORDER BY CASE WHEN sb.status = 'want_to_read' THEN 0 ELSE 1 END, sb.saved_at DESC
       LIMIT 100
     `;
+    const noticePrefs = await prisma.userPreference.findMany({ where: { userId, tag: { startsWith: SOURCE_NOTICE_PREFIX } }, select: { tag: true } });
+    const noticeTags = new Set(noticePrefs.map((pref) => pref.tag));
+    for (const row of rows) row.notify_enabled = noticeTags.has(sourceNoticeKey(row.title, row.author)) ? 1 : 0;
     res.json({ savedBooks: rows.map(savedBookRowToJson) });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
@@ -397,6 +437,71 @@ bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
     res.json({ savedBook: savedBookRowToJson(savedRows[0]) });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// PATCH /api/saved-books/:id/notifications — signed-in private source notice toggle.
+bookmarksRouter.patch('/saved-books/:id/notifications', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    const userId = claims.sub as string;
+    const rows = await prisma.$queryRaw<Array<{ id: string; title: string; author: string }>>`
+      SELECT id, title, author FROM saved_books WHERE id = ${req.params.id} AND user_id = ${userId} LIMIT 1
+    `;
+    const book = rows[0];
+    if (!book) { res.status(404).json({ error: 'Saved book not found' }); return; }
+    const tag = sourceNoticeKey(book.title, book.author);
+    if (req.body?.enabled === false) {
+      await prisma.$executeRaw`DELETE FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag}`;
+      res.json({ ok: true, enabled: false });
+      return;
+    }
+    const now = new Date();
+    const existing = await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag} LIMIT 1`;
+    if (existing[0]) {
+      await prisma.$executeRaw`UPDATE user_preferences SET weight = ${1}, updated_at = ${now} WHERE id = ${existing[0].id}`;
+    } else {
+      await prisma.$executeRaw`INSERT INTO user_preferences (id, user_id, tag, weight, updated_at) VALUES (${nanoid()}, ${userId}, ${tag}, ${1}, ${now})`;
+    }
+    res.json({ ok: true, enabled: true });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/saved-books/notices — private newly available source-passage notices.
+bookmarksRouter.get('/saved-books/notices', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureSavedBookTable(prisma);
+    const userId = claims.sub as string;
+    const prefs = await prisma.userPreference.findMany({ where: { userId, tag: { startsWith: SOURCE_NOTICE_PREFIX } }, select: { tag: true } });
+    if (prefs.length === 0) { res.json({ notices: [] }); return; }
+    const prefTags = new Set(prefs.map((pref) => pref.tag));
+    const books = await prisma.$queryRaw<Array<{ id: string; title: string; author: string; saved_from_passage_id: string | null }>>`
+      SELECT id, title, author, saved_from_passage_id FROM saved_books WHERE user_id = ${userId} ORDER BY saved_at DESC LIMIT 100
+    `;
+    const notices = [];
+    for (const book of books) {
+      if (!prefTags.has(sourceNoticeKey(book.title, book.author))) continue;
+      const matches = await prisma.$queryRaw<Array<{ id: string; text: string; bookTitle: string; author: string; chapter: string | null; tags: string; language: string }>>`
+        SELECT p.id, p.text, p.book_title as bookTitle, p.author, p.chapter, p.tags, p.language
+        FROM passages p
+        WHERE lower(p.book_title) = lower(${book.title})
+          AND lower(COALESCE(p.author, '')) = lower(${book.author})
+          AND (${book.saved_from_passage_id} IS NULL OR p.id != ${book.saved_from_passage_id})
+          AND NOT EXISTS (SELECT 1 FROM push_history ph WHERE ph.user_id = ${userId} AND ph.passage_id = p.id)
+        ORDER BY p.id
+        LIMIT 3
+      `;
+      if (matches.length) notices.push({ savedBookId: book.id, title: book.title, author: book.author, count: matches.length, passages: matches });
+    }
+    res.json({ notices });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
 
