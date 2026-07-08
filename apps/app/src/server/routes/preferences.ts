@@ -9,6 +9,7 @@ import { parseReviewTuning, reviewTuningTag, reviewTuningWeight, type ReviewTuni
 export const preferencesRouter = Router();
 
 const GOAL_SEED_WEIGHT = 7;
+const CALIBRATION_SEED_WEIGHT = 6;
 const DEFAULT_AVOID_TAGS = ['dark', 'tense', 'deception', 'suffering', 'violence'];
 const MAX_AVOID_TAGS = 5;
 const DAILY_PUSH_HOUR_TAG = `${CONTROL_TAG_PREFIX}daily-push:hour`;
@@ -16,6 +17,11 @@ const DAILY_PUSH_TZ_PREFIX = `${CONTROL_TAG_PREFIX}daily-push:tz:`;
 const READ_LATER_EMAIL_PREFIX = `${CONTROL_TAG_PREFIX}read-later:email:`;
 const READ_LATER_ACTIVE_TAG = `${CONTROL_TAG_PREFIX}read-later:active`;
 const READ_LATER_VERIFIED_TAG = `${CONTROL_TAG_PREFIX}read-later:verified`;
+const CALIBRATION_WANT_PREFIX = `${CONTROL_TAG_PREFIX}preference-calibration:want:`;
+const CALIBRATION_AVOID_TEXT_PREFIX = `${CONTROL_TAG_PREFIX}preference-calibration:avoid-text:`;
+const CALIBRATION_TAG_PREFIX = `${CONTROL_TAG_PREFIX}preference-calibration:tag:`;
+const CALIBRATION_AVOID_TAG_PREFIX = `${CONTROL_TAG_PREFIX}preference-calibration:avoid-tag:`;
+const MAX_CALIBRATION_TEXT_LENGTH = 600;
 
 const READING_GOALS = [
   {
@@ -124,6 +130,81 @@ function dailyPushTimeLabel(hour: number, timeZone: string) {
   }).format(date) + ` ${timeZone}`;
 }
 
+
+function decodeControlText(tag: string, prefix: string) {
+  if (!tag.startsWith(prefix)) return '';
+  try {
+    return decodeURIComponent(tag.slice(prefix.length));
+  } catch {
+    return '';
+  }
+}
+
+function calibrationFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
+  const wantRow = preferences.find((pref) => pref.tag.startsWith(CALIBRATION_WANT_PREFIX));
+  const avoidTextRow = preferences.find((pref) => pref.tag.startsWith(CALIBRATION_AVOID_TEXT_PREFIX));
+  const derivedTags = preferences
+    .filter((pref) => pref.tag.startsWith(CALIBRATION_TAG_PREFIX))
+    .map((pref) => normalizeAvoidTag(pref.tag.slice(CALIBRATION_TAG_PREFIX.length)))
+    .filter(Boolean)
+    .sort();
+  const derivedAvoidTags = preferences
+    .filter((pref) => pref.tag.startsWith(CALIBRATION_AVOID_TAG_PREFIX))
+    .map((pref) => normalizeAvoidTag(pref.tag.slice(CALIBRATION_AVOID_TAG_PREFIX.length)))
+    .filter(Boolean)
+    .sort();
+  return {
+    wantText: wantRow ? decodeControlText(wantRow.tag, CALIBRATION_WANT_PREFIX) : '',
+    avoidText: avoidTextRow ? decodeControlText(avoidTextRow.tag, CALIBRATION_AVOID_TEXT_PREFIX) : '',
+    derivedTags,
+    derivedAvoidTags,
+    active: Boolean(wantRow || avoidTextRow || derivedTags.length || derivedAvoidTags.length),
+    reason: derivedTags.length || derivedAvoidTags.length
+      ? `Calibrated from your preference note: ${[...derivedTags, ...derivedAvoidTags.map((tag) => `less ${tag}`)].slice(0, 5).join(' · ')}`
+      : '',
+  };
+}
+
+function normalizeCalibrationText(value: unknown) {
+  const text = typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+  if (text.length > MAX_CALIBRATION_TEXT_LENGTH) return null;
+  return text;
+}
+
+async function fetchTagUniverse(prisma: ReturnType<typeof getPrisma>) {
+  const rows = await prisma.passage.findMany({ select: { tags: true } });
+  const tags = new Set<string>();
+  for (const row of rows) {
+    for (const tag of parsePassageTags(row.tags)) {
+      const normalized = normalizeAvoidTag(tag);
+      if (normalized && !normalized.startsWith(CONTROL_TAG_PREFIX)) tags.add(normalized);
+    }
+  }
+  return Array.from(tags).sort();
+}
+
+function textMatchesTag(text: string, tag: string) {
+  const haystack = ` ${text.toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+  const phrase = tag.toLowerCase().replace(/-/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!phrase) return false;
+  if (haystack.includes(` ${phrase} `)) return true;
+  return phrase.split(' ').length > 1 && phrase.split(' ').every((part) => haystack.includes(` ${part} `));
+}
+
+function parseCalibrationTags(wantText: string, avoidText: string, tagUniverse: string[]) {
+  const combined = `${wantText} ${avoidText}`.toLowerCase();
+  const avoidCue = combined.match(/(?:less|avoid|no more|not into|fewer)\s+(.{0,180})/i)?.[1] ?? '';
+  const positiveText = wantText.toLowerCase().replace(/(?:less|avoid|no more|not into|fewer)\s+.{0,180}/gi, ' ');
+  const avoidSourceText = `${avoidText} ${avoidCue}`;
+  const positiveTags = tagUniverse.filter((tag) => textMatchesTag(positiveText, tag)).slice(0, 8);
+  const avoidTags = tagUniverse.filter((tag) => textMatchesTag(avoidSourceText, tag)).slice(0, 8);
+  const avoidSet = new Set(avoidTags);
+  return {
+    positiveTags: positiveTags.filter((tag) => !avoidSet.has(tag)),
+    avoidTags,
+  };
+}
+
 function readLaterDestinationFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
   const emailRow = preferences.find((pref) => pref.tag.startsWith(READ_LATER_EMAIL_PREFIX));
   const email = emailRow ? decodeURIComponent(emailRow.tag.slice(READ_LATER_EMAIL_PREFIX.length)) : '';
@@ -166,7 +247,8 @@ preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
     const dailyPushSchedule = dailyPushScheduleFromPreferences(prefs);
     const readLaterDestination = readLaterDestinationFromPreferences(prefs);
     const reviewTuning = parseReviewTuning(prefs);
-    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination, reviewTuning });
+    const preferenceCalibration = calibrationFromPreferences(prefs);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination, reviewTuning, preferenceCalibration });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -215,6 +297,107 @@ preferencesRouter.post('/preferences/goals', async (req: Request, res: Response)
     const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
     const avoidTags = await fetchAvoidTagOptions(prisma);
     res.json({ preferences: positivePreferences, selectedGoals, seededTags: tags, avoidTags, selectedAvoidTags });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+// POST /api/preferences/calibration
+// Stores a private free-text preference note and deterministically maps known passage tags into user_preferences.
+preferencesRouter.post('/preferences/calibration', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const wantText = normalizeCalibrationText(req.body?.wantText);
+    const avoidText = normalizeCalibrationText(req.body?.avoidText);
+    const clear = Boolean(req.body?.clear);
+    if (wantText === null || avoidText === null) {
+      res.status(400).json({ error: `Preference notes must be ${MAX_CALIBRATION_TEXT_LENGTH} characters or less.` });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    const previousPrefs = await fetchPreferences(prisma, userId);
+    const previousCalibration = calibrationFromPreferences(previousPrefs);
+
+    for (const tag of previousCalibration.derivedTags) {
+      await prisma.$executeRaw`
+        DELETE FROM user_preferences
+        WHERE user_id = ${userId} AND tag = ${tag} AND weight = ${CALIBRATION_SEED_WEIGHT}
+      `;
+    }
+    for (const tag of previousCalibration.derivedAvoidTags) {
+      await prisma.$executeRaw`
+        DELETE FROM user_preferences
+        WHERE user_id = ${userId} AND tag = ${avoidPreferenceTag(tag)} AND weight = ${AVOID_TAG_WEIGHT}
+      `;
+    }
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId}
+        AND (tag LIKE ${`${CALIBRATION_WANT_PREFIX}%`} OR tag LIKE ${`${CALIBRATION_AVOID_TEXT_PREFIX}%`} OR tag LIKE ${`${CALIBRATION_TAG_PREFIX}%`} OR tag LIKE ${`${CALIBRATION_AVOID_TAG_PREFIX}%`})
+    `;
+
+    if (!clear && (wantText || avoidText)) {
+      const tagUniverse = await fetchTagUniverse(prisma);
+      const { positiveTags, avoidTags: parsedAvoidTags } = parseCalibrationTags(wantText ?? '', avoidText ?? '', tagUniverse);
+
+      if (wantText) {
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${`${CALIBRATION_WANT_PREFIX}${encodeURIComponent(wantText)}`}, ${1}, ${updatedAt})
+        `;
+      }
+      if (avoidText) {
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${`${CALIBRATION_AVOID_TEXT_PREFIX}${encodeURIComponent(avoidText)}`}, ${1}, ${updatedAt})
+        `;
+      }
+
+      for (const tag of positiveTags) {
+        const existing = await prisma.$queryRaw<Array<{ id: string; weight: number }>>`
+          SELECT id, weight FROM user_preferences WHERE user_id = ${userId} AND tag = ${tag} LIMIT 1
+        `;
+        if (existing[0]) {
+          await prisma.$executeRaw`
+            UPDATE user_preferences
+            SET weight = ${Math.max(CALIBRATION_SEED_WEIGHT, Number(existing[0].weight) || 1)}, updated_at = ${updatedAt}
+            WHERE id = ${existing[0].id}
+          `;
+        } else {
+          await prisma.$executeRaw`
+            INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+            VALUES (${nanoid()}, ${userId}, ${tag}, ${CALIBRATION_SEED_WEIGHT}, ${updatedAt})
+          `;
+        }
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${`${CALIBRATION_TAG_PREFIX}${tag}`}, ${1}, ${updatedAt})
+        `;
+      }
+
+      for (const tag of parsedAvoidTags) {
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${avoidPreferenceTag(tag)}, ${AVOID_TAG_WEIGHT}, ${updatedAt})
+        `;
+        await prisma.$executeRaw`
+          INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+          VALUES (${nanoid()}, ${userId}, ${`${CALIBRATION_AVOID_TAG_PREFIX}${tag}`}, ${1}, ${updatedAt})
+        `;
+      }
+    }
+
+    const prefs = await fetchPreferences(prisma, userId);
+    const { positivePreferences, avoidTags: selectedAvoidTags } = splitPreferenceControls(prefs);
+    const avoidTags = await fetchAvoidTagOptions(prisma);
+    res.json({ preferences: positivePreferences, selectedAvoidTags, avoidTags, preferenceCalibration: calibrationFromPreferences(prefs) });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

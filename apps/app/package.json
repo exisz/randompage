@@ -59,7 +59,8 @@
     "check:passage-dwell": "node scripts/check-passage-dwell-policy.mjs",
     "check:saved-books": "node scripts/check-saved-books-policy.mjs",
     "check:page-photo-ocr-import": "node scripts/check-page-photo-ocr-import-policy.mjs",
-    "check:source-notices": "node scripts/check-source-notices-policy.mjs"
+    "check:source-notices": "node scripts/check-source-notices-policy.mjs",
+    "check:preference-calibration": "node scripts/check-preference-calibration-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

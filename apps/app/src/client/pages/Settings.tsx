@@ -34,6 +34,15 @@ type ReadLaterDestination = {
   configured: boolean;
 };
 
+type PreferenceCalibration = {
+  wantText: string;
+  avoidText: string;
+  derivedTags: string[];
+  derivedAvoidTags: string[];
+  active: boolean;
+  reason: string;
+};
+
 type OcrCandidate = {
   previewId: string;
   text: string;
@@ -87,17 +96,22 @@ export default function Settings() {
   const [avoidLoading, setAvoidLoading] = useState(false);
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [readLaterLoading, setReadLaterLoading] = useState(false);
+  const [calibrationLoading, setCalibrationLoading] = useState(false);
   const [dailyPushSchedule, setDailyPushSchedule] = useState<DailyPushSchedule | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
+  const [preferenceCalibration, setPreferenceCalibration] = useState<PreferenceCalibration | null>(null);
   const [dailyPushHour, setDailyPushHour] = useState(() => new Date().getHours());
   const [dailyPushTimeZone, setDailyPushTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [readLaterEmail, setReadLaterEmail] = useState('');
   const [readLaterActive, setReadLaterActive] = useState(true);
   const [readLaterVerified, setReadLaterVerified] = useState(false);
+  const [calibrationWantText, setCalibrationWantText] = useState('');
+  const [calibrationAvoidText, setCalibrationAvoidText] = useState('');
   const [goalsStatus, setGoalsStatus] = useState('');
   const [avoidStatus, setAvoidStatus] = useState('');
   const [scheduleStatus, setScheduleStatus] = useState('');
   const [readLaterStatus, setReadLaterStatus] = useState('');
+  const [calibrationStatus, setCalibrationStatus] = useState('');
   const [ocrImageDataUrl, setOcrImageDataUrl] = useState('');
   const [ocrTitle, setOcrTitle] = useState('');
   const [ocrAuthor, setOcrAuthor] = useState('');
@@ -139,6 +153,11 @@ export default function Settings() {
             setReadLaterEmail(d.readLaterDestination.email || '');
             setReadLaterActive(d.readLaterDestination.configured ? Boolean(d.readLaterDestination.active) : true);
             setReadLaterVerified(Boolean(d.readLaterDestination.verified));
+          }
+          if (d.preferenceCalibration) {
+            setPreferenceCalibration(d.preferenceCalibration);
+            setCalibrationWantText(d.preferenceCalibration.wantText || '');
+            setCalibrationAvoidText(d.preferenceCalibration.avoidText || '');
           }
           const prefTags = new Set(nextPrefs.filter((pref: UserPreference) => Number(pref.weight) >= 7).map((pref: UserPreference) => pref.tag));
           const inferredGoals = nextGoals
@@ -227,6 +246,39 @@ export default function Settings() {
       setGoalsStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setGoalsLoading(false);
+    }
+  };
+
+
+  const savePreferenceCalibration = async (clear = false) => {
+    setCalibrationLoading(true);
+    setCalibrationStatus('');
+    try {
+      const response = await apiFetch('/preferences/calibration', {
+        method: 'POST',
+        body: JSON.stringify(clear ? { clear: true } : { wantText: calibrationWantText, avoidText: calibrationAvoidText }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setPreferences(Array.isArray(data.preferences) ? data.preferences : []);
+      setAvoidTags(Array.isArray(data.avoidTags) ? data.avoidTags : avoidTags);
+      setSelectedAvoidTags(Array.isArray(data.selectedAvoidTags) ? data.selectedAvoidTags : selectedAvoidTags);
+      setPreferenceCalibration(data.preferenceCalibration || null);
+      if (clear) {
+        setCalibrationWantText('');
+        setCalibrationAvoidText('');
+        setCalibrationStatus('Cleared — preference-note weights were removed.');
+      } else {
+        const derived = data.preferenceCalibration?.derivedTags?.length || data.preferenceCalibration?.derivedAvoidTags?.length;
+        setCalibrationStatus(derived
+          ? 'Saved — RandomPage calibrated matching tags from your private note.'
+          : 'Saved privately. Add words that match library tags, like philosophy, history, psychology, nature, or less dark.');
+      }
+    } catch (e) {
+      console.error(e);
+      setCalibrationStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCalibrationLoading(false);
     }
   };
 
@@ -490,6 +542,57 @@ export default function Settings() {
                   <p className="text-xs opacity-60">No preference weights yet — save goals or read/bookmark passages to start learning.</p>
                 )}
                 {goalsStatus ? <p className="text-xs opacity-70">{goalsStatus}</p> : null}
+
+                <div className="divider my-1" />
+                <div>
+                  <h4 className="font-semibold text-sm">Preference note</h4>
+                  <p className="text-sm opacity-70">
+                    Tell RandomPage what to find in your own words. v1 stays local and deterministic: it matches your note to existing passage tags only.
+                  </p>
+                </div>
+                <textarea
+                  className="textarea textarea-bordered min-h-24 text-sm"
+                  maxLength={600}
+                  placeholder="More stoic philosophy, historical psychology, nature writing..."
+                  value={calibrationWantText}
+                  onChange={(event) => { setCalibrationWantText(event.target.value); setCalibrationStatus(''); }}
+                  disabled={calibrationLoading}
+                />
+                <input
+                  className="input input-bordered input-sm"
+                  maxLength={240}
+                  placeholder="Optional: less romance, fewer dark passages"
+                  value={calibrationAvoidText}
+                  onChange={(event) => { setCalibrationAvoidText(event.target.value); setCalibrationStatus(''); }}
+                  disabled={calibrationLoading}
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="btn btn-primary btn-sm"
+                    onClick={() => savePreferenceCalibration(false)}
+                    disabled={calibrationLoading || (!calibrationWantText.trim() && !calibrationAvoidText.trim())}
+                  >
+                    {calibrationLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                    Save preference note
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-sm text-error"
+                    onClick={() => savePreferenceCalibration(true)}
+                    disabled={calibrationLoading || !(preferenceCalibration?.active || calibrationWantText.trim() || calibrationAvoidText.trim())}
+                  >
+                    Clear note
+                  </button>
+                </div>
+                {preferenceCalibration?.reason ? (
+                  <p className="text-xs opacity-70">{preferenceCalibration.reason}</p>
+                ) : null}
+                {(preferenceCalibration?.derivedTags?.length || preferenceCalibration?.derivedAvoidTags?.length) ? (
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {preferenceCalibration.derivedTags.map(tag => <span key={tag} className="badge badge-primary badge-outline">more {tag}</span>)}
+                    {preferenceCalibration.derivedAvoidTags.map(tag => <span key={`avoid-${tag}`} className="badge badge-warning badge-outline">less {tag}</span>)}
+                  </div>
+                ) : null}
+                {calibrationStatus ? <p className="text-xs opacity-70">{calibrationStatus}</p> : null}
                 <div className="divider my-1" />
                 <div>
                   <h4 className="font-semibold text-sm">Avoid for now</h4>
