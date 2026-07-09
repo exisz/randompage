@@ -29,6 +29,29 @@ Safety/rate limits:
 - Retries only for 429/5xx.
 - No Turso inserts and no high-volume crawling.
 
+## standardebooks-new-release-eval.mjs — PLANET-3576
+
+Local evaluation for the public Standard Ebooks new-release feed connector. It
+fetches the public Atom feed, prefers titles not already represented in
+production passages when Turso credentials are available, uses official
+Standard Ebooks XHTML single-page links for text extraction, filters obvious
+front-matter/boilerplate/TOC/endnote text, and writes review artifacts. It never
+writes Turso or imports production passages.
+
+```bash
+pnpm --filter @randompage/app eval:standardebooks-new-releases
+pnpm --filter @randompage/app eval:standardebooks-new-releases -- --max-titles 5
+```
+
+Outputs:
+- `apps/app/docs/standardebooks-new-release-eval-report.md`
+- `apps/app/docs/standardebooks-new-release-eval-samples.json`
+
+Safety/rate limits:
+- Public Atom/XHTML URLs only; no patron/private OPDS feed required.
+- Serial requests, descriptive User-Agent, short delay between title fetches.
+- No Turso inserts, no Discover/push exposure, and no external LLM dependency.
+
 ## ia-ocr-ingest.mjs — PLANET-2508
 
 Guarded tiny-batch ingestion path for reviewed Internet Archive OCR/plaintext

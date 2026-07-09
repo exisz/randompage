@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-06-30 — PLANET-3275 Media Session lock-screen controls for listening
+> 最后更新: 2026-07-09 — PLANET-3576 Standard Ebooks new-release feed connector evaluation
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -313,6 +313,7 @@ exisz/randompage (GitHub)
 | `page-photo-ocr-eval.mjs` | PLANET-2708 | Local single-image Tesseract OCR evaluation for user-provided physical book pages; outputs private/import-candidate passage samples and report, no production writes |
 | `openlibrary-search-inside-eval.mjs` | PLANET-3169 | Local Open Library Search Inside + IA OCR/plaintext fetchability evaluation; queries preference topics, records Read API availability, emits JSON/Markdown report with reviewed open direct-text passage candidates only, no production writes |
 | `hathitrust-page-access-eval.mjs` | PLANET-3364 | Local HathiTrust Bibliographic API + page OCR access evaluation; probes Exis-aligned candidate volumes, records HTID/access flags/OCR response status, emits JSON/Markdown verdict and local passage candidates only when page text is obtainable, no production writes |
+| `standardebooks-new-release-eval.mjs` | PLANET-3576 | Local Standard Ebooks public new-release Atom feed evaluation; selects recent titles not already represented in production when possible, fetches official XHTML single-page text, emits review JSON/Markdown with candidate passage counts/samples, no production writes |
 | `openlibrary-ia-candidate-queue.mjs` | PLANET-3180 | Builds a metadata-only reviewed candidate queue from the Search Inside eval artifact; emits queue/report plus `openlibrary-ia-reviewed-items.json` with rows defaulting to `reviewed:false`; no OCR/plaintext fetch before human allowlist |
 | `check-openlibrary-ia-queue-policy.mjs` | PLANET-3180 | Static guard for the Open Library → IA OCR queue boundary: no network fetch in queue builder, no copied full passage text, package scripts present, and `ia-ocr-ingest` still gated by reviewed apply ack |
 | `import-epub.mjs` | PLANET-1965 | Local EPUB dry-run/apply pipeline; refuses full-text import unless `--license public-domain|cc0|cc-by|permission` is supplied |
@@ -325,6 +326,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-09 | PLANET-3576: Added local Standard Ebooks new-release feed connector evaluation (`pnpm --filter @randompage/app eval:standardebooks-new-releases`). It fetches the public Atom feed, skips already-represented production titles when Turso credentials are available, extracts candidate passages from official XHTML single-page links, and writes review artifacts without production DB writes, private/patron feeds, or LLM tagging dependency. | Engineer Pod |
 | 2026-07-09 | PLANET-3555: Added signed-in Settings free-text preference calibration. Users can privately save what they want RandomPage to find and optional avoid text; `/api/preferences/calibration` deterministically maps matching existing passage tags into user preference weights / avoid soft down-ranks, stores private `control:preference-calibration:*` rows for editable/clearable source text, and exposes derived tag reason copy without external LLMs, embeddings, summaries, or new content sources. Added `check:preference-calibration`. | Engineer Pod |
 | 2026-07-08 | PLANET-3521: Added private saved book/source new-passage notices. Bookmarks saved_books rows can toggle “Notify on new pages”, source-notice preferences live in `user_preferences` `control:source-notify:*` rows, `/api/saved-books/notices` lists deterministic matching RandomPage passages not yet delivered to that user, and `/api/push/source-notices` sends secret-protected Web Push while recording user-specific `push_history`. Added `check:source-notices`. | Engineer Pod |
 | 2026-07-07 | PLANET-3501: Added a signed-in Settings page-photo import flow. Users can choose one page photo, preview 1–3 private/import-candidate snippets from OCR text, save accepted snippets as private Bookmarks, and private/import-candidate passages are excluded from public Discover/daily queue sampling. Added `check:page-photo-ocr-import`; existing CLI `eval:page-ocr` remains unchanged. | Engineer Pod |
