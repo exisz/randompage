@@ -61,7 +61,8 @@
     "check:page-photo-ocr-import": "node scripts/check-page-photo-ocr-import-policy.mjs",
     "check:source-notices": "node scripts/check-source-notices-policy.mjs",
     "check:preference-calibration": "node scripts/check-preference-calibration-policy.mjs",
-    "eval:standardebooks-new-releases": "node scripts/standardebooks-new-release-eval.mjs"
+    "eval:standardebooks-new-releases": "node scripts/standardebooks-new-release-eval.mjs",
+    "check:isbn-source-interest": "node scripts/check-isbn-source-interest-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

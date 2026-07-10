@@ -53,6 +53,9 @@ async function ensureSavedBookTable(prisma: ReturnType<typeof getPrisma>) {
       status TEXT NOT NULL DEFAULT 'want_to_read',
       saved_from_passage_id TEXT,
       source_url TEXT,
+      isbn13 TEXT,
+      isbn10 TEXT,
+      source TEXT,
       tags TEXT NOT NULL DEFAULT '[]',
       saved_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
@@ -60,6 +63,12 @@ async function ensureSavedBookTable(prisma: ReturnType<typeof getPrisma>) {
       FOREIGN KEY (saved_from_passage_id) REFERENCES passages(id) ON DELETE SET NULL ON UPDATE CASCADE
     )
   `);
+  const columns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(saved_books)');
+  for (const [name, type] of [['isbn13', 'TEXT'], ['isbn10', 'TEXT'], ['source', 'TEXT']] as const) {
+    if (!columns.some((column) => column.name === name)) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE saved_books ADD COLUMN ${name} ${type}`);
+    }
+  }
   await prisma.$executeRawUnsafe('CREATE UNIQUE INDEX IF NOT EXISTS saved_books_user_source_key ON saved_books(user_id, title, author)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS saved_books_user_saved_idx ON saved_books(user_id, saved_at)');
 }
@@ -74,6 +83,62 @@ function normalizeSavedBookStatus(value: unknown) {
   return value === 'read' ? 'read' : 'want_to_read';
 }
 
+function normalizeIsbn(value: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const cleaned = value.toUpperCase().replace(/[^0-9X]/g, '');
+  return cleaned.length === 10 || cleaned.length === 13 ? cleaned : undefined;
+}
+
+function compactTag(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+}
+
+function normalizeMetadataTags(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  return Array.from(new Set(value.map(item => compactTag(String(item))).filter(Boolean))).slice(0, 6);
+}
+
+function firstText(value: unknown) {
+  if (Array.isArray(value)) return typeof value[0] === 'string' ? value[0] : undefined;
+  return typeof value === 'string' ? value : undefined;
+}
+
+async function lookupOpenLibraryIsbn(isbn: string) {
+  const url = `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`;
+  const response = await fetch(url, { headers: { 'user-agent': 'RandomPage/1.0 (isbn-source-interest)' } });
+  if (!response.ok) return null;
+  const data = await response.json() as Record<string, unknown>;
+  const authorNames: string[] = [];
+  const authors = Array.isArray(data.authors) ? data.authors : [];
+  for (const author of authors.slice(0, 3)) {
+    const key = typeof author === 'object' && author && typeof (author as { key?: unknown }).key === 'string' ? (author as { key: string }).key : '';
+    if (!key) continue;
+    try {
+      const authorResponse = await fetch(`https://openlibrary.org${key}.json`, { headers: { 'user-agent': 'RandomPage/1.0 (isbn-source-interest)' } });
+      if (authorResponse.ok) {
+        const authorData = await authorResponse.json() as { name?: unknown };
+        if (typeof authorData.name === 'string') authorNames.push(authorData.name);
+      }
+    } catch {
+      // Metadata lookup remains best-effort; title-only preview is still useful.
+    }
+  }
+  const title = firstText(data.title);
+  if (!title) return null;
+  const isbn13 = firstText(data.isbn_13) ?? (isbn.length === 13 ? isbn : undefined);
+  const isbn10 = firstText(data.isbn_10) ?? (isbn.length === 10 ? isbn : undefined);
+  return {
+    title,
+    author: authorNames.join(', '),
+    isbn13,
+    isbn10,
+    coverUrl: isbn13 || isbn10 ? `https://covers.openlibrary.org/b/isbn/${encodeURIComponent(isbn13 ?? isbn10 ?? isbn)}-M.jpg` : null,
+    sourceUrl: `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}`,
+    tags: normalizeMetadataTags(data.subjects),
+    provider: 'openlibrary',
+  };
+}
+
 const SOURCE_NOTICE_PREFIX = 'control:source-notify:';
 
 function sourceNoticeKey(title: string, author: string) {
@@ -81,7 +146,7 @@ function sourceNoticeKey(title: string, author: string) {
 }
 
 function savedBookRowToJson(row: {
-  id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+  id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; isbn13?: string | null; isbn10?: string | null; source?: string | null; tags: string | null; saved_at: string; updated_at: string;
   notify_enabled?: number | null; unnotified_count?: number | null; notice_passage_id?: string | null; notice_passage_text?: string | null; notice_passage_title?: string | null; notice_passage_author?: string | null; notice_passage_chapter?: string | null; notice_passage_tags?: string | null; notice_passage_language?: string | null;
   passage_text?: string | null; passage_title?: string | null; passage_author?: string | null; passage_chapter?: string | null; passage_tags?: string | null; passage_language?: string | null;
 }) {
@@ -92,6 +157,9 @@ function savedBookRowToJson(row: {
     status: row.status,
     savedFromPassageId: row.saved_from_passage_id,
     sourceUrl: row.source_url,
+    isbn13: row.isbn13 ?? null,
+    isbn10: row.isbn10 ?? null,
+    source: row.source ?? null,
     tags: row.tags ?? '[]',
     savedAt: row.saved_at,
     updatedAt: row.updated_at,
@@ -330,11 +398,11 @@ bookmarksRouter.get('/saved-books', async (req: Request, res: Response) => {
     await ensureSavedBookTable(prisma);
     const userId = claims.sub as string;
     const rows = await prisma.$queryRaw<Array<{
-      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; isbn13: string | null; isbn10: string | null; source: string | null; tags: string | null; saved_at: string; updated_at: string;
       notify_enabled: number | null; unnotified_count: number | null; notice_passage_id: string | null; notice_passage_text: string | null; notice_passage_title: string | null; notice_passage_author: string | null; notice_passage_chapter: string | null; notice_passage_tags: string | null; notice_passage_language: string | null;
       passage_text: string | null; passage_title: string | null; passage_author: string | null; passage_chapter: string | null; passage_tags: string | null; passage_language: string | null;
     }>>`
-      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.tags, sb.saved_at, sb.updated_at,
+      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.isbn13, sb.isbn10, sb.source, sb.tags, sb.saved_at, sb.updated_at,
              0 AS notify_enabled,
              (SELECT COUNT(*) FROM passages np
               WHERE lower(np.book_title) = lower(sb.title)
@@ -367,6 +435,27 @@ bookmarksRouter.get('/saved-books', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/saved-books/isbn/lookup?isbn=... — anonymous-safe metadata preview for physical books.
+bookmarksRouter.get('/saved-books/isbn/lookup', async (req: Request, res: Response) => {
+  try {
+    const isbn = normalizeIsbn(req.query.isbn);
+    if (!isbn) { res.status(400).json({ error: 'Enter a valid ISBN-10 or ISBN-13.' }); return; }
+    const metadata = await lookupOpenLibraryIsbn(isbn);
+    if (!metadata) { res.status(404).json({ error: 'No public metadata found for that ISBN yet.' }); return; }
+    const prisma = getPrisma();
+    const matches = await prisma.$queryRaw<Array<{ id: string; text: string; bookTitle: string; author: string; chapter: string | null; tags: string; language: string }>>`
+      SELECT id, text, book_title AS bookTitle, author, chapter, tags, language
+      FROM passages
+      WHERE lower(book_title) = lower(${metadata.title})
+        AND (${metadata.author} = '' OR lower(COALESCE(author, '')) = lower(${metadata.author}))
+      ORDER BY id LIMIT 5
+    `;
+    res.json({ isbn, metadata, matchingPassages: matches, matchingCount: matches.length });
+  } catch (e: unknown) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 // POST /api/saved-books — idempotently save a title/author to the signed-in user's want-to-read shelf.
 bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
   try {
@@ -380,14 +469,17 @@ bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
     let author = normalizeSavedBookText(req.body?.author, 120) ?? '';
     const passageId = normalizeSavedBookText(req.body?.passageId, 80);
     const sourceUrl = normalizeSavedBookText(req.body?.sourceUrl, 500) ?? null;
-    let tags = '[]';
+    const isbn13 = normalizeIsbn(req.body?.isbn13) ?? null;
+    const isbn10 = normalizeIsbn(req.body?.isbn10) ?? null;
+    const source = normalizeSavedBookText(req.body?.source, 40) ?? (isbn13 || isbn10 ? 'isbn-scan' : null);
+    let tags = JSON.stringify(normalizeMetadataTags(req.body?.tags));
 
     if (passageId) {
       const passage = await prisma.passage.findUnique({ where: { id: passageId } });
       if (!passage) { res.status(404).json({ error: 'Passage not found' }); return; }
       title = title ?? passage.bookTitle;
       author = author || passage.author || '';
-      tags = JSON.stringify(parsePassageTags(passage.tags));
+      tags = JSON.stringify(Array.from(new Set([...parsePassageTags(passage.tags), ...normalizeMetadataTags(req.body?.tags)])));
     }
     if (!title) { res.status(400).json({ error: 'title required' }); return; }
 
@@ -400,17 +492,17 @@ bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
     if (existing) {
       await prisma.$executeRaw`
         UPDATE saved_books
-        SET status = 'want_to_read', saved_from_passage_id = COALESCE(${passageId ?? null}, saved_from_passage_id), source_url = COALESCE(${sourceUrl}, source_url), tags = ${tags}, saved_at = ${now}, updated_at = ${now}
+        SET status = 'want_to_read', saved_from_passage_id = COALESCE(${passageId ?? null}, saved_from_passage_id), source_url = COALESCE(${sourceUrl}, source_url), isbn13 = COALESCE(${isbn13}, isbn13), isbn10 = COALESCE(${isbn10}, isbn10), source = COALESCE(${source}, source), tags = ${tags}, saved_at = ${now}, updated_at = ${now}
         WHERE id = ${id} AND user_id = ${userId}
       `;
     } else {
       await prisma.$executeRaw`
-        INSERT INTO saved_books (id, user_id, title, author, status, saved_from_passage_id, source_url, tags, saved_at, updated_at)
-        VALUES (${id}, ${userId}, ${title}, ${author}, 'want_to_read', ${passageId ?? null}, ${sourceUrl}, ${tags}, ${now}, ${now})
+        INSERT INTO saved_books (id, user_id, title, author, status, saved_from_passage_id, source_url, isbn13, isbn10, source, tags, saved_at, updated_at)
+        VALUES (${id}, ${userId}, ${title}, ${author}, 'want_to_read', ${passageId ?? null}, ${sourceUrl}, ${isbn13}, ${isbn10}, ${source}, ${tags}, ${now}, ${now})
       `;
     }
 
-    const parsedTags = JSON.parse(tags) as string[];
+    const parsedTags = Array.from(new Set([...(JSON.parse(tags) as string[]), ...(source === 'isbn-scan' ? ['isbn-scan'] : [])]));
     const updatedAt = epochSeconds(new Date(now));
     for (const tag of parsedTags.slice(0, 8)) {
       const preferenceTag = `book:${tag}`;
@@ -425,10 +517,10 @@ bookmarksRouter.post('/saved-books', async (req: Request, res: Response) => {
     }
 
     const savedRows = await prisma.$queryRaw<Array<{
-      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; tags: string | null; saved_at: string; updated_at: string;
+      id: string; title: string; author: string; status: string; saved_from_passage_id: string | null; source_url: string | null; isbn13: string | null; isbn10: string | null; source: string | null; tags: string | null; saved_at: string; updated_at: string;
       passage_text: string | null; passage_title: string | null; passage_author: string | null; passage_chapter: string | null; passage_tags: string | null; passage_language: string | null;
     }>>`
-      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.tags, sb.saved_at, sb.updated_at,
+      SELECT sb.id, sb.title, sb.author, sb.status, sb.saved_from_passage_id, sb.source_url, sb.isbn13, sb.isbn10, sb.source, sb.tags, sb.saved_at, sb.updated_at,
              p.text AS passage_text, p.book_title AS passage_title, p.author AS passage_author, p.chapter AS passage_chapter, p.tags AS passage_tags, p.language AS passage_language
       FROM saved_books sb LEFT JOIN passages p ON p.id = sb.saved_from_passage_id
       WHERE sb.id = ${id} AND sb.user_id = ${userId}

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-09 — PLANET-3576 Standard Ebooks new-release feed connector evaluation
+> 最后更新: 2026-07-10 — PLANET-3606 ISBN saved-source interest lookup
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -51,6 +51,7 @@
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
 │  │    /api/bookmarks/:id/related → deterministic related saved pages for review cards │ │
 │  │    /api/saved-books → private want-to-read book shelf CRUD        │ │
+│  │    /api/saved-books/isbn/lookup → anonymous-safe Open Library ISBN metadata preview for physical-book source interest │ │
 │  │    /api/saved-books/:id/notifications + /api/saved-books/notices → private saved-source new-passage notices │ │
 │  │    /api/bookmarks/:id/annotations → private line-level thoughts on saved passages │ │
 │  │    /api/bookmark-collections → bookmark collections CRUD   │ │
@@ -123,7 +124,7 @@ exisz/randompage (GitHub)
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
-| saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
+| saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/isbn13/isbn10/source/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail/Settings ISBN lookup 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -170,6 +171,14 @@ exisz/randompage (GitHub)
 - Browsing telemetry guard (PLANET-1985): `pnpm check:browsing-events-policy` verifies Discover views/skips and push-inbox reads are wired to `browsing_events(source=discover|push_inbox)` and push-click telemetry failures are not silently swallowed. PLANET-3433 adds `pnpm check:passage-dwell` to guard signed-in dwell/engaged-read capture, short-bounce filtering, `dwell_ms`, and private reading-minute stats.
 - Push subscription timestamp guard (PLANET-2517): `push_subscriptions.created_at` is a legacy INTEGER unix-seconds column in production. `/api/push/subscribe`, `/api/push/send`, and `/api/cron/daily-push` normalize accidental ISO text rows before Prisma reads and write new subscription rows via raw SQL with unix seconds; `pnpm check:push-policy` guards this path.
 - 手动验证示例：`curl -H "Authorization: Bearer $CRON_SECRET" https://app.randompage.rollersoft.com.au/api/cron/tag-untagged?limit=5`。
+
+## ISBN Saved Source Interest
+
+- Settings exposes a mobile-first “Scan book / enter ISBN” card. The MVP path is manual ISBN entry; camera barcode scanning remains progressive enhancement.
+- `GET /api/saved-books/isbn/lookup?isbn=` is anonymous-safe preview only. It resolves deterministic public metadata through Open Library, returns title/author/cover/source URL plus any exact RandomPage passage matches, and never requires Literal/Goodreads/StoryGraph credentials.
+- Confirmed signed-in saves reuse the existing private `saved_books` shelf with `source='isbn-scan'`, `isbn13`/`isbn10`, source URL, and lightweight metadata tags. Saving seeds bounded private `book:*` preferences only after confirmation.
+- If exact title/author RandomPage passages exist, the UI links to Source detail; otherwise it tells the user to save the source and enable Notify-on-new-pages. This keeps the feature inside RandomPage’s source-interest/passage-discovery boundary, not a Goodreads clone, public review shelf, or full-book tracker.
+- Static regression: `pnpm --filter @randompage/app check:isbn-source-interest`.
 
 ## Daily Push Schedule
 

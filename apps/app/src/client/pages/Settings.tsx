@@ -54,6 +54,13 @@ type OcrCandidate = {
   qualityNote: string;
 };
 
+type IsbnLookupResult = {
+  isbn: string;
+  metadata: { title: string; author: string; isbn13?: string; isbn10?: string; coverUrl?: string | null; sourceUrl?: string; tags?: string[]; provider?: string };
+  matchingPassages: { id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string; language?: string }[];
+  matchingCount: number;
+};
+
 const FALLBACK_READING_GOALS: ReadingGoal[] = [
   {
     id: 'reflective-philosophy',
@@ -119,6 +126,10 @@ export default function Settings() {
   const [ocrCandidates, setOcrCandidates] = useState<OcrCandidate[]>([]);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrStatus, setOcrStatus] = useState('');
+  const [isbnInput, setIsbnInput] = useState('');
+  const [isbnLookup, setIsbnLookup] = useState<IsbnLookupResult | null>(null);
+  const [isbnLoading, setIsbnLoading] = useState(false);
+  const [isbnStatus, setIsbnStatus] = useState('');
 
   useEffect(() => {
     logtoClient.isAuthenticated().then(auth => {
@@ -358,6 +369,63 @@ export default function Settings() {
   };
 
 
+  const lookupIsbn = async () => {
+    const isbn = isbnInput.trim();
+    if (!isbn) {
+      setIsbnStatus('Enter an ISBN-10 or ISBN-13 first.');
+      return;
+    }
+    setIsbnLoading(true);
+    setIsbnStatus('');
+    setIsbnLookup(null);
+    try {
+      const response = await fetch(`/api/saved-books/isbn/lookup?isbn=${encodeURIComponent(isbn)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'ISBN lookup failed');
+      setIsbnLookup(data);
+      setIsbnStatus(data.matchingCount > 0
+        ? `Found metadata and ${data.matchingCount} matching RandomPage passage${data.matchingCount === 1 ? '' : 's'}.`
+        : 'Found metadata. No matching RandomPage passages yet — you can save it and enable new-page notices.');
+    } catch (e) {
+      console.error(e);
+      setIsbnStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsbnLoading(false);
+    }
+  };
+
+  const saveIsbnSourceInterest = async () => {
+    if (!isbnLookup) return;
+    if (!authed) {
+      setIsbnStatus('Sign in to save this private source interest. Anonymous lookup is preview-only.');
+      return;
+    }
+    setIsbnLoading(true);
+    setIsbnStatus('');
+    try {
+      const response = await apiFetch('/saved-books', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: isbnLookup.metadata.title,
+          author: isbnLookup.metadata.author,
+          sourceUrl: isbnLookup.metadata.sourceUrl,
+          isbn13: isbnLookup.metadata.isbn13,
+          isbn10: isbnLookup.metadata.isbn10,
+          source: 'isbn-scan',
+          tags: isbnLookup.metadata.tags || [],
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setIsbnStatus(`Saved ${data.savedBook?.title || isbnLookup.metadata.title} to your private saved books. Open Bookmarks to enable Notify-on-new-pages.`);
+    } catch (e) {
+      console.error(e);
+      setIsbnStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsbnLoading(false);
+    }
+  };
+
   const onOcrPhotoChange = (file: File | null) => {
     setOcrStatus('');
     setOcrCandidates([]);
@@ -494,6 +562,61 @@ export default function Settings() {
             ) : (
               <button className="btn btn-primary btn-sm" onClick={signIn}>Sign in</button>
             )}
+          </div>
+        </div>
+        <div className="card border border-secondary/20 bg-secondary/10 shadow mb-4">
+          <div className="card-body gap-3">
+            <div>
+              <h3 className="card-title text-base">Scan book / enter ISBN</h3>
+              <p className="text-sm opacity-70">
+                Turn a physical book into a private saved source interest. Lookup works before sign-in; saving belongs to your private RandomPage graph.
+              </p>
+            </div>
+            <div className="join w-full">
+              <input
+                className="input input-bordered input-sm join-item w-full"
+                inputMode="numeric"
+                placeholder="ISBN, e.g. 9780062316110"
+                value={isbnInput}
+                onChange={(event) => { setIsbnInput(event.target.value); setIsbnStatus(''); }}
+                onKeyDown={(event) => { if (event.key === 'Enter') lookupIsbn(); }}
+              />
+              <button className="btn btn-secondary btn-sm join-item" onClick={lookupIsbn} disabled={isbnLoading || !isbnInput.trim()}>
+                {isbnLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                Lookup
+              </button>
+            </div>
+            <p className="text-xs opacity-60">Camera barcode scanning can be added later; manual ISBN entry is the reliable fallback.</p>
+            {isbnLookup ? (
+              <div className="rounded-box border border-base-300 bg-base-100 p-3">
+                <div className="flex gap-3">
+                  {isbnLookup.metadata.coverUrl ? <img src={isbnLookup.metadata.coverUrl} alt="Book cover" className="h-24 w-16 rounded object-cover bg-base-200" /> : null}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-serif font-semibold">{isbnLookup.metadata.title}</p>
+                    <p className="text-sm opacity-70">{isbnLookup.metadata.author || 'Unknown author'}</p>
+                    <p className="text-xs opacity-60">ISBN {isbnLookup.metadata.isbn13 || isbnLookup.metadata.isbn10 || isbnLookup.isbn}</p>
+                    {isbnLookup.metadata.tags?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {isbnLookup.metadata.tags.slice(0, 4).map(tag => <span key={tag} className="badge badge-ghost badge-xs">{tag}</span>)}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button className="btn btn-primary btn-xs" onClick={saveIsbnSourceInterest} disabled={isbnLoading}>
+                    Save private source interest
+                  </button>
+                  {isbnLookup.matchingCount > 0 ? (
+                    <Link className="btn btn-outline btn-xs" to={`/source?title=${encodeURIComponent(isbnLookup.metadata.title)}&author=${encodeURIComponent(isbnLookup.metadata.author || '')}`}>
+                      Open Source detail
+                    </Link>
+                  ) : (
+                    <span className="badge badge-warning badge-outline">No matching pages yet · save then enable notices</span>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            {isbnStatus ? <p className="text-xs opacity-70">{isbnStatus}</p> : null}
           </div>
         </div>
         <div className="card bg-base-200 shadow mb-4">
