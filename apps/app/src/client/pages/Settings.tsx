@@ -27,6 +27,12 @@ type DailyPushSchedule = {
   label: string;
 };
 
+type DailyReadingBudget = {
+  minutes: number;
+  options: number[];
+  configured: boolean;
+};
+
 type ReadLaterDestination = {
   email: string;
   active: boolean;
@@ -105,8 +111,10 @@ export default function Settings() {
   const [readLaterLoading, setReadLaterLoading] = useState(false);
   const [calibrationLoading, setCalibrationLoading] = useState(false);
   const [dailyPushSchedule, setDailyPushSchedule] = useState<DailyPushSchedule | null>(null);
+  const [dailyReadingBudget, setDailyReadingBudget] = useState<DailyReadingBudget | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
   const [preferenceCalibration, setPreferenceCalibration] = useState<PreferenceCalibration | null>(null);
+  const [dailyReadingBudgetMinutes, setDailyReadingBudgetMinutes] = useState(5);
   const [dailyPushHour, setDailyPushHour] = useState(() => new Date().getHours());
   const [dailyPushTimeZone, setDailyPushTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   const [readLaterEmail, setReadLaterEmail] = useState('');
@@ -117,6 +125,7 @@ export default function Settings() {
   const [goalsStatus, setGoalsStatus] = useState('');
   const [avoidStatus, setAvoidStatus] = useState('');
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const [budgetStatus, setBudgetStatus] = useState('');
   const [readLaterStatus, setReadLaterStatus] = useState('');
   const [calibrationStatus, setCalibrationStatus] = useState('');
   const [ocrImageDataUrl, setOcrImageDataUrl] = useState('');
@@ -154,6 +163,10 @@ export default function Settings() {
           setPreferences(nextPrefs);
           setAvoidTags(Array.isArray(d.avoidTags) ? d.avoidTags : []);
           setSelectedAvoidTags(Array.isArray(d.selectedAvoidTags) ? d.selectedAvoidTags : []);
+          if (d.dailyReadingBudget && typeof d.dailyReadingBudget.minutes === 'number') {
+            setDailyReadingBudget(d.dailyReadingBudget);
+            setDailyReadingBudgetMinutes(d.dailyReadingBudget.minutes);
+          }
           if (d.dailyPushSchedule && typeof d.dailyPushSchedule.hour === 'number') {
             setDailyPushSchedule(d.dailyPushSchedule);
             setDailyPushHour(d.dailyPushSchedule.hour);
@@ -345,6 +358,26 @@ export default function Settings() {
       setReadLaterStatus(e instanceof Error ? e.message : String(e));
     } finally {
       setReadLaterLoading(false);
+    }
+  };
+
+  const saveDailyReadingBudget = async () => {
+    setScheduleLoading(true);
+    setBudgetStatus('');
+    try {
+      const response = await apiFetch('/preferences/daily-reading-budget', {
+        method: 'POST',
+        body: JSON.stringify({ minutes: dailyReadingBudgetMinutes }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Save failed');
+      setDailyReadingBudget(data.dailyReadingBudget || null);
+      setBudgetStatus(`Saved — Discover will fit your daily queue to about ${data.dailyReadingBudget?.minutes || dailyReadingBudgetMinutes} minutes.`);
+    } catch (e) {
+      console.error(e);
+      setBudgetStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setScheduleLoading(false);
     }
   };
 
@@ -862,8 +895,30 @@ export default function Settings() {
         {authed && (
           <div className="card bg-base-200 shadow mb-4">
             <div className="card-body gap-3">
-              <h3 className="card-title text-base">Push Notifications</h3>
-              <p className="text-sm opacity-70">Get a personalized passage delivered daily.</p>
+              <h3 className="card-title text-base">Daily pages</h3>
+              <p className="text-sm opacity-70">Choose how much reading fits today, then get a personalized passage delivery.</p>
+              <div className="rounded-box border border-base-300 bg-base-100 p-3">
+                <label className="label py-1"><span className="label-text text-sm font-semibold">Daily reading budget</span></label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[3, 5, 10, 20].map((minutes) => (
+                    <button
+                      key={minutes}
+                      type="button"
+                      className={`btn btn-sm ${dailyReadingBudgetMinutes === minutes ? 'btn-primary' : 'btn-outline'}`}
+                      onClick={() => { setDailyReadingBudgetMinutes(minutes); setBudgetStatus(''); }}
+                    >
+                      {minutes} min
+                    </button>
+                  ))}
+                </div>
+                <button className="btn btn-secondary btn-sm mt-3" onClick={saveDailyReadingBudget} disabled={scheduleLoading}>
+                  {scheduleLoading ? <span className="loading loading-spinner loading-xs" /> : null}
+                  Save budget
+                </button>
+                <p className="mt-2 text-xs opacity-70">Discover will fill Today&apos;s fresh pages toward this time box using existing personalized RandomPage passages.</p>
+                {dailyReadingBudget ? <p className="mt-1 text-xs text-primary/80">Current budget: {dailyReadingBudget.minutes} minutes.</p> : null}
+                {budgetStatus ? <p className="mt-1 text-xs opacity-70">{budgetStatus}</p> : null}
+              </div>
               <div className="rounded-box border border-base-300 bg-base-100 p-3">
                 <label className="label py-1"><span className="label-text text-sm font-semibold">Daily passage time</span></label>
                 <div className="grid grid-cols-[1fr_auto] gap-2">

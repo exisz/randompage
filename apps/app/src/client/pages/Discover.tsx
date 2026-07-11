@@ -41,6 +41,7 @@ interface RecommendationExplanation {
 
 interface DailyQueueItem extends Passage {
   queuePosition: number;
+  estimatedReadingMinutes?: number;
   whyPersonalized?: RecommendationExplanation | null;
 }
 
@@ -51,6 +52,8 @@ interface DailyQueue {
   fallbackUsed: boolean;
   strategy: string;
   emptyReason: string | null;
+  budgetMinutes?: number;
+  totalEstimatedMinutes?: number;
 }
 
 interface ReadingPathGoal {
@@ -149,6 +152,16 @@ interface SpeechTextChunk {
 }
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
+
+function estimatePassageReadingMinutes(passage: Pick<Passage, 'text' | 'language'>) {
+  const text = (passage.text || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 1;
+  const cjkChars = (text.match(/[\u3400-\u9fff]/g) || []).length;
+  const wordCount = (text.match(/[A-Za-z0-9]+(?:[-’'][A-Za-z0-9]+)?/g) || []).length;
+  const cjkLike = passage.language?.toLowerCase().startsWith('zh') || cjkChars > wordCount;
+  const units = cjkLike ? Math.max(cjkChars, Math.ceil(text.length * 0.65)) : Math.max(wordCount, Math.ceil(text.length / 5));
+  return Math.max(1, Math.round(units / (cjkLike ? 450 : 220)));
+}
 
 function parsePassageTags(raw: string | string[] | null | undefined): string[] {
   if (!raw) return [];
@@ -309,7 +322,7 @@ export default function Discover() {
         setDailyQueue(null);
         return;
       }
-      const res = await apiFetch('/passages/daily-queue?limit=5');
+      const res = await apiFetch('/passages/daily-queue?limit=20');
       if (res.status === 401 || res.status === 403) {
         setAuthed(false);
         setDailyQueue(null);
@@ -324,6 +337,8 @@ export default function Discover() {
         fallbackUsed: Boolean(data.fallbackUsed),
         strategy: typeof data.strategy === 'string' ? data.strategy : '',
         emptyReason: typeof data.emptyReason === 'string' ? data.emptyReason : null,
+        budgetMinutes: typeof data.budgetMinutes === 'number' ? data.budgetMinutes : undefined,
+        totalEstimatedMinutes: typeof data.totalEstimatedMinutes === 'number' ? data.totalEstimatedMinutes : undefined,
       });
     } catch (e) {
       console.error(e);
@@ -1095,12 +1110,15 @@ export default function Discover() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
-                    <p className="mt-1 text-sm opacity-70">3–5 personalized unread picks, refreshed daily.</p>
+                    <p className="mt-1 text-sm opacity-70">A time-boxed personalized queue, refreshed daily.</p>
+                    {dailyQueue?.budgetMinutes ? (
+                      <p className="mt-1 text-xs opacity-70">Target: {dailyQueue.budgetMinutes} min · Queue estimate: {dailyQueue.totalEstimatedMinutes ?? 0} min</p>
+                    ) : null}
                     {dailyQueue?.fallbackUsed ? (
                       <p className="mt-1 text-xs text-primary/80">Fresh unread pool is low, so today includes personalized pages you have not seen recently.</p>
                     ) : null}
                   </div>
-                  <span className="badge badge-primary badge-outline">{dailyQueue?.queue.length ?? 0}/5</span>
+                  <span className="badge badge-primary badge-outline">{dailyQueue?.totalEstimatedMinutes ?? 0}/{dailyQueue?.budgetMinutes ?? 5} min</span>
                 </div>
                 {dailyQueue?.queue.length ? (
                   <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/10 p-3">
@@ -1141,7 +1159,7 @@ export default function Discover() {
                         <span className="badge badge-sm">{item.queuePosition}</span>
                         <span className="line-clamp-1 text-sm font-medium">{item.bookTitle}</span>
                       </div>
-                      <div className="mt-1 line-clamp-1 text-xs opacity-60">{item.author} · {Math.max(1, Math.round(item.text.length / 220))} min</div>
+                      <div className="mt-1 line-clamp-1 text-xs opacity-60">{item.author} · {item.estimatedReadingMinutes ?? estimatePassageReadingMinutes(item)} min read</div>
                       {item.whyPersonalized && (
                         <div className="mt-1 line-clamp-1 text-xs text-primary/80">{item.whyPersonalized.label}: {item.whyPersonalized.matchedTags.slice(0, 2).join(' + ')}</div>
                       )}

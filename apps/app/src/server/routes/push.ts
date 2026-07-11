@@ -43,6 +43,7 @@ type PushDeliveryStats = {
 
 const DAILY_PUSH_HOUR_TAG = 'control:daily-push:hour';
 const DAILY_PUSH_TZ_PREFIX = 'control:daily-push:tz:';
+const DAILY_READING_BUDGET_TAG = 'control:daily-reading-budget:minutes';
 const SOURCE_NOTICE_PREFIX = 'control:source-notify:';
 
 function sourceNoticeKey(title: string, author: string) {
@@ -110,6 +111,12 @@ function localHourInTimeZone(date: Date, timeZone: string) {
   } catch {
     return null;
   }
+}
+
+async function dailyReadingBudgetForUser(prisma: PrismaClient, userId: string) {
+  const row = await prisma.userPreference.findFirst({ where: { userId, tag: DAILY_READING_BUDGET_TAG }, select: { weight: true } });
+  const minutes = row ? Number(row.weight) : 5;
+  return [3, 5, 10, 20].includes(minutes) ? minutes : 5;
 }
 
 async function isDailyPushDueForUser(prisma: PrismaClient, userId: string, now = new Date()) {
@@ -215,6 +222,7 @@ async function sendPersonalizedPushes(
         continue;
       }
       const chosen = await selectPersonalizedPassageForUser(prisma, userId, passages);
+      const budgetMinutes = await dailyReadingBudgetForUser(prisma, userId);
       let userSent = 0;
       for (const sub of userSubs) {
         try {
@@ -222,7 +230,7 @@ async function sendPersonalizedPushes(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             JSON.stringify({
               title: 'RandomPage',
-              body: chosen.text.slice(0, 100) + (chosen.text.length > 100 ? '...' : ''),
+              body: `Your ${budgetMinutes}-minute pages are ready: ${chosen.text.slice(0, 80)}${chosen.text.length > 80 ? '...' : ''}`,
               passageId: chosen.id,
             }),
           );

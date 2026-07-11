@@ -25,7 +25,8 @@ const MAX_DWELL_EVENT_MS = 10 * 60_000;
 const MIN_PREFERENCE_WEIGHT = 1;
 const MAX_PREFERENCE_WEIGHT = 12;
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
-const DAILY_QUEUE_MAX_LIMIT = 5;
+const DAILY_QUEUE_MAX_LIMIT = 20;
+const DAILY_READING_BUDGET_TAG = 'control:daily-reading-budget:minutes';
 const READING_PATH_DAYS = 7;
 
 type ReadingPathGoal = {
@@ -63,6 +64,36 @@ function boundedDailyQueueLimit(raw: unknown) {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed)) return DAILY_QUEUE_DEFAULT_LIMIT;
   return Math.min(DAILY_QUEUE_MAX_LIMIT, Math.max(3, parsed));
+}
+
+function estimatePassageReadingMinutes(passage: { text: string; language?: string | null }) {
+  const text = (passage.text || '').replace(/\s+/g, ' ').trim();
+  if (!text) return 1;
+  const language = (passage.language || '').toLowerCase();
+  const cjkChars = (text.match(/[\u3400-\u9fff]/g) || []).length;
+  const wordCount = (text.match(/[A-Za-z0-9]+(?:[-’'][A-Za-z0-9]+)?/g) || []).length;
+  const unitsPerMinute = language.startsWith('zh') || cjkChars > wordCount ? 450 : 220;
+  const units = language.startsWith('zh') || cjkChars > wordCount ? Math.max(cjkChars, Math.ceil(text.length * 0.65)) : Math.max(wordCount, Math.ceil(text.length / 5));
+  return Math.max(1, Math.round(units / unitsPerMinute));
+}
+
+function dailyReadingBudgetFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
+  const row = preferences.find((pref) => pref.tag === DAILY_READING_BUDGET_TAG);
+  const minutes = row ? Number(row.weight) : DAILY_QUEUE_DEFAULT_LIMIT;
+  return [3, 5, 10, 20].includes(minutes) ? minutes : DAILY_QUEUE_DEFAULT_LIMIT;
+}
+
+function takeQueueForBudget<T extends { text: string; language?: string | null }>(ranked: T[], targetMinutes: number, maxItems: number) {
+  const queue: T[] = [];
+  let total = 0;
+  for (const passage of ranked) {
+    if (queue.length >= maxItems) break;
+    const minutes = estimatePassageReadingMinutes(passage);
+    if (queue.length >= 3 && total >= targetMinutes) break;
+    queue.push(passage);
+    total += minutes;
+  }
+  return { queue, totalEstimatedMinutes: total };
 }
 
 function hashUnit(seed: string) {
@@ -729,7 +760,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     await ensureBrowsingEventsTable(prisma);
 
     const userId = claims.sub as string;
-    const limit = boundedDailyQueueLimit(req.query.limit);
+    const requestedLimit = boundedDailyQueueLimit(req.query.limit);
     const today = utcDayKey(new Date());
     const seed = `${userId}:${today}`;
 
@@ -761,20 +792,25 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     const recentIds = new Set([...recentHistoryIds, ...recentPushIds]);
     const { avoidTags } = splitPreferenceControls(prefs);
     const prefMap = preferenceMapWithoutAvoids(prefs);
-    const poolChoice = chooseDailyQueuePool({ readablePassages: dailyReadablePassages, seenIds, recentIds, prefMap, avoidTags, limit });
+    const configuredBudgetMinutes = dailyReadingBudgetFromPreferences(prefs);
+    const targetMinutes = configuredBudgetMinutes;
+    const maxQueueItems = Math.max(requestedLimit, Math.min(DAILY_QUEUE_MAX_LIMIT, targetMinutes + 2));
+    const poolChoice = chooseDailyQueuePool({ readablePassages: dailyReadablePassages, seenIds, recentIds, prefMap, avoidTags, limit: maxQueueItems });
 
-    const queue = poolChoice.pool
+    const rankedPassages = poolChoice.pool
       .map((passage) => ({
         passage,
         queueScore: scoreDailyQueueCandidate(passage, prefMap, avoidTags, seed),
       }))
       .sort((a, b) => b.queueScore - a.queueScore)
-      .slice(0, Math.min(limit, dailyReadablePassages.length))
-      .map(({ passage }, index) => ({
-        ...passage,
-        queuePosition: index + 1,
-        whyPersonalized: explainRecommendation(passage, prefMap),
-      }));
+      .map(({ passage }) => passage);
+    const budgeted = takeQueueForBudget(rankedPassages, targetMinutes, Math.min(maxQueueItems, dailyReadablePassages.length));
+    const queue = budgeted.queue.map((passage, index) => ({
+      ...passage,
+      queuePosition: index + 1,
+      estimatedReadingMinutes: estimatePassageReadingMinutes(passage),
+      whyPersonalized: explainRecommendation(passage, prefMap),
+    }));
 
     const emptyReason = queue.length === 0
       ? poolChoice.emptyReason ?? 'No usable daily queue passages could be selected from the existing RandomPage library.'
@@ -783,7 +819,9 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     res.json({
       queue,
       generatedFor: today,
-      requested: limit,
+      requested: requestedLimit,
+      budgetMinutes: targetMinutes,
+      totalEstimatedMinutes: budgeted.totalEstimatedMinutes,
       freshOnly: poolChoice.freshOnly,
       fallbackUsed: poolChoice.fallbackUsed,
       strategy: poolChoice.strategy,

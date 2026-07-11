@@ -14,6 +14,7 @@ const DEFAULT_AVOID_TAGS = ['dark', 'tense', 'deception', 'suffering', 'violence
 const MAX_AVOID_TAGS = 5;
 const DAILY_PUSH_HOUR_TAG = `${CONTROL_TAG_PREFIX}daily-push:hour`;
 const DAILY_PUSH_TZ_PREFIX = `${CONTROL_TAG_PREFIX}daily-push:tz:`;
+const DAILY_READING_BUDGET_TAG = `${CONTROL_TAG_PREFIX}daily-reading-budget:minutes`;
 const READ_LATER_EMAIL_PREFIX = `${CONTROL_TAG_PREFIX}read-later:email:`;
 const READ_LATER_ACTIVE_TAG = `${CONTROL_TAG_PREFIX}read-later:active`;
 const READ_LATER_VERIFIED_TAG = `${CONTROL_TAG_PREFIX}read-later:verified`;
@@ -109,6 +110,11 @@ function normalizeDailyPushHour(value: unknown) {
   const hour = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
   return hour;
+}
+
+function normalizeDailyReadingBudget(value: unknown) {
+  const minutes = typeof value === 'number' ? value : Number(value);
+  return [3, 5, 10, 20].includes(minutes) ? minutes : null;
 }
 
 function normalizeTimeZone(value: unknown) {
@@ -221,6 +227,12 @@ function normalizeReadLaterEmail(value: unknown) {
   return email;
 }
 
+function dailyReadingBudgetFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
+  const row = preferences.find((pref) => pref.tag === DAILY_READING_BUDGET_TAG);
+  const minutes = row ? normalizeDailyReadingBudget(row.weight) : null;
+  return { minutes: minutes ?? 5, options: [3, 5, 10, 20], configured: Boolean(minutes) };
+}
+
 function dailyPushScheduleFromPreferences(preferences: Array<{ tag: string; weight: number }>) {
   const hourRow = preferences.find((pref) => pref.tag === DAILY_PUSH_HOUR_TAG);
   const tzRow = preferences.find((pref) => pref.tag.startsWith(DAILY_PUSH_TZ_PREFIX));
@@ -248,7 +260,8 @@ preferencesRouter.get('/preferences', async (req: Request, res: Response) => {
     const readLaterDestination = readLaterDestinationFromPreferences(prefs);
     const reviewTuning = parseReviewTuning(prefs);
     const preferenceCalibration = calibrationFromPreferences(prefs);
-    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, readLaterDestination, reviewTuning, preferenceCalibration });
+    const dailyReadingBudget = dailyReadingBudgetFromPreferences(prefs);
+    res.json({ preferences: positivePreferences, readingGoals: READING_GOALS, avoidTags, selectedAvoidTags, dailyPushSchedule, dailyReadingBudget, readLaterDestination, reviewTuning, preferenceCalibration });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
@@ -554,6 +567,40 @@ preferencesRouter.post('/preferences/read-later-destination', async (req: Reques
 
     const prefs = await fetchPreferences(prisma, userId);
     res.json({ readLaterDestination: readLaterDestinationFromPreferences(prefs) });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+// POST /api/preferences/daily-reading-budget
+// Stores the user's private daily reading time budget in existing user_preferences control rows.
+preferencesRouter.post('/preferences/daily-reading-budget', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const minutes = normalizeDailyReadingBudget(req.body?.minutes);
+    if (minutes === null) {
+      res.status(400).json({ error: 'Choose 3, 5, 10, or 20 minutes.' });
+      return;
+    }
+
+    const userId = claims.sub as string;
+    const prisma = getPrisma();
+    const now = new Date();
+    const updatedAt = epochSeconds(now);
+    await upsertReader(prisma, userId, now);
+
+    await prisma.$executeRaw`
+      DELETE FROM user_preferences
+      WHERE user_id = ${userId} AND tag = ${DAILY_READING_BUDGET_TAG}
+    `;
+    await prisma.$executeRaw`
+      INSERT INTO user_preferences (id, user_id, tag, weight, updated_at)
+      VALUES (${nanoid()}, ${userId}, ${DAILY_READING_BUDGET_TAG}, ${minutes}, ${updatedAt})
+    `;
+
+    const prefs = await fetchPreferences(prisma, userId);
+    res.json({ dailyReadingBudget: dailyReadingBudgetFromPreferences(prefs) });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
