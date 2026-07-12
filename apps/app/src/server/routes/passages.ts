@@ -29,6 +29,38 @@ const DAILY_QUEUE_MAX_LIMIT = 20;
 const DAILY_READING_BUDGET_TAG = 'control:daily-reading-budget:minutes';
 const READING_PATH_DAYS = 7;
 
+const RECOMMENDATION_SHELF_MAX_SHELVES = 4;
+const RECOMMENDATION_SHELF_ITEMS = 5;
+const DEFAULT_DISCOVERY_SHELF_TAGS = ['philosophy', 'psychology', 'history', 'literature'];
+
+type RecommendationShelfPassage = {
+  id: string;
+  text: string;
+  bookTitle: string;
+  author: string;
+  chapter: string | null;
+  tags: string;
+  language: string;
+};
+
+type RecommendationShelf = {
+  id: string;
+  title: string;
+  reason: string;
+  source: 'saved_book' | 'saved_passage' | 'preference_tag' | 'reading_goal' | 'cold_start';
+  passages: Array<RecommendationShelfPassage & { whyPersonalized: ReturnType<typeof explainRecommendation> | null }>;
+};
+
+type SavedBookShelfRow = {
+  id: string;
+  title: string;
+  author: string;
+  status: string;
+  saved_from_passage_id: string | null;
+  saved_at: string | number;
+};
+
+
 type ReadingPathGoal = {
   id: string;
   label: string;
@@ -383,6 +415,93 @@ function normalizeFeedbackAction(value: unknown) {
   return typeof value === 'string' && Object.prototype.hasOwnProperty.call(FEEDBACK_DELTAS, value)
     ? value
     : null;
+}
+
+
+async function ensureSavedBookTableForShelves(prisma: ReturnType<typeof getPrisma>) {
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS saved_books (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      author TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'want_to_read',
+      saved_from_passage_id TEXT,
+      source_url TEXT,
+      isbn13 TEXT,
+      isbn10 TEXT,
+      source TEXT,
+      tags TEXT NOT NULL DEFAULT '[]',
+      saved_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
+      FOREIGN KEY (saved_from_passage_id) REFERENCES passages(id) ON DELETE SET NULL ON UPDATE CASCADE
+    )
+  `);
+  await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS saved_books_user_saved_idx ON saved_books(user_id, saved_at)');
+}
+
+function normalizeShelfSlug(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'shelf';
+}
+
+function titleCaseTag(tag: string) {
+  return tag.split(/[-_\s]+/).filter(Boolean).map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
+}
+
+function shelfKeyForPassage(passage: { id: string }) {
+  return passage.id;
+}
+
+function rankedShelfPassages(options: {
+  pool: RecommendationShelfPassage[];
+  prefMap: Record<string, number>;
+  avoidTags: string[];
+  seed: string;
+  excludeIds: Set<string>;
+  predicate: (passage: RecommendationShelfPassage) => boolean;
+  limit?: number;
+}) {
+  const { pool, prefMap, avoidTags, seed, excludeIds, predicate, limit = RECOMMENDATION_SHELF_ITEMS } = options;
+  return pool
+    .filter((passage) => !excludeIds.has(shelfKeyForPassage(passage)) && predicate(passage))
+    .map((passage) => ({
+      passage,
+      score: scorePassageTagsWithAvoidance(passage.tags, prefMap, avoidTags) + hashUnit(`${seed}:${passage.id}`),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map(({ passage }) => passage);
+}
+
+function appendRecommendationShelf(
+  shelves: RecommendationShelf[],
+  usedIds: Set<string>,
+  shelf: Omit<RecommendationShelf, 'passages'> & { passages: RecommendationShelfPassage[] },
+  prefMap: Record<string, number>,
+) {
+  const passages = shelf.passages.filter((passage) => !usedIds.has(passage.id)).slice(0, RECOMMENDATION_SHELF_ITEMS);
+  if (passages.length < 3) return;
+  for (const passage of passages) usedIds.add(passage.id);
+  shelves.push({
+    ...shelf,
+    passages: passages.map((passage) => ({ ...passage, whyPersonalized: explainRecommendation(passage, prefMap) })),
+  });
+}
+
+function passageHasTag(passage: { tags: string }, tag: string) {
+  const normalized = tag.toLowerCase();
+  return parsePassageTags(passage.tags).some((candidate) => candidate.toLowerCase() === normalized);
+}
+
+function passageMatchesSource(passage: RecommendationShelfPassage, title: string, author: string) {
+  return passage.bookTitle.trim().toLowerCase() === title.trim().toLowerCase()
+    && passage.author.trim().toLowerCase() === author.trim().toLowerCase();
+}
+
+function parseExcludeIds(value: unknown) {
+  if (typeof value !== 'string') return new Set<string>();
+  return new Set(value.split(',').map((id) => id.trim()).filter(Boolean).slice(0, 50));
 }
 
 // GET /api/passages/tags?limit=12 — top tags for the Discover chip-strip (no auth required)
@@ -749,6 +868,166 @@ passagesRouter.post('/reading-path/start', async (req: Request, res: Response) =
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }
 });
+
+
+// GET /api/passages/recommendation-shelves?excludeIds=a,b
+// StoryGraph-parity personalized discovery sections from existing RandomPage passages only.
+passagesRouter.get('/passages/recommendation-shelves', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    const userId = claims.sub as string;
+    await ensureSavedBookTableForShelves(prisma);
+
+    const today = utcDayKey(new Date());
+    const seed = `${userId}:${today}:shelves`;
+    const queryExcludedIds = parseExcludeIds(req.query.excludeIds);
+
+    const [allPassages, prefs, bookmarks, savedBooks] = await Promise.all([
+      prisma.passage.findMany(),
+      prisma.userPreference.findMany({ where: { userId } }),
+      prisma.bookmark.findMany({ where: { userId }, include: { passage: true }, orderBy: { createdAt: 'desc' }, take: 30 }),
+      prisma.$queryRaw<SavedBookShelfRow[]>`
+        SELECT id, title, author, status, saved_from_passage_id, saved_at
+        FROM saved_books
+        WHERE user_id = ${userId}
+        ORDER BY saved_at DESC
+        LIMIT 20
+      `,
+    ]);
+
+    const readablePassages = preferTaggedPool(filterReadablePassages(allPassages).filter(isPublicDiscoverPassage)) as RecommendationShelfPassage[];
+    const { avoidTags } = splitPreferenceControls(prefs);
+    const prefMap = preferenceMapWithoutAvoids(prefs);
+    const usedIds = new Set<string>(queryExcludedIds);
+    const shelves: RecommendationShelf[] = [];
+
+    for (const savedBook of savedBooks) {
+      if (shelves.length >= RECOMMENDATION_SHELF_MAX_SHELVES) break;
+      const sourcePassages = rankedShelfPassages({
+        pool: readablePassages,
+        prefMap,
+        avoidTags,
+        seed: `${seed}:saved-book:${savedBook.id}`,
+        excludeIds: usedIds,
+        predicate: (passage) => passageMatchesSource(passage, savedBook.title, savedBook.author),
+      });
+      appendRecommendationShelf(shelves, usedIds, {
+        id: `saved-book-${normalizeShelfSlug(`${savedBook.title}-${savedBook.author}`)}`,
+        title: `From your want-to-read shelf: ${savedBook.title}`,
+        reason: `Existing RandomPage passages from ${savedBook.author}, because you saved this source privately.`,
+        source: 'saved_book',
+        passages: sourcePassages,
+      }, prefMap);
+    }
+
+    for (const bookmark of bookmarks) {
+      if (shelves.length >= RECOMMENDATION_SHELF_MAX_SHELVES) break;
+      const tags = parsePassageTags(bookmark.passage.tags).filter((tag) => !tag.toLowerCase().startsWith('avoid:'));
+      const anchorTag = tags.sort((a, b) => (prefMap[b.toLowerCase()] ?? 0) - (prefMap[a.toLowerCase()] ?? 0))[0];
+      if (!anchorTag) continue;
+      const savedLikePassages = rankedShelfPassages({
+        pool: readablePassages,
+        prefMap,
+        avoidTags,
+        seed: `${seed}:saved:${bookmark.id}`,
+        excludeIds: new Set([...usedIds, bookmark.passageId]),
+        predicate: (passage) => passageHasTag(passage, anchorTag),
+      });
+      appendRecommendationShelf(shelves, usedIds, {
+        id: `because-saved-${normalizeShelfSlug(anchorTag)}`,
+        title: `Because you saved ${bookmark.passage.bookTitle}`,
+        reason: `More existing pages with ${titleCaseTag(anchorTag)} signals from your saved passage.`,
+        source: 'saved_passage',
+        passages: savedLikePassages,
+      }, prefMap);
+    }
+
+    const strongestPreferenceTags = Object.entries(prefMap)
+      .filter(([tag, weight]) => !tag.startsWith('control:') && !tag.startsWith('avoid:') && weight > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([tag]) => tag)
+      .slice(0, 6);
+
+    for (const tag of strongestPreferenceTags) {
+      if (shelves.length >= RECOMMENDATION_SHELF_MAX_SHELVES) break;
+      const tagPassages = rankedShelfPassages({
+        pool: readablePassages,
+        prefMap,
+        avoidTags,
+        seed: `${seed}:tag:${tag}`,
+        excludeIds: usedIds,
+        predicate: (passage) => passageHasTag(passage, tag),
+      });
+      appendRecommendationShelf(shelves, usedIds, {
+        id: `preference-${normalizeShelfSlug(tag)}`,
+        title: `More ${titleCaseTag(tag)} for today`,
+        reason: `This shelf follows your strongest private preference signals from reading, saving, feedback, and goals.`,
+        source: 'preference_tag',
+        passages: tagPassages,
+      }, prefMap);
+    }
+
+    const goalTags = prefs
+      .filter((pref) => pref.tag.startsWith('goal:') && pref.weight > 0)
+      .map((pref) => pref.tag.replace(/^goal:/, '').trim())
+      .filter(Boolean)
+      .slice(0, 3);
+    for (const tag of goalTags) {
+      if (shelves.length >= RECOMMENDATION_SHELF_MAX_SHELVES) break;
+      const goalPassages = rankedShelfPassages({
+        pool: readablePassages,
+        prefMap,
+        avoidTags,
+        seed: `${seed}:goal:${tag}`,
+        excludeIds: usedIds,
+        predicate: (passage) => passageHasTag(passage, tag),
+      });
+      appendRecommendationShelf(shelves, usedIds, {
+        id: `goal-${normalizeShelfSlug(tag)}`,
+        title: `For your ${titleCaseTag(tag)} goal`,
+        reason: `A small shelf from your reading-goal calibration, using only existing RandomPage book passages.`,
+        source: 'reading_goal',
+        passages: goalPassages,
+      }, prefMap);
+    }
+
+    for (const tag of DEFAULT_DISCOVERY_SHELF_TAGS) {
+      if (shelves.length >= 2) break;
+      const fallbackPassages = rankedShelfPassages({
+        pool: readablePassages,
+        prefMap,
+        avoidTags,
+        seed: `${seed}:default:${tag}`,
+        excludeIds: usedIds,
+        predicate: (passage) => passageHasTag(passage, tag),
+      });
+      appendRecommendationShelf(shelves, usedIds, {
+        id: `starter-${normalizeShelfSlug(tag)}`,
+        title: `Starter shelf: ${titleCaseTag(tag)}`,
+        reason: `A cold-start shelf from RandomPage's existing tagged library while your personal graph grows.`,
+        source: 'cold_start',
+        passages: fallbackPassages,
+      }, prefMap);
+    }
+
+    res.json({
+      shelves,
+      generatedFor: today,
+      counts: {
+        shelves: shelves.length,
+        readablePassages: readablePassages.length,
+        savedBooks: savedBooks.length,
+        savedPassages: bookmarks.length,
+        preferenceTags: strongestPreferenceTags.length,
+        excludedPassages: queryExcludedIds.size,
+      },
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 
 // GET /api/passages/daily-queue?limit=5
 // Returns a small deterministic-per-day recommendation stack for the signed-in reader.

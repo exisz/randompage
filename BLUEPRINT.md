@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-10 — PLANET-3606 ISBN saved-source interest lookup
+> 最后更新: 2026-07-13 — PLANET-3665 personalized recommendation shelves
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -41,6 +41,7 @@
 │  │    /api/me        → 用户信息 (upsert)                     │ │
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览；unread exhausted 时 fallback 到 not-recent/readable existing passages，并返回 emptyReason/counts │ │
+│  │    /api/passages/recommendation-shelves → signed-in personalized Discover shelves from saved books, saved passages, preferences/goals; existing passages only │ │
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
 │  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action; applies per-user review tuning controls │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
@@ -120,7 +121,7 @@ exisz/randompage (GitHub)
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录；source-notice push 也写入 user-specific delivered passage，防止重复通知) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
-| recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
+| recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, personalized shelves, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
@@ -271,6 +272,7 @@ exisz/randompage (GitHub)
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regressions: `pnpm --filter @randompage/app check:listen-control` and `pnpm --filter @randompage/app check:daily-queue`.
 - Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
+- Personalized shelves policy (PLANET-3665): signed-in Discover calls `/api/passages/recommendation-shelves?excludeIds=` after loading the daily queue. The endpoint builds 2–4 StoryGraph-style shelves from existing RandomPage passages only: want-to-read source matches, saved-passage tag anchors, strongest private preference tags, reading-goal rows, and cold-start fallback tags. It excludes daily queue IDs where practical, returns reason copy plus 3–5 passage cards, and reuses existing open/listen/share/card/queue flows; anonymous/offline users do not receive private shelf data.
 
 ## Passage Sharing
 

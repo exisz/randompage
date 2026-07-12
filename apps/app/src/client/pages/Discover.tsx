@@ -56,6 +56,29 @@ interface DailyQueue {
   totalEstimatedMinutes?: number;
 }
 
+interface RecommendationShelfItem extends Passage {
+  whyPersonalized?: RecommendationExplanation | null;
+}
+
+interface RecommendationShelf {
+  id: string;
+  title: string;
+  reason: string;
+  source: 'saved_book' | 'saved_passage' | 'preference_tag' | 'reading_goal' | 'cold_start';
+  passages: RecommendationShelfItem[];
+}
+
+interface RecommendationShelvesResponse {
+  shelves: RecommendationShelf[];
+  generatedFor: string;
+  counts?: {
+    readablePassages?: number;
+    savedBooks?: number;
+    savedPassages?: number;
+    preferenceTags?: number;
+  };
+}
+
 interface ReadingPathGoal {
   id: string;
   label: string;
@@ -259,6 +282,8 @@ export default function Discover() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
+  const [recommendationShelves, setRecommendationShelves] = useState<RecommendationShelf[]>([]);
+  const [shelvesStatus, setShelvesStatus] = useState<string | null>(null);
   const [readingPath, setReadingPath] = useState<ReadingPath | null>(null);
   const [readingPathGoals, setReadingPathGoals] = useState<ReadingPathGoal[]>([]);
   const [pathLoading, setPathLoading] = useState(false);
@@ -315,6 +340,36 @@ export default function Discover() {
     }
   }, []);
 
+  const fetchRecommendationShelves = useCallback(async (excludeIds: string[] = []) => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setRecommendationShelves([]);
+        setShelvesStatus(null);
+        return;
+      }
+      const params = new URLSearchParams();
+      const uniqueExcludeIds = Array.from(new Set(excludeIds.filter(Boolean)));
+      if (uniqueExcludeIds.length) params.set('excludeIds', uniqueExcludeIds.join(','));
+      const query = params.toString() ? `?${params.toString()}` : '';
+      const res = await apiFetch(`/passages/recommendation-shelves${query}`);
+      if (res.status === 401 || res.status === 403) {
+        setRecommendationShelves([]);
+        setShelvesStatus(null);
+        return;
+      }
+      if (!res.ok) throw new Error(`Recommendation shelves returned ${res.status}`);
+      const data = await res.json() as RecommendationShelvesResponse;
+      const shelves = Array.isArray(data.shelves) ? data.shelves : [];
+      setRecommendationShelves(shelves);
+      setShelvesStatus(shelves.length ? null : 'Personal shelves will appear as you save pages, set goals, or tune preferences.');
+    } catch (e) {
+      console.error(e);
+      setRecommendationShelves([]);
+      setShelvesStatus('Could not load personalized shelves yet. Your daily queue still works.');
+    }
+  }, []);
+
   const fetchDailyQueue = useCallback(async () => {
     try {
       const isAuth = await logtoClient.isAuthenticated();
@@ -330,8 +385,9 @@ export default function Discover() {
       }
       if (!res.ok) throw new Error(`Daily queue returned ${res.status}`);
       const data = await res.json();
+      const queue = Array.isArray(data.queue) ? data.queue : [];
       setDailyQueue({
-        queue: Array.isArray(data.queue) ? data.queue : [],
+        queue,
         generatedFor: data.generatedFor ?? '',
         freshOnly: Boolean(data.freshOnly),
         fallbackUsed: Boolean(data.fallbackUsed),
@@ -340,6 +396,7 @@ export default function Discover() {
         budgetMinutes: typeof data.budgetMinutes === 'number' ? data.budgetMinutes : undefined,
         totalEstimatedMinutes: typeof data.totalEstimatedMinutes === 'number' ? data.totalEstimatedMinutes : undefined,
       });
+      void fetchRecommendationShelves(queue.map((item: DailyQueueItem) => item.id));
     } catch (e) {
       console.error(e);
       if (isAuthBoundaryError(e)) {
@@ -356,7 +413,7 @@ export default function Discover() {
         emptyReason: 'Could not load your daily queue. Check your connection and try Refresh queue.',
       });
     }
-  }, []);
+  }, [fetchRecommendationShelves]);
 
   const fetchReadingPath = useCallback(async () => {
     try {
@@ -1173,6 +1230,57 @@ export default function Discover() {
                 </div>
               </div>
             )}
+
+            {authed && (recommendationShelves.length > 0 || shelvesStatus) ? (
+              <div className="rounded-[2rem] border border-info/25 bg-base-200/70 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-info">Personalized shelves</p>
+                    <p className="mt-1 text-sm opacity-70">StoryGraph-style discovery sections from your own RandomPage graph — saved pages, goals, preferences, and want-to-read sources.</p>
+                  </div>
+                  <span className="badge badge-info badge-outline shrink-0">{recommendationShelves.length || 'Private'}</span>
+                </div>
+                {shelvesStatus && <p className="mt-3 rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-70">{shelvesStatus}</p>}
+                <div className="mt-3 space-y-3">
+                  {recommendationShelves.map((shelf) => (
+                    <div key={shelf.id} className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h2 className="font-serif text-lg leading-tight">{shelf.title}</h2>
+                          <p className="mt-1 text-xs leading-relaxed opacity-65">{shelf.reason}</p>
+                        </div>
+                        <span className="badge badge-sm badge-info badge-outline capitalize">{shelf.source.replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="mt-3 grid gap-2">
+                        {shelf.passages.map((item, index) => (
+                          <div key={`${shelf.id}-${item.id}`} className="rounded-xl border border-white/10 bg-base-200/55 p-3">
+                            <button className="w-full text-left" onClick={() => fetchPassageById(item.id, 'discover')}>
+                              <div className="flex items-center gap-2">
+                                <span className="badge badge-xs badge-info">{index + 1}</span>
+                                <span className="line-clamp-1 text-sm font-semibold">{item.bookTitle}</span>
+                              </div>
+                              <p className="mt-1 text-xs opacity-55">{item.author} · {estimatePassageReadingMinutes(item)} min</p>
+                              <p className="mt-2 line-clamp-2 font-serif text-sm leading-relaxed opacity-80">{shortExcerpt(item.text)}</p>
+                              {item.whyPersonalized ? (
+                                <p className="mt-2 line-clamp-1 text-xs text-info/80">{item.whyPersonalized.label}: {item.whyPersonalized.matchedTags.slice(0, 2).join(' + ') || item.whyPersonalized.reason}</p>
+                              ) : null}
+                            </button>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <button className="btn btn-primary btn-xs rounded-lg" onClick={() => fetchPassageById(item.id, 'discover')}>Open</button>
+                              <ListenControl text={item.text} title={`${item.bookTitle} shelf passage`} compact />
+                              <SharePassageButton passage={item} compact />
+                              <SharePassageImageButton passage={item} compact />
+                              <button className="btn btn-outline btn-xs rounded-lg" onClick={() => addPassageToReadingQueue(item)} disabled={isPassageQueued(item.id)}>Add to queue</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
           </section>
 
           <section className="mx-auto w-full max-w-2xl">
