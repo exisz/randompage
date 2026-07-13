@@ -1,0 +1,139 @@
+{
+  "generatedAt": "2026-07-13T18:15:38.055Z",
+  "reviewed": "docs/ia-ocr-passage-yield-reviewed-fixture.json",
+  "summary": {
+    "totalCandidates": 5,
+    "fetchedTextCount": 5,
+    "cleanPassageCount": 2134,
+    "averagePassagesPerUsableBook": 426.8,
+    "statusCounts": {
+      "metadata-only": 0,
+      "search-inside-snippet-only": 0,
+      "ocr-plaintext-usable": 5,
+      "failed-blocked": 0
+    },
+    "topFailureModes": []
+  },
+  "results": [
+    {
+      "identifier": "recentbritishph03massgoog",
+      "title": "Recent British Philosophy: A Review, with Criticisms; Including Some Comments on Mr. Mill's ...",
+      "author": "David Masson",
+      "topic": "philosophy",
+      "archiveUrl": "https://archive.org/details/recentbritishph03massgoog",
+      "metadataUrl": "https://archive.org/metadata/recentbritishph03massgoog",
+      "pageCount": 289,
+      "status": "ocr-plaintext-usable",
+      "failureReason": null,
+      "fetchMethod": "ia-djvu-ocr-text",
+      "httpStatus": 200,
+      "textFile": "recentbritishph03massgoog_djvu.txt",
+      "textUrl": "https://archive.org/download/recentbritishph03massgoog/recentbritishph03massgoog_djvu.txt",
+      "rawChars": 480396,
+      "cleanChars": 469339,
+      "passageCount": 272,
+      "avgPassageChars": 296,
+      "samplePassages": [
+        "recluse, I cannot think that the tradition of our national\n\n* Review of Professor Sedgwick's Discourse on the Studies of\n\nCambridge, 1835 ; reprinted in Mill's Dissertations,\n\n4 RECENT BRITISH PHILOSOPHY.",
+        "authority be wanted to the same eflect, it may be found\n\nin writings of Mr. Carlyle at about the same date. \" It\n\n\" is admitted on all sides,'*^ he had written in one of his\n\nEssays as early as 1829, \"that the Metaphysical and\n\n\" Moral sciences are faUing into decay, while the Physical\n\n\" are engrossing, every day, more respect and attention.",
+        "such minds may be taken as evidence, if not that Philosophy was then at a lower ebb than usual in Britain,\n\nat least that such British Philosophy as was current\n\ndid not come up to the standard of the best critics,\n\nwhether judging by their own requirements and aspirations, or by comparison with other nations."
+      ]
+    },
+    {
+      "identifier": "mlbd.introductiontoin0000sati_t0v5",
+      "title": "An Introduction To Indian Philosophy",
+      "author": "Satischandra Chatterjee; Dhirendramohan Datta",
+      "topic": "philosophy",
+      "archiveUrl": "https://archive.org/details/mlbd.introductiontoin0000sati_t0v5",
+      "metadataUrl": "https://archive.org/metadata/mlbd.introductiontoin0000sati_t0v5",
+      "pageCount": 470,
+      "status": "ocr-plaintext-usable",
+      "failureReason": null,
+      "fetchMethod": "ia-djvu-ocr-text",
+      "httpStatus": 200,
+      "textFile": "mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+      "textUrl": "https://archive.org/download/mlbd.introductiontoin0000sati_t0v5/mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+      "rawChars": 895444,
+      "cleanChars": 874774,
+      "passageCount": 500,
+      "avgPassageChars": 303,
+      "samplePassages": [
+        "3. Ramanuja’s Conception of the Self,\n\nBondage and Liberation 421\n\nINDEX 431\n\nPREFACE TO THE FIRST EDITION\n\nThe object of this book is to provide a simple\n\nintroduction to the Indian systems of philosophy. Each one\n\nof these systems has had a vast and varied development\n\nand cannot be treated adequately in a brief work like this.",
+        "theories. Their long experience with university students\n\nhas helped the authors to realise these, and they have tried\n\nto remove them as far as possible. This accounts for most\n\nof the critical discussions which could otherwise have been\n\ndispensed with.\n\nThe book has been primarily written for beginners.",
+        "The first chapter which contains the general principles and\n\nbasic features of Indian philosophy, as well as a brief sketch\n\nof each system, gives the student a bird’s-eye view of the\n\nentire field and prepares him for a more intensive study of\n\nthe systems which are contained in the following chapters."
+      ]
+    },
+    {
+      "identifier": "socialpsychology0000jess",
+      "title": "SOCIAL PSYCHOLOGY INTERPRETED",
+      "author": "JESSE WILLIAM SPROW",
+      "topic": "psychology",
+      "archiveUrl": "https://archive.org/details/socialpsychology0000jess",
+      "metadataUrl": "https://archive.org/metadata/socialpsychology0000jess",
+      "pageCount": 294,
+      "status": "ocr-plaintext-usable",
+      "failureReason": null,
+      "fetchMethod": "ia-djvu-ocr-text",
+      "httpStatus": 200,
+      "textFile": "socialpsychology0000jess_djvu.txt",
+      "textUrl": "https://archive.org/download/socialpsychology0000jess/socialpsychology0000jess_djvu.txt",
+      "rawChars": 649629,
+      "cleanChars": 634867,
+      "passageCount": 500,
+      "avgPassageChars": 308,
+      "samplePassages": [
+        "order to provide the students with the materials for an orientation to\n\nthis vast and increasing body of literature, it has seemed best to select\n\nsuch references as may be collected for a reserve shelf. The present\n\nvolume therefore is a mere guide to the study.",
+        "A survey of the development of the sciences of psychology and\n\nsociology and their separate contributions is basic for an understanding of social psychology. A very brief account is here attempted.",
+        "not hastily conclude that there is a distinct science of social psychology. Social psychology in general keeps in close contact with knowledge of human institutional and cultural development on the one\n\nhand, and with that pertaining to individual psychology on the other."
+      ]
+    },
+    {
+      "identifier": "bibleasenglishli0000jhga",
+      "title": "THe bible as english literature",
+      "author": "J.H. Gardiner",
+      "topic": "literature",
+      "archiveUrl": "https://archive.org/details/bibleasenglishli0000jhga",
+      "metadataUrl": "https://archive.org/metadata/bibleasenglishli0000jhga",
+      "pageCount": 424,
+      "status": "ocr-plaintext-usable",
+      "failureReason": null,
+      "fetchMethod": "ia-djvu-ocr-text",
+      "httpStatus": 200,
+      "textFile": "bibleasenglishli0000jhga_djvu.txt",
+      "textUrl": "https://archive.org/download/bibleasenglishli0000jhga/bibleasenglishli0000jhga_djvu.txt",
+      "rawChars": 548339,
+      "cleanChars": 531995,
+      "passageCount": 381,
+      "avgPassageChars": 293,
+      "samplePassages": [
+        "instinct, for all that Emerson has said, which puts\n\nthe sayings of Isaiah and of Amos, of St. Paul and\n\nof St. John on a higher level than the sayings of\n\nSocrates or of Marcus Aurelius, and puts the words\n\nof Jesus in a place apart and above them all. The\n\nolder and normal classification is merely a recognition of established facts in history and literature.",
+        "Testament, we come to books which were written\n\nin a modern and Western language, when the Roman\n\nempire held undisputed sway over the world.\n\nThus in point of time the work that we shall be\n\nstudying ranges in origin from some time before\n\n1200 B.c. to at least as late as the end of the first\n\n‘century A.D.",
+        "without any break which could make the pious Jew\n\nof the fourth century B.o. feel himself cut loose from\n\nancestors of the tenth or fifteenth century n.c. whose\n\nreligion and worship had close kinship to those of\n\nother desert tribes."
+      ]
+    },
+    {
+      "identifier": "latinandgreekin00kelsgoog",
+      "title": "Latin and Greek in American Education: With Symposia on the Value of Humanistic Studies",
+      "author": "Francis Willey Kelsey",
+      "topic": "classics",
+      "archiveUrl": "https://archive.org/details/latinandgreekin00kelsgoog",
+      "metadataUrl": "https://archive.org/metadata/latinandgreekin00kelsgoog",
+      "pageCount": 427,
+      "status": "ocr-plaintext-usable",
+      "failureReason": null,
+      "fetchMethod": "ia-djvu-ocr-text",
+      "httpStatus": 200,
+      "textFile": "latinandgreekin00kelsgoog_djvu.txt",
+      "textUrl": "https://archive.org/download/latinandgreekin00kelsgoog/latinandgreekin00kelsgoog_djvu.txt",
+      "rawChars": 755086,
+      "cleanChars": 735506,
+      "passageCount": 481,
+      "avgPassageChars": 303,
+      "samplePassages": [
+        "1. James Bryce, Ambassador of Great Britain 210\n\n2. James Loeb (Formerly of Kuhn, Loeb &\n\nCo.), New York 211\n\n3. William Sloane, President of W. & J.\n\nSloane, New York 217\n\nII. The Study of the Classics as a Training for Men\n\nOF Affairs 219\n\nJohn W. Foster, Washington, D.C.",
+        "III. The Study of Latin and Greek as a Training for\n\nPractical Life 226\n\nCharles R. Williams, Editor of the Indianapolis\n\nNews\n\nIV. The Value of the Study of Greek and Latin as\n\nA Preparation for the Study of Science . 238\n\nHarvey W. Wiley, Washington, D.C.\n\nV. The Classics and Modern Life 255\n\nJames Brown Scott, Washington, D.C.",
+        "in that direction has already begim. The time has come\n\nfor the fresh consideration of course-making along constructive lines; we are justified, therefore, in entering\n\nupon an inquiry as to the place which Latin and Greek\n\nnow have, and should have, in our courses of study."
+      ]
+    }
+  ]
+}

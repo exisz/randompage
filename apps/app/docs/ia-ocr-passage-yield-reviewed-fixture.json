@@ -1,0 +1,57 @@
+[
+  {
+    "identifier": "recentbritishph03massgoog",
+    "title": "Recent British Philosophy: A Review, with Criticisms; Including Some Comments on Mr. Mill's ...",
+    "author": "David Masson",
+    "topic": "philosophy",
+    "source": "openlibrary-search-inside-reviewed-queue",
+    "textFile": "recentbritishph03massgoog_djvu.txt",
+    "reviewed": true,
+    "allowOcrFetch": true,
+    "reviewNote": "Fixture allowlist row for PLANET-3696 reviewed passage-yield evaluation; local artifacts only, never production import."
+  },
+  {
+    "identifier": "mlbd.introductiontoin0000sati_t0v5",
+    "title": "An Introduction To Indian Philosophy",
+    "author": "Satischandra Chatterjee; Dhirendramohan Datta",
+    "topic": "philosophy",
+    "source": "openlibrary-search-inside-reviewed-queue",
+    "textFile": "mlbd.introductiontoin0000sati_t0v5_djvu.txt",
+    "reviewed": true,
+    "allowOcrFetch": true,
+    "reviewNote": "Fixture allowlist row for PLANET-3696 reviewed passage-yield evaluation; local artifacts only, never production import."
+  },
+  {
+    "identifier": "socialpsychology0000jess",
+    "title": "SOCIAL PSYCHOLOGY INTERPRETED",
+    "author": "JESSE WILLIAM SPROW",
+    "topic": "psychology",
+    "source": "openlibrary-search-inside-reviewed-queue",
+    "textFile": "socialpsychology0000jess_djvu.txt",
+    "reviewed": true,
+    "allowOcrFetch": true,
+    "reviewNote": "Fixture allowlist row for PLANET-3696 reviewed passage-yield evaluation; local artifacts only, never production import."
+  },
+  {
+    "identifier": "bibleasenglishli0000jhga",
+    "title": "THe bible as english literature",
+    "author": "J.H. Gardiner",
+    "topic": "literature",
+    "source": "openlibrary-search-inside-reviewed-queue",
+    "textFile": "bibleasenglishli0000jhga_djvu.txt",
+    "reviewed": true,
+    "allowOcrFetch": true,
+    "reviewNote": "Fixture allowlist row for PLANET-3696 reviewed passage-yield evaluation; local artifacts only, never production import."
+  },
+  {
+    "identifier": "latinandgreekin00kelsgoog",
+    "title": "Latin and Greek in American Education: With Symposia on the Value of Humanistic Studies",
+    "author": "Francis Willey Kelsey",
+    "topic": "classics",
+    "source": "openlibrary-search-inside-reviewed-queue",
+    "textFile": "latinandgreekin00kelsgoog_djvu.txt",
+    "reviewed": true,
+    "allowOcrFetch": true,
+    "reviewNote": "Fixture allowlist row for PLANET-3696 reviewed passage-yield evaluation; local artifacts only, never production import."
+  }
+]

@@ -63,7 +63,9 @@
     "check:source-notices": "node scripts/check-source-notices-policy.mjs",
     "check:preference-calibration": "node scripts/check-preference-calibration-policy.mjs",
     "eval:standardebooks-new-releases": "node scripts/standardebooks-new-release-eval.mjs",
-    "check:isbn-source-interest": "node scripts/check-isbn-source-interest-policy.mjs"
+    "check:isbn-source-interest": "node scripts/check-isbn-source-interest-policy.mjs",
+    "eval:ia-ocr-passage-yield": "node scripts/ia-ocr-passage-yield-eval.mjs",
+    "check:ia-ocr-passage-yield": "node scripts/check-ia-ocr-passage-yield-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
