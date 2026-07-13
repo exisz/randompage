@@ -1243,6 +1243,174 @@ passagesRouter.get('/reading/challenges', async (req: Request, res: Response) =>
   }
 });
 
+
+type DailyRecapNudge = {
+  label: string;
+  href: string;
+  reason: string;
+};
+
+function parseClientDayBoundary(value: unknown, fallback: Date) {
+  if (typeof value !== 'string') return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+function localDayLabelFromBoundary(start: Date) {
+  return start.toISOString().slice(0, 10);
+}
+
+function chooseDailyRecapNudge(options: {
+  unreadPushCount: number;
+  latestPath: ReadingPathRow | null;
+  favoriteTag: string | null;
+  openedCount: number;
+  savedCount: number;
+  reviewsCompleted: number;
+}): DailyRecapNudge {
+  if (options.unreadPushCount > 0) {
+    return {
+      label: 'Open your unread push inbox',
+      href: '/history?tab=push',
+      reason: `${options.unreadPushCount} delivered page${options.unreadPushCount === 1 ? '' : 's'} still belong to your inbox.`,
+    };
+  }
+  if (options.savedCount > 0 && options.reviewsCompleted === 0) {
+    return {
+      label: 'Review one saved page',
+      href: '/bookmarks',
+      reason: 'You saved something today; revisit one owned page while it is fresh.',
+    };
+  }
+  if (options.latestPath) {
+    return {
+      label: `Continue your ${options.latestPath.topic} path`,
+      href: '/discover',
+      reason: 'Keep the 7-day path moving with the next existing RandomPage passage.',
+    };
+  }
+  if (options.favoriteTag) {
+    return {
+      label: `Read one more ${options.favoriteTag} page`,
+      href: `/discover?tag=${encodeURIComponent(options.favoriteTag)}`,
+      reason: 'Use your preference graph to reinforce a topic you already care about.',
+    };
+  }
+  return {
+    label: options.openedCount > 0 ? 'Read one more fresh page' : 'Start today’s fresh pages',
+    href: '/discover',
+    reason: options.openedCount > 0
+      ? 'One more page turns today’s reading into a stronger habit signal.'
+      : 'No private recap metrics yet; open today’s queue to start the loop honestly.',
+  };
+}
+
+// GET /api/reading/daily-recap
+// Signed-in private recap derived only from this user's existing RandomPage records.
+passagesRouter.get('/reading/daily-recap', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureBrowsingEventsTable(prisma);
+    await ensureReadingPathsTable(prisma);
+
+    const userId = claims.sub as string;
+    const now = new Date();
+    const fallbackStart = startOfUtcDay(now);
+    const start = parseClientDayBoundary(req.query.start, fallbackStart);
+    const end = parseClientDayBoundary(req.query.end, addUtcDays(start, 1));
+    const safeEnd = end > start ? end : addUtcDays(start, 1);
+
+    const [todayViews, todayPushReads, todaySaves, todayReviews, unreadPushCount, latestPathRows, prefs, todayDwellRows] = await Promise.all([
+      prisma.browsingEvent.findMany({
+        where: { userId, action: 'view', createdAt: { gte: start, lt: safeEnd } },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.pushHistory.count({ where: { userId, readAt: { gte: start, lt: safeEnd } } }),
+      prisma.bookmark.count({ where: { userId, createdAt: { gte: start, lt: safeEnd } } }),
+      prisma.passageReview.count({ where: { userId, action: 'reviewed', reviewedAt: { gte: start, lt: safeEnd } } }),
+      prisma.pushHistory.count({ where: { userId, readAt: null } }),
+      prisma.$queryRaw<ReadingPathRow[]>`
+        SELECT id, user_id, topic, goal_id, passage_ids, started_at
+        FROM reading_paths
+        WHERE user_id = ${userId}
+        ORDER BY started_at DESC
+        LIMIT 1
+      `,
+      prisma.userPreference.findMany({ where: { userId }, select: { tag: true, weight: true } }),
+      prisma.$queryRaw<Array<{ engaged_count: number; dwell_ms: number | null }>>`
+        SELECT COUNT(DISTINCT passage_id) AS engaged_count, SUM(COALESCE(dwell_ms, 0)) AS dwell_ms
+        FROM browsing_events
+        WHERE user_id = ${userId}
+          AND action IN ('dwell', 'engaged_read')
+          AND created_at >= ${start}
+          AND created_at < ${safeEnd}
+      `,
+    ]);
+
+    const uniqueOpenedIds = Array.from(new Set(todayViews.map((event) => event.passageId)));
+    const favoriteTag = topPositivePreferenceTag(prefs);
+    const favoriteTopicReads = favoriteTag
+      ? todayViews.filter((event) => parsePassageTags(event.passage.tags).some((tag) => tag.toLowerCase() === favoriteTag.toLowerCase())).length
+      : 0;
+    const latestPassage = todayViews[0]?.passage ?? null;
+    const latestPath = latestPathRows[0] ?? null;
+    const pathPassageIds = latestPath ? parseJsonArray(latestPath.passage_ids) : [];
+    const pathPagesReadToday = uniqueOpenedIds.filter((id) => pathPassageIds.includes(id)).length;
+    const todayDwellMs = Number(todayDwellRows[0]?.dwell_ms ?? 0);
+    const metrics = {
+      passagesOpened: uniqueOpenedIds.length,
+      viewEvents: todayViews.length,
+      pushedPagesRead: todayPushReads,
+      savedPages: todaySaves,
+      reviewsCompleted: todayReviews,
+      readingMinutes: Math.round(todayDwellMs / 60_000),
+      engagedPassages: Number(todayDwellRows[0]?.engaged_count ?? 0),
+      pathPagesRead: pathPagesReadToday,
+      favoriteTopicReads,
+      unreadPushCount,
+    };
+    const hasActivity = metrics.passagesOpened > 0
+      || metrics.pushedPagesRead > 0
+      || metrics.savedPages > 0
+      || metrics.reviewsCompleted > 0
+      || metrics.readingMinutes > 0;
+
+    res.json({
+      generatedFor: localDayLabelFromBoundary(start),
+      timezone: 'client-local',
+      hasActivity,
+      summary: hasActivity
+        ? `Today you opened ${metrics.passagesOpened} page${metrics.passagesOpened === 1 ? '' : 's'}, saved ${metrics.savedPages}, reviewed ${metrics.reviewsCompleted}, and logged about ${metrics.readingMinutes} reading minute${metrics.readingMinutes === 1 ? '' : 's'}.`
+        : 'No reading activity recorded for your local day yet.',
+      metrics,
+      latestPassage: latestPassage ? {
+        id: latestPassage.id,
+        bookTitle: latestPassage.bookTitle,
+        author: latestPassage.author,
+      } : null,
+      path: latestPath ? {
+        topic: latestPath.topic,
+        pagesReadToday: pathPagesReadToday,
+        totalDays: READING_PATH_DAYS,
+      } : null,
+      favoriteTag,
+      nextStep: chooseDailyRecapNudge({
+        unreadPushCount,
+        latestPath,
+        favoriteTag,
+        openedCount: metrics.passagesOpened,
+        savedCount: metrics.savedPages,
+        reviewsCompleted: metrics.reviewsCompleted,
+      }),
+      privacy: 'signed-in user only; derived from browsing_events, push_history, bookmarks, passage_reviews, reading_paths, and user_preferences.',
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 // GET /api/reading/stats
 passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
   try {

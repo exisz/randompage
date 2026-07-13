@@ -32,6 +32,30 @@ interface ReadingStats {
   sevenDayReadingMinutes: number;
 }
 
+interface DailyRecap {
+  generatedFor: string;
+  hasActivity: boolean;
+  summary: string;
+  metrics: {
+    passagesOpened: number;
+    pushedPagesRead: number;
+    savedPages: number;
+    reviewsCompleted: number;
+    readingMinutes: number;
+    pathPagesRead: number;
+    favoriteTopicReads: number;
+    unreadPushCount: number;
+  };
+  latestPassage: { id: string; bookTitle: string; author: string } | null;
+  path: { topic: string; pagesReadToday: number; totalDays: number } | null;
+  favoriteTag: string | null;
+  nextStep: {
+    label: string;
+    href: string;
+    reason: string;
+  };
+}
+
 interface RecommendationExplanation {
   label: 'High match' | 'Good match';
   reason: string;
@@ -271,6 +295,14 @@ function speechQueueAvailable() {
     && 'SpeechSynthesisUtterance' in window;
 }
 
+function localDayRange() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 1);
+  return { start: start.toISOString(), end: end.toISOString() };
+}
+
 export default function Discover() {
   const [passage, setPassage] = useState<Passage | null>(null);
   const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
@@ -281,6 +313,7 @@ export default function Discover() {
   const [queued, setQueued] = useState(false);
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<ReadingStats | null>(null);
+  const [dailyRecap, setDailyRecap] = useState<DailyRecap | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
   const [recommendationShelves, setRecommendationShelves] = useState<RecommendationShelf[]>([]);
   const [shelvesStatus, setShelvesStatus] = useState<string | null>(null);
@@ -456,6 +489,25 @@ export default function Discover() {
     }
   }, []);
 
+  const fetchDailyRecap = useCallback(async () => {
+    try {
+      const isAuth = await logtoClient.isAuthenticated();
+      if (!isAuth) {
+        setDailyRecap(null);
+        return;
+      }
+      const range = localDayRange();
+      const params = new URLSearchParams(range);
+      const res = await apiFetch(`/reading/daily-recap?${params.toString()}`);
+      if (!res.ok) throw new Error(`Daily recap returned ${res.status}`);
+      const data = await res.json() as DailyRecap;
+      setDailyRecap(data);
+    } catch (e) {
+      console.error(e);
+      setDailyRecap(null);
+    }
+  }, []);
+
   const startReadingPath = useCallback(async (goalId: string) => {
     setPathLoading(true);
     setPathStatus(null);
@@ -524,6 +576,7 @@ export default function Discover() {
       const isAuth = await logtoClient.isAuthenticated();
       if (!isAuth) {
         setStats(null);
+        setDailyRecap(null);
         return;
       }
       const res = await apiFetch('/reading/stats');
@@ -595,6 +648,7 @@ export default function Discover() {
         void fetchDailyReview();
         void fetchUnreadPush();
         void fetchReadingChallenges();
+        void fetchDailyRecap();
       }
     } catch (e) {
       console.error(e);
@@ -605,7 +659,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyRecap, fetchDailyReview, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
@@ -636,6 +690,7 @@ export default function Discover() {
         void fetchDailyReview();
         void fetchUnreadPush();
         void fetchReadingChallenges();
+        void fetchDailyRecap();
       }
     } catch (e) {
       console.error(e);
@@ -649,7 +704,7 @@ export default function Discover() {
     } finally {
       setLoading(false);
     }
-  }, [fetchDailyQueue, fetchDailyReview, fetchPassage, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
+  }, [fetchDailyQueue, fetchDailyRecap, fetchDailyReview, fetchPassage, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
   useEffect(() => {
     void fetchTopTags();
@@ -675,6 +730,7 @@ export default function Discover() {
         ? { ...current, items: current.items.filter((candidate) => candidate.bookmarkId !== item.bookmarkId) }
         : current);
       void fetchReadingChallenges();
+      void fetchDailyRecap();
       window.setTimeout(() => setReviewStatus(null), 2500);
     } catch (e) {
       console.error(e);
@@ -990,6 +1046,53 @@ export default function Discover() {
                 </div>
               )}
             </div>
+
+
+            {authed && dailyRecap ? (
+              <div className="rounded-[2rem] border border-info/30 bg-info/10 p-4 shadow-xl backdrop-blur">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-info">Daily recap</p>
+                    <p className="mt-1 text-sm opacity-75">{dailyRecap.summary}</p>
+                  </div>
+                  <span className={`badge shrink-0 ${dailyRecap.hasActivity ? 'badge-info' : 'badge-outline'}`}>{dailyRecap.generatedFor}</span>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                    <div className="text-xl font-semibold">{dailyRecap.metrics.passagesOpened}</div>
+                    <div className="text-[0.65rem] uppercase tracking-[0.16em] opacity-60">pages opened</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                    <div className="text-xl font-semibold">{dailyRecap.metrics.pushedPagesRead}</div>
+                    <div className="text-[0.65rem] uppercase tracking-[0.16em] opacity-60">push reads</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                    <div className="text-xl font-semibold">{dailyRecap.metrics.savedPages}</div>
+                    <div className="text-[0.65rem] uppercase tracking-[0.16em] opacity-60">saved today</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                    <div className="text-xl font-semibold">{dailyRecap.metrics.reviewsCompleted}</div>
+                    <div className="text-[0.65rem] uppercase tracking-[0.16em] opacity-60">reviews</div>
+                  </div>
+                </div>
+                {dailyRecap.latestPassage || dailyRecap.path || dailyRecap.favoriteTag ? (
+                  <p className="mt-3 text-xs leading-relaxed opacity-70">
+                    {dailyRecap.latestPassage ? `Latest: ${dailyRecap.latestPassage.bookTitle} — ${dailyRecap.latestPassage.author}. ` : ''}
+                    {dailyRecap.path ? `${dailyRecap.metrics.pathPagesRead} path page${dailyRecap.metrics.pathPagesRead === 1 ? '' : 's'} read for ${dailyRecap.path.topic}. ` : ''}
+                    {dailyRecap.favoriteTag ? `${dailyRecap.metrics.favoriteTopicReads} read matched your ${dailyRecap.favoriteTag} preference.` : ''}
+                  </p>
+                ) : null}
+                <Link to={dailyRecap.nextStep.href} className="mt-3 block rounded-2xl border border-info/30 bg-base-100/55 p-3 transition hover:border-info hover:bg-info/10">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold">Next: {dailyRecap.nextStep.label}</div>
+                      <p className="mt-1 text-xs opacity-70">{dailyRecap.nextStep.reason}</p>
+                    </div>
+                    <span className="badge badge-info badge-outline shrink-0">Go</span>
+                  </div>
+                </Link>
+              </div>
+            ) : null}
 
 
             {authed && readingChallenges?.challenges.length ? (

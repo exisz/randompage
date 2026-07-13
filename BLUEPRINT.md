@@ -59,6 +59,7 @@
 │  │    /api/browsing/history → 浏览/跳过事件历史 + search UI    │ │
 │  │    /api/reading/stats → 今日阅读数 + UTC streak 统计       │ │
 │    /api/reading/challenges → lightweight challenge/achievement progress derived from browsing_events, passage_reviews, reading_paths, push_history, user_preferences │ │
+│    /api/reading/daily-recap → signed-in local-day recap + next-step nudge from browsing_events, push_history, bookmarks, passage_reviews, reading_paths, user_preferences │ │
 │  │    /api/preferences → 读取偏好权重 + goals/avoid tags + free-text calibration + daily push schedule + read-later email 控制     │ │
 │  │    /api/push/*    → 推送订阅/历史/source notices              │ │
 │  │    /api/cron/daily-push → 每日推送 (21:00 UTC)            │ │
@@ -123,7 +124,7 @@ exisz/randompage (GitHub)
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, personalized shelves, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
 | recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
-| browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；每日队列打开卡片时记录 discover view |
+| browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；`/api/reading/daily-recap` 按客户端 local day 汇总该用户今日打开/推送阅读/收藏/复习/阅读分钟并给出下一步 CTA；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
 | saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/isbn13/isbn10/source/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail/Settings ISBN lookup 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
 | reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
@@ -248,7 +249,8 @@ exisz/randompage (GitHub)
 - Discover renders a signed-in “Reading challenges” panel with 5 fixed personal progress loops: Daily 3 pages, Weekly saved review, 7-day path progress, Open pushed page, and Explore favorite topic.
 - `GET /api/reading/challenges` derives progress from existing source-of-truth tables only: `browsing_events`, `passage_reviews`, raw `reading_paths`, `push_history`, and `user_preferences`. No social leaderboard, monetization, summaries, or duplicate achievement event table is introduced.
 - Rewards are textual/visual badges and progress bars only; completion updates when existing actions occur (view/listen passage, review saved passage, open pushed passage, read current path/favorite-topic passage).
-- Static regression: `pnpm --filter @randompage/app check:reading-challenges`.
+- Daily recap: `GET /api/reading/daily-recap?start=<local-day-start>&end=<local-day-end>` is signed-in only and derives a local-day recap from existing per-user records: `browsing_events`, `push_history`, `bookmarks`, `passage_reviews`, raw `reading_paths`, and `user_preferences`. Discover renders an honest Daily recap card with opened/saved/review/push-read counts, latest/path/preference context when present, and a next-step CTA to existing RandomPage surfaces. Empty days show a cold-start message and link to today’s fresh pages; no summaries, LLMs, or new content sources are introduced.
+- Static regressions: `pnpm --filter @randompage/app check:reading-challenges` and `pnpm --filter @randompage/app check:daily-recap`.
 
 
 ## User-Curated Reading Queue
@@ -334,6 +336,8 @@ exisz/randompage (GitHub)
 下次重新 ingest 后必须按顺序跑：`cleanup-boilerplate.mjs --apply` → `tag-passages.mjs`。
 
 ## 版本记录
+
+| 2026-07-13 | PLANET-3681: Added signed-in Daily recap on Discover plus `GET /api/reading/daily-recap`. The recap uses client local-day boundaries and existing per-user RandomPage tables (`browsing_events`, `push_history`, `bookmarks`, `passage_reviews`, `reading_paths`, `user_preferences`) to show opened/saved/review/push-read counts, reading minutes, latest/path/preference context, and one next-step CTA; empty days honestly link to today’s fresh pages. Added `check:daily-recap`; no Headway summaries/courses/paywall/social layer or external LLM/embedding provider. | Engineer Pod |
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
