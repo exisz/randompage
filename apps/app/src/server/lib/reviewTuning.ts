@@ -17,7 +17,7 @@ export type ReviewTuningRule = {
   label: string;
 };
 
-export type ReviewTunableBookmark = Bookmark & { passage: Passage; passageReviews?: Array<{ dueAfter: Date }> };
+export type ReviewTunableBookmark = Bookmark & { passage: Passage; passageReviews?: Array<{ dueAfter: Date; reviewedAt?: Date; action?: string; box?: number | null }> };
 
 const PRESET_TO_WEIGHT: Record<Exclude<ReviewTuningPreset, 'normal'>, number> = {
   pause: -100,

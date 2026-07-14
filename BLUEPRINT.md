@@ -43,7 +43,7 @@
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览；unread exhausted 时 fallback 到 not-recent/readable existing passages，并返回 emptyReason/counts │ │
 │  │    /api/passages/recommendation-shelves → signed-in personalized Discover shelves from saved books, saved passages, preferences/goals; existing passages only │ │
 │    /api/reading-path → 7-day goal-based existing-passage path │ │
-│  │    /api/daily-review → 收藏片段 Daily Review / themed revisit action; applies per-user review tuning controls │ │
+│  │    /api/daily-review + /api/daily-review/overview → 收藏片段 Daily Review card flow plus all-due saved-page overview; applies per-user review tuning controls │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences
 │ │    POST /api/passages/:id/dwell → signed-in passage dwell / engaged-read events with bounded dwell_ms │ │
@@ -207,9 +207,10 @@ exisz/randompage (GitHub)
 
 - `apps/app/src/client/pages/Bookmarks.tsx` exposes an optional mobile-first Recall Cards mode for due saved passages. The card shows title/author/chapter plus the prompt “What idea did this page contain?” before revealing the passage body.
 - Recall actions reuse the existing `POST /api/daily-review/:bookmarkId` / `passage_reviews` path: `reviewed` advances the spaced-review box ladder, `review_later` returns tomorrow without advancing, and `skip` steps back sooner. No new table or scheduler is introduced.
-- Daily Review (Discover), Themed Review, and Recall Cards read the actual POST response (`review.dueAfter` / `intervalDays` / `box`) and surface a lightweight next-review confirmation such as “Nice — next review in ~2 weeks” or “back tomorrow”; the UI does not hardcode cadence.
-- Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls.
-- Static regression: `pnpm --filter @randompage/app check:recall-cards`.
+- Daily Review (Discover), Themed Review, Recall Cards, and the Bookmarks “Today’s saved-page review” overview read the actual POST response (`review.dueAfter` / `intervalDays` / `box`) and surface a lightweight next-review confirmation such as “Nice — next review in ~2 weeks” or “back tomorrow”; the UI does not hardcode cadence.
+- `GET /api/daily-review/overview` returns every currently due saved RandomPage passage for the signed-in user, with private note / line-thought indicators, due reason, review tuning summary, and empty reasons for no saved passages / none due today / all paused by tuning. Bookmarks renders this as an inspectable all-due queue while preserving existing open/listen/share/card/related/review actions.
+- Empty/anonymous boundaries: Bookmarks remains auth-gated; no saved passages shows a clean Discover CTA; offline cached mode disables mutation controls and does not pretend to compute fresh due state.
+- Static regressions: `pnpm --filter @randompage/app check:recall-cards` and `pnpm --filter @randompage/app check:daily-review-overview`.
 
 ## Line-Level Thought Annotations
 
@@ -318,6 +319,7 @@ exisz/randompage (GitHub)
 | `check-passage-annotations-policy.mjs` | PLANET-3093 | 静态回归检查 passage_annotations inline DDL、owned bookmark/user-scoped edit/delete、offset/quote validation、quote/note caps、Bookmarks selection UI 与 recall-search indexing。 |
 | `check-active-recall-policy.mjs` | PLANET-3146 | 静态回归检查 active-recall cloze card inline DDL、owned bookmark scope、quote offset validation、hidden-before-reveal UI、remembered/forgot interval direction、original passage actions。 |
 | `check-review-tuning-policy.mjs` | PLANET-3130 | 静态回归检查 review tuning control rows、Daily Review tuned ranking/explanations、Themed Review filtering。 |
+| `check-daily-review-overview-policy.mjs` | PLANET-3714 | 静态回归检查 signed-in all-due saved-page review endpoint、Bookmarks overview UI、tuning/offline empty states、existing review/related actions。 |
 | `check-daily-queue-policy.mjs` | PLANET-2780 | 静态回归检查 daily queue unread-exhausted fallback、API emptyReason/counts 与 Discover retry/precise empty state |
 | `check-schema-table-mapping.mjs` | PLANET-1914 | 生成 production-shaped snake_case SQLite fixture，验证 Prisma `User`→`users`、`push_subscriptions`、`browsing_events`、`user_preferences` 写入路径 |
 | `search-source-candidates.mjs` | PLANET-1964 | Metadata-first Open Library + Google Books candidate search; emits title/author/source_url/access_depth without caching protected text |
@@ -343,6 +345,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-14 | PLANET-3714: Added Bookmarks “Today’s saved-page review” overview. Signed-in users can inspect every currently due saved RandomPage passage before reviewing; `/api/daily-review/overview` reuses spaced-review + review tuning, reports no-saved/none-due/all-paused empty reasons, and rows preserve open/listen/share/card/related/review actions. Added `check:daily-review-overview`. | Engineer Pod |
 | 2026-07-09 | PLANET-3576: Added local Standard Ebooks new-release feed connector evaluation (`pnpm --filter @randompage/app eval:standardebooks-new-releases`). It fetches the public Atom feed, skips already-represented production titles when Turso credentials are available, extracts candidate passages from official XHTML single-page links, and writes review artifacts without production DB writes, private/patron feeds, or LLM tagging dependency. | Engineer Pod |
 | 2026-07-09 | PLANET-3555: Added signed-in Settings free-text preference calibration. Users can privately save what they want RandomPage to find and optional avoid text; `/api/preferences/calibration` deterministically maps matching existing passage tags into user preference weights / avoid soft down-ranks, stores private `control:preference-calibration:*` rows for editable/clearable source text, and exposes derived tag reason copy without external LLMs, embeddings, summaries, or new content sources. Added `check:preference-calibration`. | Engineer Pod |
 | 2026-07-08 | PLANET-3521: Added private saved book/source new-passage notices. Bookmarks saved_books rows can toggle “Notify on new pages”, source-notice preferences live in `user_preferences` `control:source-notify:*` rows, `/api/saved-books/notices` lists deterministic matching RandomPage passages not yet delivered to that user, and `/api/push/source-notices` sends secret-protected Web Push while recording user-specific `push_history`. Added `check:source-notices`. | Engineer Pod |

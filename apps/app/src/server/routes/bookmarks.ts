@@ -873,6 +873,35 @@ bookmarksRouter.delete('/bookmark-collections/:id/bookmarks/:bookmarkId', async 
   }
 });
 
+function dailyReviewEmptyReason(savedCount: number, dueCount: number, pausedDueCount: number) {
+  if (savedCount === 0) return 'no_saved_passages';
+  if (dueCount === 0) return 'none_due_today';
+  if (pausedDueCount === dueCount) return 'all_paused_by_tuning';
+  return null;
+}
+
+function dailyReviewItemPayload(bookmark: any, index: number, tuningReason?: string | null) {
+  const latest = bookmark.passageReviews?.[0];
+  const annotationCount = Array.isArray(bookmark.annotations) ? bookmark.annotations.length : 0;
+  const tags = parsePassageTags(bookmark.passage?.tags ?? '[]');
+  return {
+    id: bookmark.id,
+    bookmarkId: bookmark.id,
+    passageId: bookmark.passageId,
+    reviewPosition: index + 1,
+    lastReviewedAt: latest?.reviewedAt ?? null,
+    dueAfter: latest?.dueAfter ?? null,
+    box: latest?.box ?? null,
+    note: bookmark.note ?? null,
+    hasPrivateNote: Boolean(bookmark.note),
+    annotationCount,
+    dueReason: latest?.dueAfter ? `due since ${new Date(latest.dueAfter).toLocaleDateString('en-CA')}` : 'new saved page',
+    passage: bookmark.passage,
+    tags,
+    tuningReason: tuningReason ?? null,
+  };
+}
+
 // GET /api/daily-review — resurface 1–3 saved passages due for revisit
 bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
   try {
@@ -888,6 +917,7 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
         include: {
           passage: true,
           passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+          annotations: { orderBy: { createdAt: 'asc' } },
         },
         orderBy: { createdAt: 'asc' },
         take: 50,
@@ -898,18 +928,59 @@ bookmarksRouter.get('/daily-review', async (req: Request, res: Response) => {
 
     const due = tuneDueBookmarks(bookmarks, reviewTuning, now)
       .slice(0, 3)
-      .map(({ bookmark, tuning }, index) => ({
-        id: bookmark.id,
-        bookmarkId: bookmark.id,
-        passageId: bookmark.passageId,
-        reviewPosition: index + 1,
-        lastReviewedAt: bookmark.passageReviews[0]?.reviewedAt ?? null,
-        note: bookmark.note ?? null,
-        passage: bookmark.passage,
-        tuningReason: tuning.reason,
-      }));
+      .map(({ bookmark, tuning }, index) => dailyReviewItemPayload(bookmark, index, tuning.reason));
 
     res.json({ items: due, generatedFor: now.toISOString().slice(0, 10), reviewTuning });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+// GET /api/daily-review/overview — list every due saved passage for today's private review queue.
+bookmarksRouter.get('/daily-review/overview', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const now = new Date();
+
+    const [bookmarks, preferences] = await Promise.all([
+      prisma.bookmark.findMany({
+        where: { userId },
+        include: {
+          passage: true,
+          collectionItems: { include: { collection: true } },
+          passageReviews: { orderBy: { reviewedAt: 'desc' }, take: 1 },
+          annotations: { orderBy: { createdAt: 'asc' } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 250,
+      }),
+      prisma.userPreference.findMany({ where: { userId } }),
+    ]);
+    const reviewTuning = parseReviewTuning(preferences);
+    const dueCandidates = bookmarks.filter((bookmark) => {
+      const latest = bookmark.passageReviews?.[0];
+      return !latest || latest.dueAfter <= now;
+    });
+    const tunedDue = tuneDueBookmarks(bookmarks, reviewTuning, now);
+    const pausedDueCount = Math.max(0, dueCandidates.length - tunedDue.length);
+    const items = tunedDue.map(({ bookmark, tuning }, index) => dailyReviewItemPayload(bookmark, index, tuning.reason));
+    const emptyReason = dailyReviewEmptyReason(bookmarks.length, dueCandidates.length, pausedDueCount);
+
+    res.json({
+      items,
+      generatedFor: now.toISOString().slice(0, 10),
+      summary: {
+        savedCount: bookmarks.length,
+        dueCount: dueCandidates.length,
+        visibleDueCount: items.length,
+        pausedDueCount,
+        emptyReason,
+      },
+      reviewTuning,
+    });
   } catch (e: unknown) {
     res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
   }

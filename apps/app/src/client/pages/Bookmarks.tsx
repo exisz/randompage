@@ -34,6 +34,11 @@ interface SavedBook { id: string; title: string; author: string; status: 'want_t
 type ReviewTuningPreset = 'pause' | 'less' | 'normal' | 'more';
 type ReviewTuningScope = 'global' | 'source' | 'tag';
 interface ReviewTuningRule { scope: ReviewTuningScope; value: string; preset: ReviewTuningPreset; label: string; }
+interface DailyReviewOverviewItem {
+  id: string; bookmarkId: string; passageId: string; reviewPosition: number; lastReviewedAt?: string | null; dueAfter?: string | null; box?: number | null; note?: string | null; hasPrivateNote?: boolean; annotationCount?: number; dueReason?: string; tuningReason?: string | null; passage: Passage; tags?: string[];
+}
+interface DailyReviewOverviewSummary { savedCount: number; dueCount: number; visibleDueCount: number; pausedDueCount: number; emptyReason?: 'no_saved_passages' | 'none_due_today' | 'all_paused_by_tuning' | null; }
+interface DailyReviewOverview { items: DailyReviewOverviewItem[]; generatedFor?: string; summary: DailyReviewOverviewSummary; }
 interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
   note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; collectionPurposes?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
@@ -88,6 +93,8 @@ export default function Bookmarks() {
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
   const [reviewTuning, setReviewTuning] = useState<ReviewTuningRule[]>([]);
+  const [dailyReviewOverview, setDailyReviewOverview] = useState<DailyReviewOverview | null>(null);
+  const [dailyReviewOverviewStatus, setDailyReviewOverviewStatus] = useState<string | null>(null);
   const [reviewTuningScope, setReviewTuningScope] = useState<ReviewTuningScope>('global');
   const [reviewTuningValue, setReviewTuningValue] = useState('');
   const [reviewTuningPreset, setReviewTuningPreset] = useState<ReviewTuningPreset>('more');
@@ -116,6 +123,8 @@ export default function Bookmarks() {
     setBookmarks(cachedBookmarks);
     setNoteDrafts(Object.fromEntries(cachedBookmarks.map(bookmark => [bookmark.id, bookmark.note ?? ''])));
     setCollections((cached.collections as Collection[]) || []);
+    setDailyReviewOverview(null);
+    setDailyReviewOverviewStatus('Reconnect to compute today’s fresh saved-page review queue. Cached offline bookmarks stay readable, but due state needs the server.');
     setOfflineMode(true);
     setOfflineCachedAt(cached.cachedAt);
     return true;
@@ -123,18 +132,20 @@ export default function Bookmarks() {
 
   const refresh = async () => {
     try {
-      const [bookmarksRes, collectionsRes, preferencesRes, recallCardsRes, savedBooksRes] = await Promise.all([
+      const [bookmarksRes, collectionsRes, preferencesRes, recallCardsRes, savedBooksRes, dailyOverviewRes] = await Promise.all([
         apiFetch('/bookmarks'),
         apiFetch('/bookmark-collections'),
         apiFetch('/preferences'),
         apiFetch('/bookmarks/recall-cards'),
         apiFetch('/saved-books'),
+        apiFetch('/daily-review/overview'),
       ]);
       const bookmarksData = await bookmarksRes.json();
       const collectionsData = await collectionsRes.json();
       const preferencesData = await preferencesRes.json();
       const recallCardsData = await recallCardsRes.json();
       const savedBooksData = await savedBooksRes.json();
+      const dailyOverviewData = await dailyOverviewRes.json();
       const nextBookmarks = bookmarksData.bookmarks || [];
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
@@ -143,6 +154,12 @@ export default function Bookmarks() {
       setSavedBooks(Array.isArray(savedBooksData.savedBooks) ? savedBooksData.savedBooks : []);
       setReadLaterDestination(preferencesData.readLaterDestination || null);
       setReviewTuning(Array.isArray(preferencesData.reviewTuning) ? preferencesData.reviewTuning : []);
+      setDailyReviewOverview({
+        items: Array.isArray(dailyOverviewData.items) ? dailyOverviewData.items : [],
+        generatedFor: dailyOverviewData.generatedFor,
+        summary: dailyOverviewData.summary || { savedCount: nextBookmarks.length, dueCount: 0, visibleDueCount: 0, pausedDueCount: 0, emptyReason: nextBookmarks.length ? 'none_due_today' : 'no_saved_passages' },
+      });
+      setDailyReviewOverviewStatus(null);
       setActiveRecallCards(Array.isArray(recallCardsData.cards) ? recallCardsData.cards : []);
       setOfflineMode(false);
       setOfflineCachedAt(null);
@@ -667,20 +684,32 @@ export default function Bookmarks() {
     if (offlineMode) return;
     setBusy(true);
     setReviewStatus(null);
+    setDailyReviewOverviewStatus(null);
     try {
       const res = await apiFetch(`/daily-review/${bookmarkId}`, {
         method: 'POST',
         body: JSON.stringify({ action }),
       });
       const schedule = await res.json() as ReviewSchedulePayload;
-      setReviewStatus(formatReviewScheduleFeedback(action, schedule));
+      const feedback = formatReviewScheduleFeedback(action, schedule);
       setRevealedRecallIds(prev => {
         const next = new Set(prev);
         next.delete(bookmarkId);
         return next;
       });
       await refresh();
+      setReviewStatus(feedback);
+      setDailyReviewOverviewStatus(feedback);
     } finally { setBusy(false); }
+  };
+
+  const dailyReviewEmptyCopy = () => {
+    const reason = dailyReviewOverview?.summary.emptyReason;
+    if (offlineMode) return 'Offline mode cannot compute a fresh due list. Cached saved passages are still available below.';
+    if (reason === 'no_saved_passages') return 'No saved passages yet. Save a RandomPage passage first, then today’s review list will appear here.';
+    if (reason === 'all_paused_by_tuning') return 'All due saved pages are paused by your Review tuning. Adjust tuning below to bring them back.';
+    if (reason === 'none_due_today') return 'Nothing due today. Reviewed pages rest until their spaced-review date.';
+    return 'No due saved pages right now.';
   };
 
   return (
@@ -928,6 +957,67 @@ export default function Bookmarks() {
           </div>
         </div>
 
+        <div className="card bg-gradient-to-br from-primary/15 via-base-200 to-secondary/10 shadow mb-4" id="daily-review-overview">
+          <div className="card-body gap-3 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] opacity-50">Today’s saved-page review</p>
+                <h3 className="font-serif text-lg">All due saved pages</h3>
+                <p className="text-sm opacity-70">Inspect your full private due queue before choosing what to review first. This uses the same spaced-review schedule and tuning as Daily Review.</p>
+              </div>
+              <span className="badge badge-primary badge-outline shrink-0">{dailyReviewOverview?.summary.visibleDueCount ?? 0} due</span>
+            </div>
+            {dailyReviewOverview?.summary.pausedDueCount ? (
+              <div className="alert alert-info py-2 text-sm"><span>{dailyReviewOverview.summary.pausedDueCount} due saved page{dailyReviewOverview.summary.pausedDueCount === 1 ? '' : 's'} hidden by Review tuning.</span></div>
+            ) : null}
+            {dailyReviewOverviewStatus && <div className="alert alert-success py-2 text-sm"><span>{dailyReviewOverviewStatus}</span></div>}
+            {(dailyReviewOverview?.items.length ?? 0) === 0 ? (
+              <div className="rounded-box border border-dashed border-base-content/20 p-4 text-sm">
+                <p className="font-medium">No review list to show.</p>
+                <p className="opacity-70 mt-1">{dailyReviewEmptyCopy()}</p>
+                {dailyReviewOverview?.summary.emptyReason === 'all_paused_by_tuning' ? <button className="btn btn-link btn-xs px-0 mt-2" onClick={() => setReviewTuningScope('global')}>Adjust Review tuning</button> : null}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {dailyReviewOverview?.items.map((item, index) => {
+                  const bmTags = (item.tags?.length ? item.tags : parseTags(item.passage.tags)).slice(0, 4);
+                  return (
+                    <div key={item.bookmarkId} className="rounded-box border border-primary/20 bg-base-100/85 p-3 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs opacity-60">
+                        <span>Due {index + 1} of {dailyReviewOverview.items.length}</span>
+                        <span>{item.dueReason || (item.dueAfter ? `due ${new Date(item.dueAfter).toLocaleDateString()}` : 'new saved page')}</span>
+                      </div>
+                      {item.tuningReason ? <p className="mt-2 text-xs text-secondary">{item.tuningReason}</p> : null}
+                      <p className="font-serif leading-relaxed mt-2">{item.passage.text.slice(0, 280)}{item.passage.text.length > 280 ? '…' : ''}</p>
+                      <div className="mt-2 text-right text-sm"><BookSourceLink bookTitle={item.passage.bookTitle} author={item.passage.author} chapter={item.passage.chapter} compact className="items-end opacity-60 hover:opacity-100" /></div>
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {item.hasPrivateNote ? <span className="badge badge-warning badge-outline badge-sm">private note</span> : null}
+                        {(item.annotationCount ?? 0) > 0 ? <span className="badge badge-accent badge-outline badge-sm">{item.annotationCount} line thought{item.annotationCount === 1 ? '' : 's'}</span> : null}
+                        {typeof item.box === 'number' ? <span className="badge badge-ghost badge-sm">box {item.box}</span> : null}
+                        {bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button className="btn btn-primary btn-xs" onClick={() => navigate(`/discover?passageId=${item.passageId}`)}>Open</button>
+                          <ListenControl text={item.passage.text} title={`${item.passage.bookTitle} due saved page`} compact />
+                          <SharePassageButton passage={item.passage} compact />
+                          <SharePassageImageButton passage={item.passage} compact />
+                          <button className="btn btn-outline btn-xs" disabled={offlineMode} onClick={() => loadRelatedSavedPages(item as unknown as Bookmark)}>{relatedSavedPages[item.bookmarkId] ? 'Hide related' : 'Related saved pages'}</button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button className="btn btn-ghost btn-xs" disabled={offlineMode || busy} onClick={() => markThemedReview(item.bookmarkId, 'skip')}>Skip today</button>
+                          <button className="btn btn-outline btn-xs" disabled={offlineMode || busy} onClick={() => markThemedReview(item.bookmarkId, 'review_later')}>Review later</button>
+                          <button className="btn btn-secondary btn-xs" disabled={offlineMode || busy} onClick={() => markThemedReview(item.bookmarkId, 'reviewed')}>Reviewed</button>
+                        </div>
+                      </div>
+                      {renderRelatedSavedPages(item as unknown as Bookmark)}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="card bg-gradient-to-br from-accent/15 via-base-200 to-primary/10 shadow mb-4">
           <div className="card-body gap-3 p-4">
