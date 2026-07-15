@@ -112,6 +112,7 @@ interface ReadingPathGoal {
 interface ReadingPathEntry {
   day: number;
   passage: Passage;
+  passages?: Passage[];
   reason: string;
 }
 
@@ -124,6 +125,8 @@ interface ReadingPath {
   current: ReadingPathEntry | null;
   upcoming: ReadingPathEntry[];
   queue: ReadingPathEntry[];
+  progress?: { completedDays: number; remainingDays: number; percent: number };
+  adaptation?: string;
 }
 
 interface ReadingPathResponse {
@@ -1201,8 +1204,8 @@ export default function Discover() {
               <div className="rounded-[2rem] border border-accent/30 bg-accent/10 p-4 shadow-xl backdrop-blur">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-accent">7-day reading path</p>
-                    <p className="mt-1 text-sm opacity-70">A goal-based sequence of existing book passages — no summaries, no courses.</p>
+                    <p className="text-xs uppercase tracking-[0.24em] text-accent">30-day passage path</p>
+                    <p className="mt-1 text-sm opacity-70">An adaptive 30-day sequence of existing book passages — no summaries, no courses.</p>
                   </div>
                   {readingPath ? <span className="badge badge-accent badge-outline">Day {readingPath.currentDay}/{readingPath.totalDays}</span> : null}
                 </div>
@@ -1210,18 +1213,25 @@ export default function Discover() {
                   <div className="mt-3 rounded-2xl border border-white/10 bg-base-100/50 p-3">
                     <button className="w-full text-left" onClick={() => fetchPassageById(readingPath.current!.passage.id, 'discover')}>
                       <div className="flex items-center gap-2">
-                        <span className="badge badge-accent">Day {readingPath.current.day}/7</span>
+                        <span className="badge badge-accent">Day {readingPath.current.day}/{readingPath.totalDays}</span>
                         <span className="line-clamp-1 text-sm font-semibold">{readingPath.current.passage.bookTitle}</span>
                       </div>
                       <p className="mt-1 text-xs opacity-60">{readingPath.current.passage.author} · {readingPath.topic}</p>
                       <p className="mt-2 line-clamp-2 text-sm leading-relaxed opacity-75">{shortExcerpt(readingPath.current.passage.text)}</p>
                       <p className="mt-2 text-xs text-accent/80">{readingPath.current.reason}</p>
+                      {readingPath.progress ? (
+                        <div className="mt-3">
+                          <progress className="progress progress-accent h-2 w-full" value={readingPath.progress.percent} max="100" />
+                          <p className="mt-1 text-xs opacity-60">Progress: {readingPath.progress.completedDays} days completed · {readingPath.progress.remainingDays} days remaining</p>
+                        </div>
+                      ) : null}
+                      {readingPath.adaptation ? <p className="mt-2 text-xs opacity-60">{readingPath.adaptation}</p> : null}
                     </button>
                     {readingPath.upcoming.length > 0 && (
                       <div className="mt-3 grid gap-2">
                         {readingPath.upcoming.slice(0, 6).map((item) => (
                           <div key={`${readingPath.id}-${item.day}`} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-base-200/40 px-3 py-2">
-                            <span className="badge badge-sm badge-outline">Day {item.day}/7</span>
+                            <span className="badge badge-sm badge-outline">Day {item.day}/{readingPath.totalDays}</span>
                             <span className="min-w-0 flex-1 line-clamp-1 text-xs opacity-75">{item.passage.bookTitle} · {item.passage.author}</span>
                           </div>
                         ))}
@@ -1244,7 +1254,7 @@ export default function Discover() {
                       >
                         <span>
                           <span className="block font-semibold">Start {goal.label}</span>
-                          <span className="block text-xs opacity-70">7 days · {goal.tags.slice(0, 3).join(' · ')}</span>
+                          <span className="block text-xs opacity-70">30 days · {goal.tags.slice(0, 3).join(' · ')}</span>
                         </span>
                       </button>
                     ))}

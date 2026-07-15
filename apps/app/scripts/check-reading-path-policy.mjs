@@ -11,7 +11,7 @@ const routeTokens = [
   "passagesRouter.get('/reading-path'",
   "passagesRouter.post('/reading-path/start'",
   'CREATE TABLE IF NOT EXISTS reading_paths',
-  'READING_PATH_DAYS = 7',
+  'READING_PATH_DAYS = 30',
   'filterReadablePassages(allPassages)',
   'scoreReadingPathCandidate',
   "recordInteraction(prisma, userId, current.passage.id, 'view', 'discover')",
@@ -24,10 +24,10 @@ for (const token of routeTokens) {
 }
 
 const uiTokens = [
-  '7-day reading path',
+  '30-day passage path',
   "apiFetch('/reading-path')",
   "apiFetch('/reading-path/start'",
-  'Day {readingPath.current.day}/7',
+  'Day {readingPath.current.day}/{readingPath.totalDays}',
   'no summaries, no courses',
   'readingPath.upcoming.slice(0, 6)',
 ];
@@ -41,7 +41,7 @@ for (const token of uiTokens) {
 const blueprintTokens = [
   '/api/reading-path',
   'reading_paths',
-  '7-day goal-based reading paths',
+  '30-day adaptive existing-passage path',
 ];
 
 for (const token of blueprintTokens) {

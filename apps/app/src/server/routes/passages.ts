@@ -27,7 +27,7 @@ const MAX_PREFERENCE_WEIGHT = 12;
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
 const DAILY_QUEUE_MAX_LIMIT = 20;
 const DAILY_READING_BUDGET_TAG = 'control:daily-reading-budget:minutes';
-const READING_PATH_DAYS = 7;
+const READING_PATH_DAYS = 30;
 
 const RECOMMENDATION_SHELF_MAX_SHELVES = 4;
 const RECOMMENDATION_SHELF_ITEMS = 5;
@@ -769,6 +769,7 @@ async function buildReadingPathPayload(
       return {
         day: index + 1,
         passage,
+        passages: [passage],
         reason: matched.length > 0 ? `Matched ${matched.slice(0, 2).join(' + ')} for ${row.topic}.` : `Sequenced from existing RandomPage passages for ${row.topic}.`,
       };
     })
@@ -788,10 +789,16 @@ async function buildReadingPathPayload(
     current,
     upcoming: queue.filter((item) => item && item.day > currentDay),
     queue,
+    progress: {
+      completedDays: Math.max(0, Math.min(currentDay - 1, passageIds.length)),
+      remainingDays: Math.max(0, READING_PATH_DAYS - currentDay + 1),
+      percent: Math.round((Math.max(0, currentDay - 1) / READING_PATH_DAYS) * 100),
+    },
+    adaptation: 'Ranks existing RandomPage passages by reading goal, private preferences, topic matches, and deterministic per-user rotation; no summaries, courses, external LLM, or new content source.',
   };
 }
 
-// GET /api/reading-path — active 7-day goal path for the signed-in reader.
+// GET /api/reading-path — active 30-day adaptive passage path for the signed-in reader.
 passagesRouter.get('/reading-path', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
@@ -815,7 +822,7 @@ passagesRouter.get('/reading-path', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/reading-path/start — generate a lightweight Headway-parity path from existing book passages.
+// POST /api/reading-path/start — generate a lightweight Headway-parity 30-day path from existing book passages.
 passagesRouter.post('/reading-path/start', async (req: Request, res: Response) => {
   try {
     const claims = await verifyBearer(req.header('authorization'));
@@ -839,7 +846,7 @@ passagesRouter.post('/reading-path/start', async (req: Request, res: Response) =
       prisma.userPreference.findMany({ where: { userId } }),
     ]);
     const prefMap = preferenceMapWithoutAvoids(prefs);
-    const pool = filterReadablePassages(allPassages);
+    const pool = preferTaggedPool(filterReadablePassages(allPassages).filter(isPublicDiscoverPassage));
     const passageIds = pool
       .map((passage) => ({ passage, score: scoreReadingPathCandidate(passage, goal, topic, prefMap, `${userId}:${topic}`) }))
       .sort((a, b) => b.score - a.score)
@@ -847,7 +854,7 @@ passagesRouter.post('/reading-path/start', async (req: Request, res: Response) =
       .map(({ passage }) => passage.id);
 
     if (passageIds.length < READING_PATH_DAYS) {
-      res.status(404).json({ error: 'Not enough existing RandomPage passages to build a 7-day path.' });
+      res.status(404).json({ error: 'Not enough existing RandomPage book passages to build a 30-day path. Save more passages or broaden your reading goal.' });
       return;
     }
 

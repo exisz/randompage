@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-13 — PLANET-3665 personalized recommendation shelves
+> 最后更新: 2026-07-15 — PLANET-3731 adaptive 30-day passage paths
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -42,7 +42,7 @@
 │  │    /api/passages/random → 随机片段 + view/skip 记录        │ │
 │  │    /api/passages/daily-queue → 每日个性化未读队列预览；unread exhausted 时 fallback 到 not-recent/readable existing passages，并返回 emptyReason/counts │ │
 │  │    /api/passages/recommendation-shelves → signed-in personalized Discover shelves from saved books, saved passages, preferences/goals; existing passages only │ │
-│    /api/reading-path → 7-day goal-based existing-passage path │ │
+│    /api/reading-path → adaptive 30-day existing-passage path │ │
 │  │    /api/daily-review + /api/daily-review/overview → 收藏片段 Daily Review card flow plus all-due saved-page overview; applies per-user review tuning controls │ │
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences
@@ -127,7 +127,7 @@ exisz/randompage (GitHub)
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；`/api/reading/daily-recap` 按客户端 local day 汇总该用户今日打开/推送阅读/收藏/复习/阅读分钟并给出下一步 CTA；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
 | saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/isbn13/isbn10/source/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail/Settings ISBN lookup 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
-| reading_paths | 用户当前/历史 7-day goal-based reading path；保存 topic/goal_id、7 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/7 与 upcoming teasers；不存 generated summaries/courses |
+| reading_paths | 用户当前/历史 30-day adaptive passage path；保存 topic/goal_id、30 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/30、today passage、progress、upcoming teasers 与匹配原因；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
 
@@ -309,7 +309,7 @@ exisz/randompage (GitHub)
 | `check-avoid-tags-policy.mjs` | PLANET-2594 | 静态回归检查 Settings “Avoid for now”、`POST /api/preferences/avoid-tags`、Discover/daily queue/push soft down-rank 路径 |
 | `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
 | `check-share-passage-policy.mjs` | PLANET-2685/2748 | 静态回归检查 Web Share / clipboard fallback、client-side PNG visual card export、Discover/Bookmarks/History passage Share/Card actions |
-| `check-reading-path-policy.mjs` | PLANET-2739 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 7-day goal-based existing-passage path UI |
+| `check-reading-path-policy.mjs` | PLANET-2739/3731 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 30-day adaptive existing-passage path UI |
 | `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
 | `check-passage-feedback-policy.mjs` | PLANET-2934 | 静态回归检查 Discover + Push inbox feedback chips、`POST /api/passages/:id/feedback`、bounded preference updates 与 double-submit guard。 |
 | `check-kindle-export-policy.mjs` | PLANET-2984/2994 | 静态回归检查 Settings read-later destination、Bookmarks + source detail Kindle/read-later HTML/TXT/copy/email export、canonical URLs、private note snippets、no-summary boundary。 |
@@ -345,6 +345,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-15 | PLANET-3731: Extended Discover reading paths from 7 days to an adaptive 30-day passage path. `/api/reading-path/start` now selects 30 existing public RandomPage passages from the signed-in reader's goal/topic/preferences, returns Day N/30 progress metadata and adaptation copy, and keeps the boundary to existing book passages only — no summaries, courses, external LLMs/embeddings, social layer, or new content sources. Updated `check:reading-path`. | Engineer Pod |
 | 2026-07-14 | PLANET-3714: Added Bookmarks “Today’s saved-page review” overview. Signed-in users can inspect every currently due saved RandomPage passage before reviewing; `/api/daily-review/overview` reuses spaced-review + review tuning, reports no-saved/none-due/all-paused empty reasons, and rows preserve open/listen/share/card/related/review actions. Added `check:daily-review-overview`. | Engineer Pod |
 | 2026-07-09 | PLANET-3576: Added local Standard Ebooks new-release feed connector evaluation (`pnpm --filter @randompage/app eval:standardebooks-new-releases`). It fetches the public Atom feed, skips already-represented production titles when Turso credentials are available, extracts candidate passages from official XHTML single-page links, and writes review artifacts without production DB writes, private/patron feeds, or LLM tagging dependency. | Engineer Pod |
 | 2026-07-09 | PLANET-3555: Added signed-in Settings free-text preference calibration. Users can privately save what they want RandomPage to find and optional avoid text; `/api/preferences/calibration` deterministically maps matching existing passage tags into user preference weights / avoid soft down-ranks, stores private `control:preference-calibration:*` rows for editable/clearable source text, and exposes derived tag reason copy without external LLMs, embeddings, summaries, or new content sources. Added `check:preference-calibration`. | Engineer Pod |
