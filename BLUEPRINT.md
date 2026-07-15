@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-15 — PLANET-3731 adaptive 30-day passage paths
+> 最后更新: 2026-07-16 — PLANET-3758 offline cached daily queue
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -193,8 +193,8 @@ exisz/randompage (GitHub)
 
 - Service worker `apps/app/src/client/public/sw.js` caches navigations/app shell and static assets so `/discover`, `/bookmarks`, `/history`, `/settings` can render offline after a successful online session.
 - Client offline helper `apps/app/src/client/lib/offline.ts` persists the last 30 bookmarks and last 30 browsing/push history entries in localStorage after authenticated online loads.
-- Offline Bookmarks/History are read-only and show explicit cached/offline banners; cached saved/queued/history/push-inbox passage cards explicitly keep browser Web Speech Listen controls available offline (device voice permitting, no downloaded audio), while Discover shows a graceful network-required message for fresh recommendations instead of a blank/broken state.
-- Static regression: `pnpm --filter @randompage/app check:offline-cache` (covers cached listening copy and no-audio-download browser-speech notice).
+- Offline Bookmarks/History are read-only and show explicit cached/offline banners; cached saved/queued/history/push-inbox passage cards explicitly keep browser Web Speech Listen controls available offline (device voice permitting, no downloaded audio). Discover still tells users fresh recommendations require network, but if today’s signed-in daily queue was loaded online earlier, it shows “Today’s cached pages” from the local `randompage:offline:daily-queue` cache with cached timestamp and browser-speech Start daily listening that avoids API calls.
+- Static regression: `pnpm --filter @randompage/app check:offline-cache` (covers cached saved/push listening copy, no-audio-download browser-speech notice, offline daily queue cache read/write, and cached daily listening avoiding API calls).
 
 ## Saved-Passage Private Notes
 
@@ -307,7 +307,7 @@ exisz/randompage (GitHub)
 | `check-tag-failure-policy.mjs` | PLANET-2263/3240 | 生产 corpus tag QA：报告 untagged / untagged_exhausted / failure_rows / exhausted_failure_rows 与样例，并有 `--static-only` guard 验证 Gemini quota fallback、fallbackTagged observability、Discover/daily queue tagged-pool preference，防止 retry 耗尽或 provider billing 后静默滞留 |
 | `check-preferences-goals-policy.mjs` | PLANET-2418 | 静态回归检查 Settings reading goals UI 与 `POST /api/preferences/goals` seed 写入路径 |
 | `check-avoid-tags-policy.mjs` | PLANET-2594 | 静态回归检查 Settings “Avoid for now”、`POST /api/preferences/avoid-tags`、Discover/daily queue/push soft down-rank 路径 |
-| `check-offline-cache-policy.mjs` | PLANET-2456 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写与 Discover offline message |
+| `check-offline-cache-policy.mjs` | PLANET-2456/3758 | 静态回归检查 service worker navigation/static cache、Bookmarks/History 离线缓存读写、Discover offline message、Today daily queue local cache 与 cached daily listening no-API path |
 | `check-share-passage-policy.mjs` | PLANET-2685/2748 | 静态回归检查 Web Share / clipboard fallback、client-side PNG visual card export、Discover/Bookmarks/History passage Share/Card actions |
 | `check-reading-path-policy.mjs` | PLANET-2739/3731 | 静态回归检查 `/api/reading-path`、`reading_paths` 与 Discover 30-day adaptive existing-passage path UI |
 | `check-history-day-grouping-policy.mjs` | PLANET-2844 | 静态回归检查 History tab 按本地日期 Today/Yesterday/YYYY-MM-DD 分组，并保持 search/tag/offline 行为 |
@@ -345,6 +345,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-16 | PLANET-3758: Added offline cached daily queue for Discover. Successful signed-in daily queue loads now persist today’s current passage cards in localStorage; offline Discover labels them “Today’s cached pages” with cached timestamp and honest network-required copy, and Start daily listening reads cached passages via browser Web Speech without API calls or fresh-personalization claims. Expanded `check:offline-cache`. | Engineer Pod |
 | 2026-07-15 | PLANET-3731: Extended Discover reading paths from 7 days to an adaptive 30-day passage path. `/api/reading-path/start` now selects 30 existing public RandomPage passages from the signed-in reader's goal/topic/preferences, returns Day N/30 progress metadata and adaptation copy, and keeps the boundary to existing book passages only — no summaries, courses, external LLMs/embeddings, social layer, or new content sources. Updated `check:reading-path`. | Engineer Pod |
 | 2026-07-14 | PLANET-3714: Added Bookmarks “Today’s saved-page review” overview. Signed-in users can inspect every currently due saved RandomPage passage before reviewing; `/api/daily-review/overview` reuses spaced-review + review tuning, reports no-saved/none-due/all-paused empty reasons, and rows preserve open/listen/share/card/related/review actions. Added `check:daily-review-overview`. | Engineer Pod |
 | 2026-07-09 | PLANET-3576: Added local Standard Ebooks new-release feed connector evaluation (`pnpm --filter @randompage/app eval:standardebooks-new-releases`). It fetches the public Atom feed, skips already-represented production titles when Turso credentials are available, extracts candidate passages from official XHTML single-page links, and writes review artifacts without production DB writes, private/patron feeds, or LLM tagging dependency. | Engineer Pod |

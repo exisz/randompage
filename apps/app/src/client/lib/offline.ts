@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 const STORAGE_PREFIX = 'randompage:offline:';
 const MAX_BOOKMARKS = 30;
 const MAX_HISTORY = 30;
+const MAX_DAILY_QUEUE = 5;
 
 export interface OfflineBookmarksCache {
   bookmarks: unknown[];
@@ -14,6 +15,18 @@ export interface OfflineHistoryCache {
   browsingHistory: unknown[];
   pushHistory: unknown[];
   cachedAt: string;
+}
+
+export interface OfflineDailyQueueCache {
+  queue: unknown[];
+  generatedFor: string;
+  freshOnly: boolean;
+  fallbackUsed: boolean;
+  strategy: string;
+  budgetMinutes?: number;
+  totalEstimatedMinutes?: number;
+  cachedAt: string;
+  localDate: string;
 }
 
 function storageKey(name: string) {
@@ -82,4 +95,32 @@ export function saveHistoryOfflineCache(cache: Omit<OfflineHistoryCache, 'cached
 
 export function readHistoryOfflineCache() {
   return readJson<OfflineHistoryCache>('history');
+}
+
+function localDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+export function saveDailyQueueOfflineCache(cache: Omit<OfflineDailyQueueCache, 'cachedAt' | 'localDate'>) {
+  writeJson('daily-queue', {
+    queue: Array.isArray(cache.queue) ? cache.queue.slice(0, MAX_DAILY_QUEUE) : [],
+    generatedFor: cache.generatedFor ?? '',
+    freshOnly: Boolean(cache.freshOnly),
+    fallbackUsed: Boolean(cache.fallbackUsed),
+    strategy: cache.strategy || 'daily_queue',
+    budgetMinutes: cache.budgetMinutes,
+    totalEstimatedMinutes: cache.totalEstimatedMinutes,
+    cachedAt: new Date().toISOString(),
+    localDate: localDateKey(),
+  });
+}
+
+export function readDailyQueueOfflineCache({ todayOnly = true }: { todayOnly?: boolean } = {}) {
+  const cache = readJson<OfflineDailyQueueCache>('daily-queue');
+  if (!cache) return null;
+  if (todayOnly && cache.localDate !== localDateKey()) return null;
+  return cache;
 }

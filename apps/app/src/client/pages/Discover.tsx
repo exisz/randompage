@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { logtoClient } from '../lib/logto';
 import { apiFetch } from '../lib/api';
-import { isOfflineError, useOnlineStatus } from '../lib/offline';
+import { isOfflineError, readDailyQueueOfflineCache, saveDailyQueueOfflineCache, useOnlineStatus } from '../lib/offline';
 import ListenControl from '../components/ListenControl';
 import SharePassageButton from '../components/SharePassageButton';
 import SharePassageImageButton from '../components/SharePassageImageButton';
@@ -306,6 +306,13 @@ function localDayRange() {
   return { start: start.toISOString(), end: end.toISOString() };
 }
 
+function formatCachedAt(value: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
 export default function Discover() {
   const [passage, setPassage] = useState<Passage | null>(null);
   const [whyPersonalized, setWhyPersonalized] = useState<RecommendationExplanation | null>(null);
@@ -318,6 +325,7 @@ export default function Discover() {
   const [stats, setStats] = useState<ReadingStats | null>(null);
   const [dailyRecap, setDailyRecap] = useState<DailyRecap | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
+  const [dailyQueueCachedAt, setDailyQueueCachedAt] = useState<string | null>(null);
   const [recommendationShelves, setRecommendationShelves] = useState<RecommendationShelf[]>([]);
   const [shelvesStatus, setShelvesStatus] = useState<string | null>(null);
   const [readingPath, setReadingPath] = useState<ReadingPath | null>(null);
@@ -344,6 +352,25 @@ export default function Discover() {
   const dailyQueueUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   // Keep ref in sync with state for use inside useCallback closures
   useEffect(() => { selectedTagRef.current = selectedTag; }, [selectedTag]);
+
+  useEffect(() => {
+    if (online || dailyQueue?.queue.length) return;
+    const cached = readDailyQueueOfflineCache();
+    if (!cached?.queue.length) return;
+    const queue = cached.queue as DailyQueueItem[];
+    setAuthed(true);
+    setDailyQueue({
+      queue,
+      generatedFor: cached.generatedFor,
+      freshOnly: false,
+      fallbackUsed: cached.fallbackUsed,
+      strategy: 'offline_cache',
+      emptyReason: null,
+      budgetMinutes: cached.budgetMinutes,
+      totalEstimatedMinutes: cached.totalEstimatedMinutes,
+    });
+    setDailyQueueCachedAt(cached.cachedAt);
+  }, [dailyQueue?.queue.length, online]);
 
   useEffect(() => () => {
     if (dailyQueueUtteranceRef.current && speechQueueAvailable()) {
@@ -411,18 +438,20 @@ export default function Discover() {
       const isAuth = await logtoClient.isAuthenticated();
       if (!isAuth) {
         setDailyQueue(null);
+        setDailyQueueCachedAt(null);
         return;
       }
       const res = await apiFetch('/passages/daily-queue?limit=20');
       if (res.status === 401 || res.status === 403) {
         setAuthed(false);
         setDailyQueue(null);
+        setDailyQueueCachedAt(null);
         return;
       }
       if (!res.ok) throw new Error(`Daily queue returned ${res.status}`);
       const data = await res.json();
       const queue = Array.isArray(data.queue) ? data.queue : [];
-      setDailyQueue({
+      const nextQueue = {
         queue,
         generatedFor: data.generatedFor ?? '',
         freshOnly: Boolean(data.freshOnly),
@@ -431,22 +460,56 @@ export default function Discover() {
         emptyReason: typeof data.emptyReason === 'string' ? data.emptyReason : null,
         budgetMinutes: typeof data.budgetMinutes === 'number' ? data.budgetMinutes : undefined,
         totalEstimatedMinutes: typeof data.totalEstimatedMinutes === 'number' ? data.totalEstimatedMinutes : undefined,
-      });
+      } satisfies DailyQueue;
+      setDailyQueue(nextQueue);
+      setDailyQueueCachedAt(null);
+      if (queue.length) {
+        saveDailyQueueOfflineCache({
+          queue,
+          generatedFor: nextQueue.generatedFor,
+          freshOnly: nextQueue.freshOnly,
+          fallbackUsed: nextQueue.fallbackUsed,
+          strategy: nextQueue.strategy,
+          budgetMinutes: nextQueue.budgetMinutes,
+          totalEstimatedMinutes: nextQueue.totalEstimatedMinutes,
+        });
+      }
       void fetchRecommendationShelves(queue.map((item: DailyQueueItem) => item.id));
     } catch (e) {
       console.error(e);
       if (isAuthBoundaryError(e)) {
         setAuthed(false);
         setDailyQueue(null);
+        setDailyQueueCachedAt(null);
         return;
       }
+      const cached = isOfflineError(e) ? readDailyQueueOfflineCache() : null;
+      if (cached?.queue.length) {
+        const queue = cached.queue as DailyQueueItem[];
+        setDailyQueue({
+          queue,
+          generatedFor: cached.generatedFor,
+          freshOnly: false,
+          fallbackUsed: cached.fallbackUsed,
+          strategy: 'offline_cache',
+          emptyReason: null,
+          budgetMinutes: cached.budgetMinutes,
+          totalEstimatedMinutes: cached.totalEstimatedMinutes,
+        });
+        setDailyQueueCachedAt(cached.cachedAt);
+        setShelvesStatus('Personal shelves need network. Today’s cached pages are still available offline.');
+        return;
+      }
+      setDailyQueueCachedAt(null);
       setDailyQueue({
         queue: [],
         generatedFor: '',
         freshOnly: false,
         fallbackUsed: false,
         strategy: 'load_error',
-        emptyReason: 'Could not load your daily queue. Check your connection and try Refresh queue.',
+        emptyReason: isOfflineError(e)
+          ? 'You are offline and no cached daily queue is available for today. Reconnect to refresh recommendations, or use cached Bookmarks/History.'
+          : 'Could not load your daily queue. Check your connection and try Refresh queue.',
       });
     }
   }, [fetchRecommendationShelves]);
@@ -844,6 +907,7 @@ export default function Discover() {
   const speakDailyQueueItem = useCallback((index: number) => {
     const queue = dailyQueue?.queue ?? [];
     const item = queue[index];
+    const usingCachedDailyQueue = dailyQueue?.strategy === 'offline_cache';
     if (!item) {
       stopDailyQueue();
       return;
@@ -860,7 +924,14 @@ export default function Discover() {
     setQueueActiveIndex(index);
     setQueuePlayback('playing');
     setQueueNotice(null);
-    void fetchPassageById(item.id, 'discover');
+    if (usingCachedDailyQueue || !online) {
+      setPassage(item);
+      setQueued(isPassageQueued(item.id));
+      setWhyPersonalized(item.whyPersonalized ?? null);
+      setLoadError('Listening from today’s cached offline queue. Reconnect to refresh recommendations or record a fresh Discover view.');
+    } else {
+      void fetchPassageById(item.id, 'discover');
+    }
 
     const speechChunks = splitSpeechText(item.text);
     setActiveSpeechChunkIndex(speechChunks.length ? 0 : null);
@@ -927,7 +998,7 @@ export default function Discover() {
     setMediaSessionPlaybackState('playing');
     if (voices.length === 0) setQueueNotice('Using your browser default voice. If you hear nothing, this device may not have a speech voice installed.');
     window.speechSynthesis.speak(utterance);
-  }, [dailyQueue?.queue, fetchPassageById, stopDailyQueue]);
+  }, [dailyQueue?.queue, dailyQueue?.strategy, fetchPassageById, online, stopDailyQueue]);
 
   const startDailyQueue = useCallback(() => {
     if (!dailyQueue?.queue.length) return;
@@ -955,6 +1026,7 @@ export default function Discover() {
   }, [dailyQueue?.queue, queueActiveIndex, speakDailyQueueItem]);
 
   const activeQueueItem = queueActiveIndex !== null ? dailyQueue?.queue[queueActiveIndex] : null;
+  const usingCachedDailyQueue = dailyQueue?.strategy === 'offline_cache';
   const isCurrentPassageSpeaking = Boolean(passage && activeQueueItem?.id === passage.id && queuePlayback !== 'idle');
   const activePassageSpeechChunks = passage ? splitSpeechText(passage.text) : [];
   const tags = parsePassageTags(passage?.tags);
@@ -1007,7 +1079,7 @@ export default function Discover() {
 
         {(!online || loadError?.includes('offline')) && (
           <div className="alert alert-info mb-4 shadow-xl">
-            <span>Offline mode — fresh recommendations need network. Cached saved and pushed passages are available from Bookmarks and History after an online sync.</span>
+            <span>Offline mode — fresh recommendations need network. Cached saved and pushed passages are available from Bookmarks and History after an online sync; today’s cached daily queue appears here when it was loaded earlier today.</span>
           </div>
         )}
 
@@ -1279,12 +1351,14 @@ export default function Discover() {
               <div className="rounded-[2rem] border border-primary/15 bg-base-200/70 p-4 shadow-xl backdrop-blur">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs uppercase tracking-[0.24em] text-primary/80">Today&apos;s fresh pages</p>
-                    <p className="mt-1 text-sm opacity-70">A time-boxed personalized queue, refreshed daily.</p>
+                    <p className="text-xs uppercase tracking-[0.24em] text-primary/80">{usingCachedDailyQueue ? 'Today’s cached pages' : 'Today’s fresh pages'}</p>
+                    <p className="mt-1 text-sm opacity-70">{usingCachedDailyQueue ? `Cached offline queue from ${formatCachedAt(dailyQueueCachedAt)}. Refreshing recommendations needs network.` : 'A time-boxed personalized queue, refreshed daily.'}</p>
                     {dailyQueue?.budgetMinutes ? (
                       <p className="mt-1 text-xs opacity-70">Target: {dailyQueue.budgetMinutes} min · Queue estimate: {dailyQueue.totalEstimatedMinutes ?? 0} min</p>
                     ) : null}
-                    {dailyQueue?.fallbackUsed ? (
+                    {usingCachedDailyQueue ? (
+                      <p className="mt-1 text-xs text-primary/80">Offline listening uses your browser voice and does not call the API; it will not claim fresh personalization until you reconnect.</p>
+                    ) : dailyQueue?.fallbackUsed ? (
                       <p className="mt-1 text-xs text-primary/80">Fresh unread pool is low, so today includes personalized pages you have not seen recently.</p>
                     ) : null}
                   </div>
@@ -1308,7 +1382,7 @@ export default function Discover() {
                       )}
                     </div>
                     <p className="mt-2 text-xs leading-relaxed opacity-70">
-                      Plays today&apos;s personalized book passages in sequence using your browser voice. Each active passage opens here so the listen counts as your own Discover interaction.
+                      {usingCachedDailyQueue ? 'Plays today’s cached book passages in sequence using your browser voice. Reconnect before refreshing or recording new Discover interactions.' : 'Plays today’s personalized book passages in sequence using your browser voice. Each active passage opens here so the listen counts as your own Discover interaction.'}
                     </p>
                     {queueActiveIndex !== null && dailyQueue.queue[queueActiveIndex] && (
                       <p className="mt-2 text-xs text-primary/80" role="status">
@@ -1323,7 +1397,16 @@ export default function Discover() {
                     <button
                       key={item.id}
                       className={`w-full rounded-2xl border px-3 py-2 text-left transition hover:border-primary/50 hover:bg-primary/10 ${passage?.id === item.id || dailyQueue.queue[queueActiveIndex ?? -1]?.id === item.id ? 'border-primary/60 bg-primary/15' : 'border-white/10 bg-base-100/40'}`}
-                      onClick={() => fetchPassageById(item.id, 'discover')}
+                      onClick={() => {
+                        if (usingCachedDailyQueue || !online) {
+                          setPassage(item);
+                          setQueued(isPassageQueued(item.id));
+                          setWhyPersonalized(item.whyPersonalized ?? null);
+                          setLoadError('Opened from today’s cached offline queue. Reconnect to refresh recommendations or record a fresh Discover view.');
+                        } else {
+                          void fetchPassageById(item.id, 'discover');
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-2">
                         <span className="badge badge-sm">{item.queuePosition}</span>
