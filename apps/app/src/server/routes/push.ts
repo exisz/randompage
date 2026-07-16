@@ -37,8 +37,14 @@ type PushDeliveryStats = {
   failed: number;
   removed: number;
   skippedSchedule: number;
-  personalized: { userId: string; passageId: string }[];
+  personalized: { userId: string; passageId: string; reason: string }[];
   failures: PushFailure[];
+};
+
+type PersonalizedPassageSelection = {
+  passage: Passage;
+  reason: string;
+  matchedTags: string[];
 };
 
 const DAILY_PUSH_HOUR_TAG = 'control:daily-push:hour';
@@ -48,6 +54,12 @@ const SOURCE_NOTICE_PREFIX = 'control:source-notify:';
 
 function sourceNoticeKey(title: string, author: string) {
   return `${SOURCE_NOTICE_PREFIX}${encodeURIComponent(`${title.trim()}::${author.trim()}`)}`;
+}
+
+function compactPushReason(reason: string | null | undefined) {
+  const fallback = 'A fresh page from your library.';
+  const clean = String(reason || fallback).replace(/\s+/g, ' ').trim() || fallback;
+  return clean.length > 96 ? `${clean.slice(0, 93).trimEnd()}...` : clean;
 }
 
 async function normalizePushSubscriptionCreatedAt(prisma: PrismaClient) {
@@ -147,7 +159,7 @@ async function selectPersonalizedPassageForUser(
   prisma: PrismaClient,
   userId: string,
   passages: Passage[],
-) {
+): Promise<PersonalizedPassageSelection> {
   const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
   const recent = await prisma.pushHistory.findMany({
     where: { userId, sentAt: { gte: since } },
@@ -175,7 +187,12 @@ async function selectPersonalizedPassageForUser(
     rand -= w.weight;
     if (rand <= 0) { chosen = w.passage; break; }
   }
-  return chosen;
+  const explanation = explainRecommendation(chosen, prefMap);
+  return {
+    passage: chosen,
+    reason: compactPushReason(explanation?.reason),
+    matchedTags: explanation?.matchedTags ?? [],
+  };
 }
 
 async function deleteSubscriptionIfUnrecoverable(
@@ -213,7 +230,7 @@ async function sendPersonalizedPushes(
   let failed = 0;
   let removed = 0;
   let skippedSchedule = 0;
-  const personalized: { userId: string; passageId: string }[] = [];
+  const personalized: { userId: string; passageId: string; reason: string }[] = [];
 
   for (const [userId, userSubs] of groupSubscriptionsByUser(subscriptions).entries()) {
     try {
@@ -221,7 +238,8 @@ async function sendPersonalizedPushes(
         skippedSchedule += userSubs.length;
         continue;
       }
-      const chosen = await selectPersonalizedPassageForUser(prisma, userId, passages);
+      const selection = await selectPersonalizedPassageForUser(prisma, userId, passages);
+      const chosen = selection.passage;
       const budgetMinutes = await dailyReadingBudgetForUser(prisma, userId);
       let userSent = 0;
       for (const sub of userSubs) {
@@ -230,8 +248,10 @@ async function sendPersonalizedPushes(
             { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
             JSON.stringify({
               title: 'RandomPage',
-              body: `Your ${budgetMinutes}-minute pages are ready: ${chosen.text.slice(0, 80)}${chosen.text.length > 80 ? '...' : ''}`,
+              body: `${selection.reason} Your ${budgetMinutes}-minute page: ${chosen.text.slice(0, 80)}${chosen.text.length > 80 ? '...' : ''}`,
               passageId: chosen.id,
+              reason: selection.reason,
+              matchedTags: selection.matchedTags,
             }),
           );
           userSent++;
@@ -257,7 +277,7 @@ async function sendPersonalizedPushes(
           data: { id: nanoid(), userId, passageId: chosen.id, sentAt: new Date() },
         });
         sent += userSent;
-        personalized.push({ userId, passageId: chosen.id });
+        personalized.push({ userId, passageId: chosen.id, reason: selection.reason });
       }
     } catch (outerErr: unknown) {
       failed++;
@@ -342,7 +362,7 @@ pushRouter.get('/push/history', async (req: Request, res: Response) => {
 // POST /api/push/send
 // Auth: x-push-secret header == PUSH_SECRET (matches PLANET-951 contract)
 // Behavior: per-user personalized weighted sampling, excludes recently pushed passages,
-// records pushHistory, returns { sent, failed, personalized: [{userId, passageId}] }.
+// records pushHistory, returns { sent, failed, personalized: [{userId, passageId, reason}] }.
 pushRouter.post('/push/send', async (req: Request, res: Response) => {
   try {
     const secret = process.env.PUSH_SECRET;

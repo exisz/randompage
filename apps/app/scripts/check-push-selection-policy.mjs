@@ -30,6 +30,9 @@ const requiredGlobally = [
   'unixepoch(created_at)',
   'findPushSubscriptionByUserEndpoint',
   'createPushSubscriptionRaw',
+  'compactPushReason(explanation?.reason)',
+  'reason: selection.reason',
+  'matchedTags: selection.matchedTags',
 ];
 for (const token of requiredGlobally) {
   if (!source.includes(token)) {
@@ -48,4 +51,4 @@ for (const token of banned) {
   }
 }
 
-console.log('push selection policy check passed: cron reuses shared personalized selection and exposes GET/POST');
+console.log('push selection policy check passed: cron reuses shared personalized selection, push reasons, and GET/POST');

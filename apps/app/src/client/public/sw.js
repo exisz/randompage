@@ -71,7 +71,7 @@ self.addEventListener('push', e => {
     self.registration.showNotification(data.title || 'RandomPage', {
       body: data.body || 'A new passage awaits.',
       icon: '/icon-192.png',
-      data: { passageId: data.passageId },
+      data: { passageId: data.passageId, reason: data.reason || null },
     })
   );
 });

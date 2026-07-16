@@ -187,6 +187,7 @@ exisz/randompage (GitHub)
 - Settings → Push Notifications exposes a mobile-first “Daily passage time” control for signed-in users. It stores a one-hour local delivery window as `control:daily-push:hour` and `control:daily-push:tz:<timezone>` rows in `user_preferences`, so no new table/migration is required.
 - `splitPreferenceControls()` excludes `control:*` rows from recommendation preference maps; schedule controls never weight passage selection.
 - `/api/push/send` and `/api/cron/daily-push` respect configured user windows by default. Users without a schedule remain due, preserving the legacy fixed-cron behavior. QA/Product smoke tests may pass `?override_schedule=1` or header `x-push-override-schedule: 1` to exercise delivery outside the configured window.
+- Daily passage push notifications include a short deterministic reason line from the chosen passage’s tags vs private user preferences (fallback: “A fresh page from your library.”); the same `reason` is returned in `personalized[]`, with no LLM/embedding/new content source.
 - Push history is unchanged: a sent scheduled passage still writes one per-user `push_history` record and opens to the delivered passage.
 
 ## PWA / Offline
@@ -345,6 +346,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-16 | PLANET-3775: Daily `/api/push/send` and `/api/cron/daily-push` now add bounded deterministic personalization reason copy to delivered Web Push payloads and return the same `reason` in `personalized[]`. Reasons reuse existing `explainRecommendation` over passage tags + private preference rows, with honest fallback copy and no external LLM/embedding/new content source; expanded `check:push-policy`. | Engineer Pod |
 | 2026-07-16 | PLANET-3758: Added offline cached daily queue for Discover. Successful signed-in daily queue loads now persist today’s current passage cards in localStorage; offline Discover labels them “Today’s cached pages” with cached timestamp and honest network-required copy, and Start daily listening reads cached passages via browser Web Speech without API calls or fresh-personalization claims. Expanded `check:offline-cache`. | Engineer Pod |
 | 2026-07-15 | PLANET-3731: Extended Discover reading paths from 7 days to an adaptive 30-day passage path. `/api/reading-path/start` now selects 30 existing public RandomPage passages from the signed-in reader's goal/topic/preferences, returns Day N/30 progress metadata and adaptation copy, and keeps the boundary to existing book passages only — no summaries, courses, external LLMs/embeddings, social layer, or new content sources. Updated `check:reading-path`. | Engineer Pod |
 | 2026-07-14 | PLANET-3714: Added Bookmarks “Today’s saved-page review” overview. Signed-in users can inspect every currently due saved RandomPage passage before reviewing; `/api/daily-review/overview` reuses spaced-review + review tuning, reports no-saved/none-due/all-paused empty reasons, and rows preserve open/listen/share/card/related/review actions. Added `check:daily-review-overview`. | Engineer Pod |
