@@ -24,10 +24,49 @@
   "orientation": "portrait",
   "shortcuts": [
     {
-      "name": "Today",
+      "name": "Today’s pages",
       "short_name": "Today",
-      "description": "Open today's personal RandomPage passage",
+      "description": "Open today’s personal RandomPage passage queue.",
       "url": "/today",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Review saved pages",
+      "short_name": "Review",
+      "description": "Jump to your saved-passage Daily Review queue.",
+      "url": "/bookmarks#daily-review-overview",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Saved library",
+      "short_name": "Saved",
+      "description": "Open your private saved RandomPage passage library.",
+      "url": "/bookmarks",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Push inbox",
+      "short_name": "Inbox",
+      "description": "Open delivered RandomPage passages from your push inbox.",
+      "url": "/history?tab=push#push-inbox",
       "icons": [
         {
           "src": "/icon-192.png",
