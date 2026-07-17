@@ -193,6 +193,9 @@ async function ensureBookmarkNotesColumn(prisma: ReturnType<typeof getPrisma>) {
   if (!columns.some((column) => column.name === 'note')) {
     await prisma.$executeRawUnsafe('ALTER TABLE bookmarks ADD COLUMN note TEXT');
   }
+  if (!columns.some((column) => column.name === 'user_tags')) {
+    await prisma.$executeRawUnsafe('ALTER TABLE bookmarks ADD COLUMN user_tags TEXT');
+  }
 }
 
 async function ensurePassageReviewTable(prisma: ReturnType<typeof getPrisma>) {
@@ -239,6 +242,7 @@ async function ensurePassageAnnotationTable(prisma: ReturnType<typeof getPrisma>
       start_offset INTEGER NOT NULL,
       end_offset INTEGER NOT NULL,
       note TEXT NOT NULL,
+      user_tags TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT ON UPDATE CASCADE,
@@ -246,6 +250,10 @@ async function ensurePassageAnnotationTable(prisma: ReturnType<typeof getPrisma>
       FOREIGN KEY (passage_id) REFERENCES passages(id) ON DELETE RESTRICT ON UPDATE CASCADE
     )
   `);
+  const annotationColumns = await prisma.$queryRawUnsafe<Array<{ name: string }>>('PRAGMA table_info(passage_annotations)');
+  if (!annotationColumns.some((column) => column.name === 'user_tags')) {
+    await prisma.$executeRawUnsafe('ALTER TABLE passage_annotations ADD COLUMN user_tags TEXT');
+  }
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_user_bookmark_idx ON passage_annotations(user_id, bookmark_id)');
   await prisma.$executeRawUnsafe('CREATE INDEX IF NOT EXISTS passage_annotations_passage_idx ON passage_annotations(passage_id)');
 }
@@ -323,6 +331,17 @@ function normalizeBookmarkNote(value: unknown) {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();
   return trimmed ? trimmed.slice(0, 1200) : null;
+}
+
+function normalizeUserTags(value: unknown) {
+  if (value === null) return '[]';
+  const raw = Array.isArray(value) ? value : typeof value === 'string' ? value.split(/[,#\n]+/) : undefined;
+  if (!raw) return undefined;
+  const tags = Array.from(new Set(raw
+    .map(item => String(item).trim().toLowerCase().replace(/^#/, '').replace(/\s+/g, '-').replace(/[^a-z0-9\u4e00-\u9fff-]+/g, '').replace(/-+/g, '-').replace(/^-|-$/g, ''))
+    .filter(tag => tag.length >= 2)
+  )).slice(0, 12);
+  return JSON.stringify(tags);
 }
 
 function normalizeAnnotationText(value: unknown, maxLength: number) {
@@ -668,6 +687,7 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
       candidates.set(input.id, {
         ...existing,
         note: existing.note ?? input.note,
+        userTags: existing.userTags ?? input.userTags,
         collections,
         collectionPurposes,
         sources,
@@ -678,7 +698,8 @@ bookmarksRouter.get('/bookmarks/recall-search', async (req: Request, res: Respon
       upsertCandidate({
         ...bookmark.passage,
         note: bookmark.note,
-        annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
+        userTags: bookmark.userTags,
+        annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note, userTags: annotation.userTags })),
         collections: bookmark.collectionItems.map(item => item.collection.name),
         collectionPurposes: bookmark.collectionItems.map(item => item.collection.purpose).filter((purpose): purpose is string => Boolean(purpose)),
         sources: ['bookmark'],
@@ -727,7 +748,8 @@ bookmarksRouter.get('/bookmarks/:id/related', async (req: Request, res: Response
       ...bookmark.passage,
       bookmarkId: bookmark.id,
       note: bookmark.note,
-      annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note })),
+      userTags: bookmark.userTags,
+      annotations: bookmark.annotations.map(annotation => ({ quote: annotation.quote, note: annotation.note, userTags: annotation.userTags })),
       collections: bookmark.collectionItems.map(item => item.collection.name),
       collectionPurposes: bookmark.collectionItems.map(item => item.collection.purpose).filter((purpose): purpose is string => Boolean(purpose)),
       sources: ['bookmark'],
@@ -1113,6 +1135,25 @@ bookmarksRouter.patch('/bookmarks/:id/note', async (req: Request, res: Response)
 });
 
 
+// PATCH /api/bookmarks/:id/user-tags — edit private user-owned tags on an owned saved passage
+bookmarksRouter.patch('/bookmarks/:id/user-tags', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const userTags = normalizeUserTags(req.body?.userTags ?? req.body?.tags);
+    if (userTags === undefined) { res.status(400).json({ error: 'userTags must be an array, comma-separated string, or null' }); return; }
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await requireOwnedBookmark(prisma, userId, req.params.id);
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+    const updated = await prisma.bookmark.update({ where: { id: bookmark.id }, data: { userTags } });
+    res.json({ bookmark: updated, userTags: JSON.parse(userTags) });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
 
 // POST /api/bookmarks/:id/annotations — create a private line-level thought on an owned saved passage
 bookmarksRouter.post('/bookmarks/:id/annotations', async (req: Request, res: Response) => {
@@ -1126,6 +1167,7 @@ bookmarksRouter.post('/bookmarks/:id/annotations', async (req: Request, res: Res
 
     const quote = normalizeAnnotationText(req.body?.quote, 600);
     const note = normalizeAnnotationText(req.body?.note, 1200);
+    const userTags = normalizeUserTags(req.body?.userTags ?? req.body?.tags ?? []);
     if (!quote || !note) { res.status(400).json({ error: 'quote and note are required strings' }); return; }
     const anchor = validateAnnotationAnchor(bookmark.passage.text, quote, req.body?.startOffset, req.body?.endOffset);
     if ('error' in anchor) { res.status(400).json({ error: anchor.error }); return; }
@@ -1141,6 +1183,7 @@ bookmarksRouter.post('/bookmarks/:id/annotations', async (req: Request, res: Res
         startOffset: anchor.start,
         endOffset: anchor.end,
         note,
+        userTags: userTags ?? '[]',
         createdAt: now,
         updatedAt: now,
       },
@@ -1162,10 +1205,33 @@ bookmarksRouter.patch('/bookmarks/:id/annotations/:annotationId', async (req: Re
     if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
     const note = normalizeAnnotationText(req.body?.note, 1200);
     if (!note) { res.status(400).json({ error: 'note is required' }); return; }
+    const userTags = req.body?.userTags === undefined && req.body?.tags === undefined ? undefined : normalizeUserTags(req.body?.userTags ?? req.body?.tags);
     const existing = await prisma.passageAnnotation.findFirst({ where: { id: req.params.annotationId, userId, bookmarkId: bookmark.id } });
     if (!existing) { res.status(404).json({ error: 'Annotation not found' }); return; }
-    const annotation = await prisma.passageAnnotation.update({ where: { id: existing.id }, data: { note, updatedAt: new Date() } });
+    if (userTags === undefined && (req.body?.userTags !== undefined || req.body?.tags !== undefined)) { res.status(400).json({ error: 'userTags must be an array, comma-separated string, or null' }); return; }
+    const annotation = await prisma.passageAnnotation.update({ where: { id: existing.id }, data: { note, ...(userTags !== undefined ? { userTags } : {}), updatedAt: new Date() } });
     res.json({ annotation });
+  } catch (e: unknown) {
+    res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+
+// PATCH /api/bookmarks/:id/annotations/:annotationId/user-tags — edit private tags on an owned line-level thought
+bookmarksRouter.patch('/bookmarks/:id/annotations/:annotationId/user-tags', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const userTags = normalizeUserTags(req.body?.userTags ?? req.body?.tags);
+    if (userTags === undefined) { res.status(400).json({ error: 'userTags must be an array, comma-separated string, or null' }); return; }
+    const prisma = getPrisma();
+    await ensurePassageReviewTable(prisma);
+    const userId = claims.sub as string;
+    const bookmark = await requireOwnedBookmark(prisma, userId, req.params.id);
+    if (!bookmark) { res.status(404).json({ error: 'Bookmark not found' }); return; }
+    const existing = await prisma.passageAnnotation.findFirst({ where: { id: req.params.annotationId, userId, bookmarkId: bookmark.id } });
+    if (!existing) { res.status(404).json({ error: 'Annotation not found' }); return; }
+    const annotation = await prisma.passageAnnotation.update({ where: { id: existing.id }, data: { userTags, updatedAt: new Date() } });
+    res.json({ annotation, userTags: JSON.parse(userTags) });
   } catch (e: unknown) {
     res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
   }

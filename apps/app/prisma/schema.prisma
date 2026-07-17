@@ -75,6 +75,7 @@ model Bookmark {
   passageId String   @map("passage_id")
   createdAt DateTime @map("created_at")
   note      String?  @map("note")
+  userTags  String?  @map("user_tags")
 
   user            User                     @relation(fields: [userId], references: [id])
   passage         Passage                  @relation(fields: [passageId], references: [id])
@@ -197,6 +198,7 @@ model PassageAnnotation {
   startOffset Int      @map("start_offset")
   endOffset   Int      @map("end_offset")
   note        String
+  userTags    String?  @map("user_tags")
   createdAt   DateTime @map("created_at")
   updatedAt   DateTime @map("updated_at")
 

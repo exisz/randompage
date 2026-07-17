@@ -6,7 +6,8 @@ export interface RecallSearchPassageInput {
   chapter?: string | null;
   tags?: string | null;
   note?: string | null;
-  annotations?: { quote: string; note: string }[];
+  userTags?: string | null;
+  annotations?: { quote: string; note: string; userTags?: string | null }[];
   collections?: string[];
   collectionPurposes?: string[];
   sources?: string[];
@@ -81,7 +82,7 @@ function makeSnippet(text: string, tokens: string[]) {
 export function buildRelatedSavedPassageQuery(passage: RecallSearchPassageInput) {
   const tags = parseRecallTags(passage.tags).slice(0, 8);
   const annotationText = (passage.annotations ?? [])
-    .map(annotation => `${annotation.quote} ${annotation.note}`)
+    .map(annotation => `${annotation.quote} ${annotation.note} ${annotation.userTags ?? ''}`)
     .join(' ')
     .slice(0, 320);
   const excerpt = passage.text.replace(/\s+/g, ' ').trim().slice(0, 360);
@@ -114,9 +115,13 @@ export function scoreRecallPassages(query: string, passages: RecallSearchPassage
   return passages
     .map((passage) => {
       const tags = parseRecallTags(passage.tags);
+      const privateTags = parseRecallTags(passage.userTags);
+      const annotationPrivateTags = (passage.annotations ?? []).flatMap(annotation => parseRecallTags(annotation.userTags));
+      const privateTagText = [...privateTags, ...annotationPrivateTags].join(' ');
       const fields = [
+        { name: 'private tag', value: privateTagText, weight: 10 },
         { name: 'private note', value: passage.note ?? '', weight: 8 },
-        { name: 'line-level thought', value: (passage.annotations ?? []).map(annotation => `${annotation.quote} ${annotation.note}`).join(' '), weight: 9 },
+        { name: 'line-level thought', value: (passage.annotations ?? []).map(annotation => `${annotation.quote} ${annotation.note} ${annotation.userTags ?? ''}`).join(' '), weight: 9 },
         { name: 'title', value: passage.bookTitle, weight: 7 },
         { name: 'author', value: passage.author, weight: 4 },
         { name: 'tag', value: tags.join(' '), weight: 6 },
@@ -143,11 +148,12 @@ export function scoreRecallPassages(query: string, passages: RecallSearchPassage
       if (passage.note) score += 0.5;
       if ((passage.annotations ?? []).length > 0) score += 0.5;
       const strongest = matchedFields.slice(0, 3).join(', ');
+      const matchedPrivateTag = [...privateTags, ...annotationPrivateTags].find(tag => tokens.some(token => tag.toLowerCase().includes(token)));
       return {
         ...passage,
         score,
         matchedFields,
-        matchReason: strongest ? `Matched ${strongest}` : 'No strong recall match',
+        matchReason: matchedPrivateTag ? `Matched private tag: ${matchedPrivateTag}` : strongest ? `Matched ${strongest}` : 'No strong recall match',
         snippet: makeSnippet(
           matchedFields.includes('line-level thought')
             ? (passage.annotations ?? []).map(annotation => `${annotation.quote} — ${annotation.note}`).join(' ')

@@ -66,7 +66,8 @@
     "check:isbn-source-interest": "node scripts/check-isbn-source-interest-policy.mjs",
     "eval:ia-ocr-passage-yield": "node scripts/ia-ocr-passage-yield-eval.mjs",
     "check:ia-ocr-passage-yield": "node scripts/check-ia-ocr-passage-yield-policy.mjs",
-    "check:daily-review-overview": "node scripts/check-daily-review-overview-policy.mjs"
+    "check:daily-review-overview": "node scripts/check-daily-review-overview-policy.mjs",
+    "check:private-user-tags": "node scripts/check-private-user-tags-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",

@@ -112,18 +112,18 @@ exisz/randompage (GitHub)
 | credentials | WebAuthn 凭证 (passkey) |
 | sessions | 登录会话 (passkey 用) |
 | passages | 片段库 (543 条, EN+CN, 100% tagged, boilerplate-free) |
-| bookmarks | 用户收藏；`note` 字段保存该用户对 saved passage 的私密笔记/反思（user-passage relationship，不写到 passages 全局内容） |
+| bookmarks | 用户收藏；`note` 字段保存该用户对 saved passage 的私密笔记/反思，`user_tags` 保存该用户给 saved passage 的私有概念标签（user-passage relationship，不写到 passages 全局内容） |
 | bookmark_collections | 用户自定义收藏夹/知识库 collections（按 user_id 隔离）；`purpose` 可选私密用途/场景说明，用于 saved-passage pack 的 Bookmarks 展示与 Recall Search deterministic matching |
 | bookmark_collection_items | collection ↔ bookmark membership；移除 collection 不删除 bookmark |
 | passage_reviews | Daily Review / Themed Review / Recall Cards 复习记录（reviewed/review_later/skip、reviewed_at、due_after、box），按 user_id + bookmark_id 隔离，避免同一收藏立即重复出现；box 支持 increasing-interval ladder |
-| passage_annotations | 用户对 saved passage 内具体选中文本的私密 line-level thoughts；保存 quote、start_offset/end_offset、note，按 user_id + bookmark_id 隔离，可独立 edit/delete |
+| passage_annotations | 用户对 saved passage 内具体选中文本的私密 line-level thoughts；保存 quote、start_offset/end_offset、note、user_tags，按 user_id + bookmark_id 隔离，可独立 edit/delete/tag |
 | passage_recall_cards | 用户从 saved passage 选中短语创建的私密 active-recall cloze cards；保存 quote offsets、hidden context、due_after、box，按 user_id/bookmark_id 隔离 |
 | passage_recall_reviews | active-recall card grading history（remembered/forgot/soon/later/someday）与下次 due_after/box，用于调度方向验证 |
 | push_subscriptions | Web Push 订阅 |
 | push_history | 推送记录 (含 read_at 标记；notification click 通过 passageId 精确标记匹配记录；source-notice push 也写入 user-specific delivered passage，防止重复通知) |
 | offline localStorage cache | Client-side cached last saved passages + browsing/push inbox responses after online sync; read-only fallback for offline Bookmarks/History. |
 | recommendation explanation payload | `whyPersonalized` is returned on Discover passage, Daily Queue, personalized shelves, browsing history, and push history responses when user_preferences overlap passage tags; UI renders compact “Why this page?” / High-Good match labels. |
-| recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, line-level annotation quote/note text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
+| recall search result | `/api/bookmarks/recall-search` builds an in-memory, per-request candidate set from the signed-in user’s bookmarks, private notes, private user tags, line-level annotation quote/note/tag text, collection names, browsing history, and push inbox, then deterministic fuzzy-scores text/title/author/tags/note/annotations/collections. Queries and passage text stay inside RandomPage; no external LLM/embedding provider is used. |
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；`/api/reading/daily-recap` 按客户端 local day 汇总该用户今日打开/推送阅读/收藏/复习/阅读分钟并给出下一步 CTA；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
 | saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/isbn13/isbn10/source/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail/Settings ISBN lookup 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
@@ -220,6 +220,7 @@ exisz/randompage (GitHub)
 - `passage_annotations` stores `user_id`, `bookmark_id`, `passage_id`, `quote`, `start_offset`, `end_offset`, `note`, timestamps; inline DDL creates the table/indexes at runtime. Ownership checks scope create/edit/delete to the signed-in user's bookmark.
 - Annotations render beneath the saved passage as quote + note chips and can be edited/deleted independently from the whole-passage `bookmarks.note`.
 - Recall search indexes annotation quote/note text alongside private notes, collections, history, and push inbox.
+- Private user tags (`user_tags`) can be saved on both whole saved-passage bookmarks and individual line-level thoughts. Bookmarks exact search, Recall Search, and Themed Review index these user-owned tags separately from source/content tags, and private-tag recall matches display “Matched private tag: …”.
 - Static regression: `pnpm --filter @randompage/app check:passage-annotations`.
 
 ## Active Recall Mastery Cards

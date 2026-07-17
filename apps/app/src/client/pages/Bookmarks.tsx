@@ -21,10 +21,10 @@ interface PassageReview {
   action: string;
 }
 interface PassageAnnotation {
-  id: string; quote: string; startOffset: number; endOffset: number; note: string; createdAt: string; updatedAt: string;
+  id: string; quote: string; startOffset: number; endOffset: number; note: string; userTags?: string | null; createdAt: string; updatedAt: string;
 }
 interface Bookmark {
-  id: string; createdAt: string; note?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[]; annotations?: PassageAnnotation[];
+  id: string; createdAt: string; note?: string | null; userTags?: string | null; passage: Passage; collectionItems?: BookmarkCollectionItem[]; passageReviews?: PassageReview[]; annotations?: PassageAnnotation[];
 }
 interface Collection {
   id: string; name: string; purpose?: string | null; updatedAt: string; items: { bookmarkId: string }[];
@@ -41,7 +41,7 @@ interface DailyReviewOverviewSummary { savedCount: number; dueCount: number; vis
 interface DailyReviewOverview { items: DailyReviewOverviewItem[]; generatedFor?: string; summary: DailyReviewOverviewSummary; }
 interface RecallSearchResult {
   id: string; text: string; bookTitle: string; author: string; chapter?: string; tags: string;
-  note?: string | null; annotations?: { quote: string; note: string }[]; sources?: string[]; collections?: string[]; collectionPurposes?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
+  note?: string | null; userTags?: string | null; annotations?: { quote: string; note: string; userTags?: string | null }[]; sources?: string[]; collections?: string[]; collectionPurposes?: string[]; score: number; matchReason: string; snippet: string; matchedFields: string[];
 }
 interface ActiveRecallCard {
   id: string; bookmarkId: string; passageId: string; quote: string; startOffset: number; endOffset: number; contextBefore: string; contextAfter: string; dueAfter: string; box?: number | null; passage: Passage;
@@ -57,10 +57,17 @@ function parseTags(tags: string) {
   }
 }
 
+function privateTagsForBookmark(bookmark: Bookmark) {
+  return [
+    ...parseTags(bookmark.userTags ?? ''),
+    ...(bookmark.annotations ?? []).flatMap(annotation => parseTags(annotation.userTags ?? '')),
+  ];
+}
+
 function passageSearchText(bookmark: Bookmark) {
-  const tags = parseTags(bookmark.passage.tags).join(' ');
+  const tags = [...parseTags(bookmark.passage.tags), ...privateTagsForBookmark(bookmark)].join(' ');
   const collections = bookmark.collectionItems?.map(item => `${item.collection.name} ${item.collection.purpose ?? ''}`).join(' ') ?? '';
-  const annotations = bookmark.annotations?.map(annotation => `${annotation.quote} ${annotation.note}`).join(' ') ?? '';
+  const annotations = bookmark.annotations?.map(annotation => `${annotation.quote} ${annotation.note} ${parseTags(annotation.userTags ?? '').join(' ')}`).join(' ') ?? '';
   return [bookmark.passage.text, bookmark.passage.bookTitle, bookmark.passage.author, bookmark.note ?? '', annotations, tags, collections]
     .join(' ')
     .toLowerCase();
@@ -87,6 +94,8 @@ export default function Bookmarks() {
   const [recallMode, setRecallMode] = useState(false);
   const [revealedRecallIds, setRevealedRecallIds] = useState<Set<string>>(() => new Set());
   const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [userTagDrafts, setUserTagDrafts] = useState<Record<string, string>>({});
+  const [tagBusyId, setTagBusyId] = useState<string | null>(null);
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
   const [readingQueue, setReadingQueue] = useState<QueuedPassage[]>(() => readReadingQueue());
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
@@ -122,6 +131,7 @@ export default function Bookmarks() {
     setActiveRecallCards([]);
     setBookmarks(cachedBookmarks);
     setNoteDrafts(Object.fromEntries(cachedBookmarks.map(bookmark => [bookmark.id, bookmark.note ?? ''])));
+    setUserTagDrafts(Object.fromEntries(cachedBookmarks.map(bookmark => [bookmark.id, parseTags(bookmark.userTags ?? '').join(', ')])));
     setCollections((cached.collections as Collection[]) || []);
     setDailyReviewOverview(null);
     setDailyReviewOverviewStatus('Reconnect to compute today’s fresh saved-page review queue. Cached offline bookmarks stay readable, but due state needs the server.');
@@ -150,6 +160,7 @@ export default function Bookmarks() {
       const nextCollections = collectionsData.collections || [];
       setBookmarks(nextBookmarks);
       setNoteDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, bookmark.note ?? ''])));
+      setUserTagDrafts(Object.fromEntries(nextBookmarks.map((bookmark: Bookmark) => [bookmark.id, parseTags(bookmark.userTags ?? '').join(', ')])));
       setCollections(nextCollections);
       setSavedBooks(Array.isArray(savedBooksData.savedBooks) ? savedBooksData.savedBooks : []);
       setReadLaterDestination(preferencesData.readLaterDestination || null);
@@ -178,7 +189,10 @@ export default function Bookmarks() {
 
   const tags = useMemo(() => {
     const all = new Set<string>();
-    for (const bookmark of bookmarks) parseTags(bookmark.passage.tags).forEach(tag => all.add(tag));
+    for (const bookmark of bookmarks) {
+      parseTags(bookmark.passage.tags).forEach(tag => all.add(tag));
+      privateTagsForBookmark(bookmark).forEach(tag => all.add(`private:${tag}`));
+    }
     return Array.from(all).sort((a, b) => a.localeCompare(b));
   }, [bookmarks]);
 
@@ -186,7 +200,11 @@ export default function Bookmarks() {
     const needle = query.trim().toLowerCase();
     return bookmarks.filter(bookmark => {
       if (needle && !passageSearchText(bookmark).includes(needle)) return false;
-      if (activeTag !== 'all' && !parseTags(bookmark.passage.tags).includes(activeTag)) return false;
+      if (activeTag !== 'all') {
+        if (activeTag.startsWith('private:')) {
+          if (!privateTagsForBookmark(bookmark).includes(activeTag.slice(8))) return false;
+        } else if (!parseTags(bookmark.passage.tags).includes(activeTag)) return false;
+      }
       if (activeCollection === 'unfiled') return (bookmark.collectionItems?.length ?? 0) === 0;
       if (activeCollection !== 'all') return bookmark.collectionItems?.some(item => item.collection.id === activeCollection) ?? false;
       return true;
@@ -207,7 +225,7 @@ export default function Bookmarks() {
   const exportDescription = useMemo(() => {
     const filters = [
       query.trim() ? `search “${query.trim()}”` : '',
-      activeTag !== 'all' ? `tag #${activeTag}` : '',
+      activeTag !== 'all' ? (activeTag.startsWith('private:') ? `private tag #${activeTag.slice(8)}` : `tag #${activeTag}`) : '',
       activeCollection === 'unfiled' ? 'unfiled bookmarks' : '',
       activeCollection !== 'all' && activeCollection !== 'unfiled' ? `collection ${collections.find(item => item.id === activeCollection)?.name ?? activeCollection}` : '',
     ].filter(Boolean);
@@ -343,8 +361,9 @@ export default function Bookmarks() {
   const markdownPayloadForBookmark = (bookmark: Bookmark) => ({
     ...bookmark.passage,
     note: bookmark.note,
+    userTags: bookmark.userTags,
     collections: bookmark.collectionItems?.map(item => item.collection.name) ?? [],
-    annotations: bookmark.annotations?.map(annotation => ({ quote: annotation.quote, note: annotation.note })) ?? [],
+    annotations: bookmark.annotations?.map(annotation => ({ quote: annotation.quote, note: annotation.note, userTags: annotation.userTags })) ?? [],
   });
 
   const exportBookmarkMarkdown = async (bookmark: Bookmark, variant: MarkdownExportVariant = 'plain') => {
@@ -390,7 +409,7 @@ export default function Bookmarks() {
 
   const reviewThemes = useMemo(() => {
     const options = [
-      ...tags.map(tag => ({ value: `tag:${tag}`, label: `#${tag}`, type: 'tag' })),
+      ...tags.map(tag => tag.startsWith('private:') ? ({ value: `private-tag:${tag.slice(8)}`, label: `Private #${tag.slice(8)}`, type: 'private-tag' }) : ({ value: `tag:${tag}`, label: `#${tag}`, type: 'tag' })),
       ...collections.map(collection => ({ value: `collection:${collection.id}`, label: collection.name, type: 'collection' })),
     ];
     return options;
@@ -408,6 +427,7 @@ export default function Bookmarks() {
   const reviewThemeLabel = useMemo(() => {
     if (reviewTopic.trim()) return `topic: ${reviewTopic.trim()}`;
     if (reviewTheme.startsWith('tag:')) return `#${reviewTheme.slice(4)}`;
+    if (reviewTheme.startsWith('private-tag:')) return `private #${reviewTheme.slice(12)}`;
     if (reviewTheme.startsWith('collection:')) return collections.find(collection => collection.id === reviewTheme.slice(11))?.name ?? 'selected collection';
     return '';
   }, [collections, reviewTheme, reviewTopic]);
@@ -482,6 +502,9 @@ export default function Bookmarks() {
         } else if (reviewTheme.startsWith('tag:')) {
           const tag = reviewTheme.slice(4);
           if (!parseTags(bookmark.passage.tags).includes(tag)) return false;
+        } else if (reviewTheme.startsWith('private-tag:')) {
+          const tag = reviewTheme.slice(12);
+          if (!privateTagsForBookmark(bookmark).includes(tag)) return false;
         } else if (reviewTheme.startsWith('collection:')) {
           const collectionId = reviewTheme.slice(11);
           if (!bookmark.collectionItems?.some(item => item.collection.id === collectionId)) return false;
@@ -622,6 +645,30 @@ export default function Bookmarks() {
       });
       await refresh();
     } finally { setNoteBusyId(null); }
+  };
+
+  const saveBookmarkUserTags = async (bookmark: Bookmark) => {
+    if (offlineMode) return;
+    setTagBusyId(bookmark.id);
+    try {
+      await apiFetch(`/bookmarks/${bookmark.id}/user-tags`, {
+        method: 'PATCH',
+        body: JSON.stringify({ userTags: userTagDrafts[bookmark.id] ?? '' }),
+      });
+      await refresh();
+    } finally { setTagBusyId(null); }
+  };
+
+  const editAnnotationUserTags = async (bookmark: Bookmark, annotation: PassageAnnotation) => {
+    if (offlineMode) return;
+    const current = parseTags(annotation.userTags ?? '').join(', ');
+    const next = window.prompt('Private tags for this line-level thought', current);
+    if (next === null || next.trim() === current) return;
+    setThoughtBusyId(bookmark.id);
+    try {
+      await apiFetch(`/bookmarks/${bookmark.id}/annotations/${annotation.id}/user-tags`, { method: 'PATCH', body: JSON.stringify({ userTags: next }) });
+      await refresh();
+    } finally { setThoughtBusyId(null); }
   };
 
   const createCollection = async () => {
@@ -794,7 +841,7 @@ export default function Bookmarks() {
             </label>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <button className={`btn btn-xs ${activeTag === 'all' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTag('all')}>All tags</button>
-              {tags.slice(0, 16).map(tag => <button key={tag} className={`btn btn-xs whitespace-nowrap ${activeTag === tag ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTag(tag)}>#{tag}</button>)}
+              {tags.slice(0, 16).map(tag => <button key={tag} className={`btn btn-xs whitespace-nowrap ${activeTag === tag ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTag(tag)}>{tag.startsWith('private:') ? `Private #${tag.slice(8)}` : `#${tag}`}</button>)}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-1">
               <button className={`btn btn-xs ${activeCollection === 'all' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => setActiveCollection('all')}>All collections</button>
@@ -1224,7 +1271,8 @@ export default function Bookmarks() {
             <div className="divider my-0 text-xs opacity-60">or pick a saved shelf</div>
             <select className="select select-bordered w-full" value={reviewTheme} onChange={e => { setReviewTheme(e.target.value); setReviewTopic(''); setReviewStatus(null); }} disabled={offlineMode || reviewThemes.length === 0}>
               <option value="">Select a tag or collection…</option>
-              {tags.length > 0 && <optgroup label="Tags">{tags.map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</optgroup>}
+              {tags.filter(tag => !tag.startsWith('private:')).length > 0 && <optgroup label="Tags">{tags.filter(tag => !tag.startsWith('private:')).map(tag => <option key={`tag:${tag}`} value={`tag:${tag}`}>#{tag}</option>)}</optgroup>}
+              {tags.some(tag => tag.startsWith('private:')) && <optgroup label="Private user tags">{tags.filter(tag => tag.startsWith('private:')).map(tag => <option key={`private-tag:${tag.slice(8)}`} value={`private-tag:${tag.slice(8)}`}>Private #{tag.slice(8)}</option>)}</optgroup>}
               {collections.length > 0 && <optgroup label="Collections">{collections.map(collection => <option key={`collection:${collection.id}`} value={`collection:${collection.id}`}>{collection.name}</option>)}</optgroup>}
             </select>
             {reviewThemes.length === 0 && !reviewTopic.trim() && <p className="text-sm opacity-70">Save passages with tags or create a collection first, then come back for a focused review queue.</p>}
@@ -1330,7 +1378,9 @@ export default function Bookmarks() {
                             <div key={annotation.id} className="rounded-box bg-base-100/75 p-2 text-sm">
                               <p className="font-serif opacity-80">“{annotation.quote}”</p>
                               <p className="mt-1">{annotation.note}</p>
+                              {parseTags(annotation.userTags ?? '').length > 0 && <div className="mt-2 flex flex-wrap gap-1">{parseTags(annotation.userTags ?? '').map(tag => <span key={tag} className="badge badge-primary badge-outline badge-xs">Private #{tag}</span>)}</div>}
                               <div className="mt-2 flex justify-end gap-2">
+                                <button className="btn btn-ghost btn-xs" disabled={thoughtBusyId === bm.id} onClick={() => editAnnotationUserTags(bm, annotation)}>Tags</button>
                                 <button className="btn btn-ghost btn-xs" disabled={thoughtBusyId === bm.id} onClick={() => editLineThought(bm, annotation)}>Edit</button>
                                 <button className="btn btn-ghost btn-xs text-error" disabled={thoughtBusyId === bm.id} onClick={() => deleteLineThought(bm, annotation)}>Delete</button>
                               </div>
@@ -1353,6 +1403,23 @@ export default function Bookmarks() {
                     </div>
                     <div className="text-right text-sm"><BookSourceLink bookTitle={bm.passage.bookTitle} author={bm.passage.author} compact className="items-end opacity-60 hover:opacity-100" /></div>
                     {bmTags.length > 0 && <div className="flex flex-wrap gap-1">{bmTags.map(tag => <span key={tag} className="badge badge-ghost badge-sm">#{tag}</span>)}</div>}
+                    {parseTags(bm.userTags ?? '').length > 0 && <div className="flex flex-wrap gap-1">{parseTags(bm.userTags ?? '').map(tag => <span key={tag} className="badge badge-primary badge-outline badge-sm">Private #{tag}</span>)}</div>}
+                    <div className="rounded-box bg-base-100/70 border border-primary/15 p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-xs uppercase tracking-[0.18em] opacity-60">Private user tags</span>
+                        <span className="badge badge-primary badge-outline badge-sm">user-owned</span>
+                      </div>
+                      <input
+                        className="input input-bordered input-sm w-full"
+                        value={userTagDrafts[bm.id] ?? ''}
+                        onChange={e => setUserTagDrafts(prev => ({ ...prev, [bm.id]: e.target.value }))}
+                        placeholder="decision-making, stoicism, essay-fodder…"
+                        disabled={offlineMode || tagBusyId === bm.id}
+                      />
+                      <div className="mt-2 flex justify-end">
+                        <button className="btn btn-primary btn-xs" disabled={offlineMode || tagBusyId === bm.id || (userTagDrafts[bm.id] ?? '').trim() === parseTags(bm.userTags ?? '').join(', ')} onClick={() => saveBookmarkUserTags(bm)}>Save private tags</button>
+                      </div>
+                    </div>
                     <div className="rounded-box bg-base-100/70 border border-base-content/10 p-3">
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-xs uppercase tracking-[0.18em] opacity-60">Private note</span>
