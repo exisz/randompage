@@ -99,6 +99,7 @@ export default function Bookmarks() {
   const [noteBusyId, setNoteBusyId] = useState<string | null>(null);
   const [readingQueue, setReadingQueue] = useState<QueuedPassage[]>(() => readReadingQueue());
   const [queueStatus, setQueueStatus] = useState<string | null>(null);
+  const [sharingQueue, setSharingQueue] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [readLaterDestination, setReadLaterDestination] = useState<ReadLaterDestination | null>(null);
   const [reviewTuning, setReviewTuning] = useState<ReviewTuningRule[]>([]);
@@ -546,6 +547,33 @@ export default function Bookmarks() {
     setReadingQueue(clearReadingQueue());
   };
 
+  const shareQueuedPlaylist = async () => {
+    if (offlineMode || readingQueue.length === 0) return;
+    const title = window.prompt('Playlist title for this public read-only link:', 'RandomPage passage playlist')?.trim() || 'RandomPage passage playlist';
+    const note = window.prompt('Optional note to show at the top of the shared playlist:', '')?.trim() || null;
+    setSharingQueue(true);
+    setQueueStatus('Creating read-only playlist link…');
+    try {
+      const response = await apiFetch('/playlists', {
+        method: 'POST',
+        body: JSON.stringify({
+          title,
+          note,
+          passageIds: readingQueue.map(item => item.passage.id),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? 'Could not create playlist link');
+      const url = `${window.location.origin}${data.playlist.url}`;
+      await navigator.clipboard?.writeText(url);
+      setQueueStatus(`Share link copied: ${url}`);
+    } catch (e) {
+      setQueueStatus(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSharingQueue(false);
+    }
+  };
+
   const removeBookmark = async (id: string) => {
     if (offlineMode) return;
     await apiFetch(`/bookmarks/${id}`, { method: 'DELETE' });
@@ -936,7 +964,7 @@ export default function Bookmarks() {
               <div>
                 <p className="text-xs uppercase tracking-[0.25em] opacity-50">My Queue</p>
                 <h3 className="font-serif text-lg">Curated passage playlist</h3>
-                <p className="text-sm opacity-70">Passages you add from Discover or Bookmarks stay here on this device in the order you queued them.</p>
+                <p className="text-sm opacity-70">Passages you add from Discover or Bookmarks stay here on this device in the order you queued them. Share creates a public read-only RandomPage playlist URL from these existing passages.</p>
               </div>
               <span className="badge badge-primary badge-outline shrink-0">{readingQueue.length}</span>
             </div>
@@ -948,7 +976,8 @@ export default function Bookmarks() {
               </div>
             ) : (
               <>
-                <div className="flex justify-end">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <button className="btn btn-primary btn-xs" disabled={offlineMode || sharingQueue} onClick={shareQueuedPlaylist}>{sharingQueue ? 'Creating…' : 'Share playlist'}</button>
                   <button className="btn btn-ghost btn-xs text-error" onClick={clearQueuedPassages}>Clear queue</button>
                 </div>
                 <div className="flex flex-col gap-3">

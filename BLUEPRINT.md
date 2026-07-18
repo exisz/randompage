@@ -51,6 +51,8 @@
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
 │  │    /api/bookmarks/:id/related → deterministic related saved pages for review cards │ │
+│  │    /playlist/:shareId → public read-only shared passage playlist view │ │
+│  │    POST /api/playlists + GET /api/playlists/:shareId → signed-in create / public read-only playlist shares │ │
 │  │    /api/saved-books → private want-to-read book shelf CRUD        │ │
 │  │    /api/saved-books/isbn/lookup → anonymous-safe Open Library ISBN metadata preview for physical-book source interest │ │
 │  │    /api/saved-books/:id/notifications + /api/saved-books/notices → private saved-source new-passage notices │ │
@@ -127,6 +129,7 @@ exisz/randompage (GitHub)
 | browsing_events | 用户浏览/跳过事件 (view/skip + source)、passage dwell/engaged-read events (`dwell` / `engaged_read` with nullable `dwell_ms`) 与 explicit feedback chips (`more_like_this` / `less_like_this` / `too_dense` / `different_topic`)；push click/read 使用 source=push_inbox 回流偏好；`/api/reading/stats` 基于 view + dwell events 计算 today count / UTC streak / today+7d reading minutes；`/api/reading/challenges` 派生 Daily 3 pages / push-inbox challenge progress；`/api/reading/daily-recap` 按客户端 local day 汇总该用户今日打开/推送阅读/收藏/复习/阅读分钟并给出下一步 CTA；每日队列打开卡片时记录 discover view |
 | user_preferences | 用户偏好标签权重（Settings reading goals 可把预设 tag seed 到权重 7；Settings free-text preference calibration 会私密保存 `control:preference-calibration:*` 原文/marker rows，并把可匹配现有 passage tags 写入正向 tag 权重或 `avoid:<tag>` soft down-rank；收藏/浏览/More like this 提高 tag 权重，skip/Less like this/Different-topic 以 1–12 bounded weight 调整；saved book 写轻量 `book:<tag>` 正信号；`too_dense` 只记录事件不隐藏 saved content；`avoid:<tag>` 负权重行保存 “Avoid for now” soft down-rank 控制；`control:daily-push:*` 行保存用户 daily passage delivery hour/timezone；`control:review-tuning:*` 行保存 Daily Review 全局/书源/tag 的 pause/less/more 私密频率控制；`control:source-notify:*` 行保存用户对 saved book/source 新 passage notice 的私有订阅；control rows 不参与 Discover 推荐打分） |
 | saved_books | 用户私有书级 want-to-read/read shelf；按 user_id + title + author 幂等，保存 saved_from_passage_id/source_url/isbn13/isbn10/source/tags/saved_at/updated_at；Bookmarks 展示并支持 mark-read/remove/new-passage notice toggle，Discover/Source detail/Settings ISBN lookup 可保存；无公共书单/社交/reviews/外部 catalog ingestion |
+| passage_playlist_shares / passage_playlist_share_items | signed-in user 从 device-local My Queue 创建 public read-only share token；items 只保存 ordered existing passage IDs，公共 `/playlist/:shareId` 展示 RandomPage passage cards 与 sign-in/save CTA；无 comments/follows/likes/social graph/summary content |
 | reading_paths | 用户当前/历史 30-day adaptive passage path；保存 topic/goal_id、30 个 existing passage IDs、started_at 与 completed/skipped day JSON，Discover 渲染 Day N/30、today passage、progress、upcoming teasers 与匹配原因；不存 generated summaries/courses |
 | ingest_runs | 数据管线拉书入库运行记录（slug/title/source_url/inserted_count） |
 | passage_tag_failures | LLM 打标失败重试计数，`retry_count >= 3` 后跳过 |
@@ -263,6 +266,7 @@ exisz/randompage (GitHub)
 - The MVP queue is a device-local user-curated playlist stored in `localStorage` (`randompage_my_reading_queue_v1`) with ordered `addedAt` entries; no new backend table, content source, summaries, social feed, or payment/offline packaging is introduced.
 - Bookmarks renders the “My Queue” section with queued passage title/author/excerpt/tags, per-item Listen/Share/Card controls, remove-one, and clear-queue actions. Removing a queued item never deletes bookmarks/history records.
 - Static regression: `pnpm --filter @randompage/app check:reading-queue`.
+- PLANET-3832 extends My Queue with a signed-in Share playlist action. `POST /api/playlists` persists a public read-only share token over ordered existing passage IDs only, and `/playlist/:shareId` renders the same real passage cards with Listen/Share/Card/Open/queue/save CTA. This borrows a low-friction playlist return loop without Blinkist-style summaries, comments, follows, likes, or a social graph. Static regression: `pnpm --filter @randompage/app check:playlist-share`.
 
 ## History Day-Grouped Timeline
 
@@ -348,6 +352,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-19 | PLANET-3832: Added shareable read-only passage playlists. Bookmarks My Queue can create/copy a public `/playlist/:shareId` URL backed by `passage_playlist_shares` + ordered `passage_playlist_share_items`; the public page shows existing RandomPage passage cards with sign-in/save CTA and no summaries/social graph. Added `check:playlist-share`. | Engineer Pod |
 | 2026-07-17 | PLANET-3797: Expanded PWA manifest shortcuts from a single Today entry to four RandomPage-specific home-screen shortcuts: Today’s pages, Review saved pages, Saved library, and Push inbox. The default installed-app start remains `/discover`; shortcuts route only to existing book-passage surfaces and `check:today-shortcut` now validates the full shortcut set. | Engineer Pod |
 | 2026-07-16 | PLANET-3775: Daily `/api/push/send` and `/api/cron/daily-push` now add bounded deterministic personalization reason copy to delivered Web Push payloads and return the same `reason` in `personalized[]`. Reasons reuse existing `explainRecommendation` over passage tags + private preference rows, with honest fallback copy and no external LLM/embedding/new content source; expanded `check:push-policy`. | Engineer Pod |
 | 2026-07-16 | PLANET-3758: Added offline cached daily queue for Discover. Successful signed-in daily queue loads now persist today’s current passage cards in localStorage; offline Discover labels them “Today’s cached pages” with cached timestamp and honest network-required copy, and Start daily listening reads cached passages via browser Web Speech without API calls or fresh-personalization claims. Expanded `check:offline-cache`. | Engineer Pod |

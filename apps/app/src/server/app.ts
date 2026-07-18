@@ -7,6 +7,7 @@ import { pushRouter } from './routes/push.js';
 import { preferencesRouter } from './routes/preferences.js';
 import { cronRouter } from './routes/cron.js';
 import { importRouter } from './routes/import.js';
+import { playlistsRouter } from './routes/playlists.js';
 
 export function createApp(): Express {
   const app = express();
@@ -19,6 +20,7 @@ export function createApp(): Express {
   app.use('/api', preferencesRouter);
   app.use('/api', cronRouter);
   app.use('/api', importRouter);
+  app.use('/api', playlistsRouter);
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'Not found' });
   });
