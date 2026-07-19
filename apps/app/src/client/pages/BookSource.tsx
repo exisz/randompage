@@ -31,6 +31,15 @@ interface BookSourcePayload {
   passages: Passage[];
 }
 
+interface SourceVibe {
+  chips: string[];
+  reason: string;
+  relationHint: string | null;
+  savedCount: number | null;
+  unreadCount: number | null;
+  availableCount: number;
+}
+
 interface ReadLaterDestination { email: string; active: boolean; verified: boolean; configured: boolean; }
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
@@ -48,6 +57,51 @@ function parseTags(raw: string | null | undefined) {
 
 function visibleTags(raw: string) {
   return parseTags(raw).filter((tag) => !HIDDEN_TAGS.has(tag.toLowerCase())).slice(0, 4);
+}
+
+function formatVibeTags(tags: string[]) {
+  if (tags.length === 0) return '';
+  if (tags.length === 1) return tags[0];
+  if (tags.length === 2) return `${tags[0]} and ${tags[1]}`;
+  return `${tags.slice(0, -1).join(', ')}, and ${tags[tags.length - 1]}`;
+}
+
+function buildSourceVibe(payload: BookSourcePayload): SourceVibe {
+  const counts = new Map<string, number>();
+  for (const passage of payload.passages) {
+    for (const tag of parseTags(passage.tags)) {
+      const normalized = tag.trim();
+      if (!normalized || HIDDEN_TAGS.has(normalized.toLowerCase())) continue;
+      counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    }
+  }
+  const chips = Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 6)
+    .map(([tag]) => tag);
+  const availableCount = payload.source.passageCount;
+  const savedCount = payload.source.savedCount;
+  const unreadCount = savedCount === null ? null : payload.passages.filter((passage) => !passage.isRead).length;
+  const readCount = unreadCount === null ? null : Math.max(availableCount - unreadCount, 0);
+  const hasSparseMetadata = chips.length === 0;
+  const basis = `${availableCount} readable ${availableCount === 1 ? 'passage' : 'passages'}`;
+  const relationParts = savedCount === null
+    ? []
+    : [
+      savedCount > 0 ? `${savedCount} saved` : 'none saved yet',
+      `${unreadCount ?? 0} new-to-you`,
+      readCount && readCount > 0 ? `${readCount} read` : null,
+    ].filter(Boolean) as string[];
+  return {
+    chips,
+    availableCount,
+    savedCount,
+    unreadCount,
+    reason: hasSparseMetadata
+      ? `Metadata is sparse for this source, so RandomPage is showing an honest profile from ${basis} and keeping the passage list first.`
+      : `Mostly ${formatVibeTags(chips.slice(0, 3))} based on ${basis} from this exact source.`,
+    relationHint: savedCount === null ? null : `Your private relation: ${relationParts.join(' · ')}.`,
+  };
 }
 
 function excerpt(text: string) {
@@ -206,6 +260,7 @@ export default function BookSource() {
   }
 
   const hasMultiple = payload.source.passageCount > 1;
+  const sourceVibe = buildSourceVibe(payload);
 
   return (
     <main className="min-h-screen bg-base-100 text-base-content">
@@ -228,6 +283,24 @@ export default function BookSource() {
           <p className="mt-4 max-w-2xl text-sm leading-relaxed opacity-70">
             Continue from one good passage into more existing RandomPage pages from the same book. This stays inside your personal book-passage discovery graph — no new summaries, feeds, or social layer.
           </p>
+          <div className="mt-5 rounded-box border border-primary/20 bg-base-100/80 p-4 shadow-sm" aria-label="Source vibe profile">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-primary/70">Source vibe profile</p>
+                <p className="mt-1 max-w-2xl text-sm leading-relaxed opacity-80">{sourceVibe.reason}</p>
+                {sourceVibe.relationHint && <p className="mt-1 text-xs opacity-60">{sourceVibe.relationHint}</p>}
+              </div>
+              <div className="stats stats-vertical bg-base-200/70 text-xs shadow-none sm:stats-horizontal">
+                <div className="stat min-w-24 p-3"><div className="stat-title text-[0.65rem]">Available</div><div className="stat-value text-lg">{sourceVibe.availableCount}</div></div>
+                {sourceVibe.savedCount !== null && <div className="stat min-w-24 p-3"><div className="stat-title text-[0.65rem]">Saved</div><div className="stat-value text-lg">{sourceVibe.savedCount}</div></div>}
+                {sourceVibe.unreadCount !== null && <div className="stat min-w-24 p-3"><div className="stat-title text-[0.65rem]">Unread</div><div className="stat-value text-lg">{sourceVibe.unreadCount}</div></div>}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {sourceVibe.chips.length > 0 ? sourceVibe.chips.map((tag) => <span key={tag} className="badge badge-primary badge-outline">#{tag}</span>) : <span className="badge badge-ghost">Sparse source metadata</span>}
+            </div>
+            <p className="mt-3 text-xs opacity-50">Deterministic profile from existing RandomPage passage tags and your private saved/read flags only — no reviews, ratings, summaries, or external content.</p>
+          </div>
           {payload.source.savedCount !== null && (
             <div className="mt-5 rounded-box border border-base-content/10 bg-base-100/70 p-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -34,7 +34,7 @@
 │  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
 │  │    /history       → 浏览历史 + 推送收件箱（日分组 timeline + saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
-│  │    /source?title=...&author=... → book/source detail view with same-book passages │ │
+│  │    /source?title=...&author=... → book/source detail view with same-book passages + deterministic source vibe profile │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
 │  │    /callback      → Logto SSO 回调                        │ │
 │  │    /api/health    → API health check                      │ │
@@ -47,7 +47,7 @@
 │  │    /api/passages/:id → 指定片段；push click 读回流          │ │
 │  │    POST /api/passages/:id/feedback → explicit feedback chips write browsing_events + bounded tag preferences
 │ │    POST /api/passages/:id/dwell → signed-in passage dwell / engaged-read events with bounded dwell_ms │ │
-│  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export │ │
+│  │    /api/book-source → 同 bookTitle/author 的 existing passages；登录态 unread-first + saved/read flags + saved note snippets for export；Source detail client derives deterministic source vibe chips/counts from this payload │ │
 │  │    /api/bookmarks → 书签 CRUD + collection membership      │ │
 │  │    /api/bookmarks/recall-search → fuzzy idea search over user-owned saved/history/push passages │ │
 │  │    /api/bookmarks/:id/related → deterministic related saved pages for review cards │ │
