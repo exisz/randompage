@@ -1,0 +1,71 @@
+{
+  "generatedAt": "2026-07-20T14:23:08.984Z",
+  "source": "docs/loc-digitized-books-eval-samples.json",
+  "policy": "metadata-only LOC reviewed queue; text fetch/apply requires reviewed allowlist and loc-reviewed-ingest gate",
+  "queue": [
+    {
+      "source": "loc-selected-digitized-books",
+      "filename": "00000177.txt",
+      "itemId": "http://www.loc.gov/item/00000177/",
+      "md5": "0534b69315724ddaf90d6ec24d2106de",
+      "size": 235732,
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000177.txt",
+      "locResource": "http://www.loc.gov/item/00000177/",
+      "title": "00000177",
+      "author": "Unknown",
+      "date": null,
+      "subjects": [],
+      "language": "english",
+      "candidateCount": 288,
+      "score": 59,
+      "reviewed": false,
+      "reviewNote": "pending human review before LOC text fetch"
+    },
+    {
+      "source": "loc-selected-digitized-books",
+      "filename": "00000108.txt",
+      "itemId": "http://www.loc.gov/item/00000108/",
+      "md5": "dfb03eba793271cd6640e7a71f7bbd95",
+      "size": 56446,
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+      "title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "date": "1899",
+      "subjects": [
+        {
+          "carnegie, andrew": "https://www.loc.gov/search/?fa=subject:carnegie,+andrew&fo=json"
+        },
+        {
+          "colonial question": "https://www.loc.gov/search/?fa=subject:colonial+question&fo=json"
+        },
+        {
+          "united states": "https://www.loc.gov/search/?fa=subject:united+states&fo=json"
+        }
+      ],
+      "language": "english",
+      "candidateCount": 39,
+      "score": 53,
+      "reviewed": true,
+      "reviewNote": "explicitly marked reviewed by --mark-reviewed"
+    },
+    {
+      "source": "loc-selected-digitized-books",
+      "filename": "00000433.txt",
+      "itemId": "http://www.loc.gov/item/00000433/",
+      "md5": "3b28b043374aa2b03e178d9f37eee59f",
+      "size": 16469,
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000433.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.houseofhundredli00torr/",
+      "title": "The house of a hundred lights.",
+      "author": "Torrence, Ridgely, 1875-1950.",
+      "date": "1900",
+      "subjects": [],
+      "language": "english",
+      "candidateCount": 1,
+      "score": 45,
+      "reviewed": false,
+      "reviewNote": "pending human review before LOC text fetch"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+[
+  {
+    "source": "loc-selected-digitized-books",
+    "filename": "00000177.txt",
+    "itemId": "http://www.loc.gov/item/00000177/",
+    "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000177.txt",
+    "locResource": "http://www.loc.gov/item/00000177/",
+    "title": "00000177",
+    "author": "Unknown",
+    "date": null,
+    "subjects": [],
+    "language": "english",
+    "reviewed": false,
+    "reviewNote": "pending human review before LOC text fetch"
+  },
+  {
+    "source": "loc-selected-digitized-books",
+    "filename": "00000108.txt",
+    "itemId": "http://www.loc.gov/item/00000108/",
+    "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+    "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+    "title": "Anti-Carnegie scraps and comments,",
+    "author": "Campbell, M. F. [from old catalog]",
+    "date": "1899",
+    "subjects": [
+      {
+        "carnegie, andrew": "https://www.loc.gov/search/?fa=subject:carnegie,+andrew&fo=json"
+      },
+      {
+        "colonial question": "https://www.loc.gov/search/?fa=subject:colonial+question&fo=json"
+      },
+      {
+        "united states": "https://www.loc.gov/search/?fa=subject:united+states&fo=json"
+      }
+    ],
+    "language": "english",
+    "reviewed": true,
+    "reviewNote": "explicitly marked reviewed by --mark-reviewed"
+  },
+  {
+    "source": "loc-selected-digitized-books",
+    "filename": "00000433.txt",
+    "itemId": "http://www.loc.gov/item/00000433/",
+    "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000433.txt",
+    "locResource": "https://www.loc.gov/resource/gdcmassbookdig.houseofhundredli00torr/",
+    "title": "The house of a hundred lights.",
+    "author": "Torrence, Ridgely, 1875-1950.",
+    "date": "1900",
+    "subjects": [],
+    "language": "english",
+    "reviewed": false,
+    "reviewNote": "pending human review before LOC text fetch"
+  }
+]

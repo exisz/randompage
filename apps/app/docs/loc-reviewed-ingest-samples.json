@@ -1,0 +1,64 @@
+{
+  "mode": "dry-run",
+  "rows": [
+    {
+      "id": "c78c2392ee8b25de",
+      "text": "rumors of war, no work \" ; later some\n\nof his employees took up the subject\n\nand echoed his words. Carnegie was\n\ndelighted ; he wrote to them from\n\nNew York through the press and expressed a desire to shake hands with\n\nthem, and contemplated a visit to\n\nPittsburg to do so.",
+      "book_title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "chapter": "Library of Congress OCR: 00000108.txt",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+      "charCount": 273
+    },
+    {
+      "id": "216d20dc86504d64",
+      "text": "Senator Mason that smacked of Car-\n\nANTI-CARNEGIE :\n\nnegie. Mason never let go his manuscript, but applied himself closely\n\nto it ; he did not seem to be quite\n\nfamiliar with it.\n\n\" He clenched his pamphlets in his fist,\n\nHe quoted and he hinted,\n\n'Till in a declamation-mist.\n\nHis argument he tint it.",
+      "book_title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "chapter": "Library of Congress OCR: 00000108.txt",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+      "charCount": 302
+    },
+    {
+      "id": "805eed9d5cd41845",
+      "text": "enjoy the advantage over our opponents that we now do, having to\n\nmeet them in the open field.\"\n\nAndrew Carnegie has been sua-gested by his friend J. H. B. as the\n\nman to be placed in the United\n\nStates Senate for various reasons.\n\nFirst, \" He stands ready to champion\n\nthe cause of the common people.\"",
+      "book_title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "chapter": "Library of Congress OCR: 00000108.txt",
+      "tags": "[]",
+      "language": "en",
+      "sourceUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+      "charCount": 302
+    }
+  ],
+  "itemResults": [
+    {
+      "filename": "00000108.txt",
+      "itemId": "http://www.loc.gov/item/00000108/",
+      "title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "sourceUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/",
+      "rawChars": 56401,
+      "cleanChars": 53722,
+      "acceptedPassages": [
+        "rumors of war, no work \" ; later some\n\nof his employees took up the subject\n\nand echoed his words. Carnegie was\n\ndelighted ; he wrote to them from\n\nNew York through the press and expressed a desire to shake hands with\n\nthem, and contemplated a visit to\n\nPittsburg to do so.",
+        "Senator Mason that smacked of Car-\n\nANTI-CARNEGIE :\n\nnegie. Mason never let go his manuscript, but applied himself closely\n\nto it ; he did not seem to be quite\n\nfamiliar with it.\n\n\" He clenched his pamphlets in his fist,\n\nHe quoted and he hinted,\n\n'Till in a declamation-mist.\n\nHis argument he tint it.",
+        "enjoy the advantage over our opponents that we now do, having to\n\nmeet them in the open field.\"\n\nAndrew Carnegie has been sua-gested by his friend J. H. B. as the\n\nman to be placed in the United\n\nStates Senate for various reasons.\n\nFirst, \" He stands ready to champion\n\nthe cause of the common people.\""
+      ],
+      "rejected": {},
+      "status": "ready",
+      "reason": null
+    }
+  ],
+  "failures": [],
+  "inserted": 0,
+  "blockedReason": null
+}

@@ -69,7 +69,10 @@
     "check:daily-review-overview": "node scripts/check-daily-review-overview-policy.mjs",
     "check:private-user-tags": "node scripts/check-private-user-tags-policy.mjs",
     "check:playlist-share": "node scripts/check-playlist-share-policy.mjs",
-    "eval:loc-digitized-books": "node scripts/loc-digitized-books-eval.mjs"
+    "eval:loc-digitized-books": "node scripts/loc-digitized-books-eval.mjs",
+    "queue:loc-reviewed": "node scripts/loc-reviewed-queue.mjs",
+    "ingest:loc-reviewed": "node scripts/loc-reviewed-ingest.mjs",
+    "check:loc-reviewed-ingest": "node scripts/check-loc-reviewed-ingest-policy.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
