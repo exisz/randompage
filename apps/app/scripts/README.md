@@ -52,6 +52,28 @@ Safety/rate limits:
 - Serial requests, descriptive User-Agent, short delay between title fetches.
 - No Turso inserts, no Discover/push exposure, and no external LLM dependency.
 
+## loc-digitized-books-eval.mjs — PLANET-3874
+
+Local evaluation for the Library of Congress Labs Selected Digitized Books data
+package. It reads the bulk `manifest.txt`, samples direct `.txt` OCR files,
+fetches LOC item JSON metadata for sampled rows, slices OCR text into
+RandomPage-sized passage candidates, and writes review artifacts. It never
+writes Turso or imports production passages.
+
+```bash
+pnpm --filter @randompage/app eval:loc-digitized-books
+pnpm --filter @randompage/app eval:loc-digitized-books -- --max-manifest-rows 500 --max-texts 6
+```
+
+Outputs:
+- `apps/app/docs/loc-digitized-books-eval-report.md`
+- `apps/app/docs/loc-digitized-books-eval-samples.json`
+
+Safety/rate limits:
+- Bulk manifest discovery plus serial per-file `.txt` fetches only.
+- Descriptive User-Agent, short delay between item fetches, retries only for 429/5xx.
+- No Turso inserts, no Discover/push exposure, no full-reader UI, and no external LLM dependency.
+
 ## ia-ocr-ingest.mjs — PLANET-2508
 
 Guarded tiny-batch ingestion path for reviewed Internet Archive OCR/plaintext

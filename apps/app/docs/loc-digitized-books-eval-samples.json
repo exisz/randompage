@@ -1,0 +1,169 @@
+{
+  "summary": {
+    "manifestUrl": "https://data.labs.loc.gov/digitized-books/manifest.txt",
+    "fetchMode": "bulk manifest.txt discovery + per-file direct .txt download from LOC Labs data package",
+    "noProductionWrites": true,
+    "manifestTxtRowsInWindow": 80,
+    "sampledTextFiles": 3,
+    "textFetchSuccesses": 3,
+    "totalCandidates": 328,
+    "avgCandidatesPerText": 109.3,
+    "sampledBytes": 308647,
+    "estimatedPackageTextFilesFromTicket": 84058,
+    "estimatedPackageBooksFromTicket": 90414,
+    "roughPackageCandidateEstimate": 9187539,
+    "failureModes": [],
+    "verdict": "A: promising as a direct reviewed passage source; build a gated ingest follow-up"
+  },
+  "results": [
+    {
+      "filename": "00000177.txt",
+      "itemId": "http://www.loc.gov/item/00000177/",
+      "md5": "0534b69315724ddaf90d6ec24d2106de",
+      "size": 235732,
+      "objectKey": "data.labs.loc.gov/digitized-books/data/00000177.txt",
+      "url": "https://data.labs.loc.gov/digitized-books/data/00000177.txt",
+      "success": true,
+      "elapsedMs": 645,
+      "textChars": 234932,
+      "metadata": {
+        "metadataUrl": "http://www.loc.gov/item/00000177/?fo=json",
+        "title": "Our country in poem and prose; arranged and for collateral supplementary reading,",
+        "author": "Persons, Eleanor Alice. [from old catalog]",
+        "date": "1899",
+        "subjects": [
+          {
+            "history": "https://www.loc.gov/search/?fa=subject:history&fo=json"
+          },
+          {
+            "poetry": "https://www.loc.gov/search/?fa=subject:poetry&fo=json"
+          },
+          {
+            "united states": "https://www.loc.gov/search/?fa=subject:united+states&fo=json"
+          }
+        ],
+        "language": "english",
+        "locResource": "https://www.loc.gov/resource/gdcmassbookdig.ourcountryinpoem00pers/"
+      },
+      "candidateCount": 288,
+      "estimatedCandidateDensityPerMb": 1281.1,
+      "samples": [
+        "The pupils' interest in history depends largely upon the amount of bright, entertaining material brought for- ward during the recitation. This volume is presented to the public in the hope that it may place directly in the hands of pupils the supplemental literature needed.",
+        "Selections from the works of Aldrich, Phcjebe Cary, Emerson, Fiske, Bret Harte, Holmes, Howells, Long- fellow, Stedman, Taylor, and Whittier are used by arrang- ment with and permission of Messrs. Houghton, Mifflin & Company, the authorized publishers of the works of these authors."
+      ]
+    },
+    {
+      "filename": "00000433.txt",
+      "itemId": "http://www.loc.gov/item/00000433/",
+      "md5": "3b28b043374aa2b03e178d9f37eee59f",
+      "size": 16469,
+      "objectKey": "data.labs.loc.gov/digitized-books/data/00000433.txt",
+      "url": "https://data.labs.loc.gov/digitized-books/data/00000433.txt",
+      "success": true,
+      "elapsedMs": 1617,
+      "textChars": 16365,
+      "metadata": {
+        "metadataUrl": "http://www.loc.gov/item/00000433/?fo=json",
+        "title": "The house of a hundred lights.",
+        "author": "Torrence, Ridgely, 1875-1950.",
+        "date": "1900",
+        "subjects": [],
+        "language": "english",
+        "locResource": "https://www.loc.gov/resource/gdcmassbookdig.houseofhundredli00torr/"
+      },
+      "candidateCount": 1,
+      "estimatedCandidateDensityPerMb": 63.7,
+      "samples": [
+        "when I was parch'd with Reason's drought. Said he, \"Trust me, I've probed these things; have utter faith in me, — and doubt! \" \" Though the sky reel and Day dissolve, and though a myriad suns fade out, One thing of Earth seems permanent and founded on Belief: 'tis — Doubt."
+      ]
+    },
+    {
+      "filename": "00000108.txt",
+      "itemId": "http://www.loc.gov/item/00000108/",
+      "md5": "dfb03eba793271cd6640e7a71f7bbd95",
+      "size": 56446,
+      "objectKey": "data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "url": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "success": true,
+      "elapsedMs": 681,
+      "textChars": 56401,
+      "metadata": {
+        "metadataUrl": "http://www.loc.gov/item/00000108/?fo=json",
+        "title": "Anti-Carnegie scraps and comments,",
+        "author": "Campbell, M. F. [from old catalog]",
+        "date": "1899",
+        "subjects": [
+          {
+            "carnegie, andrew": "https://www.loc.gov/search/?fa=subject:carnegie,+andrew&fo=json"
+          },
+          {
+            "colonial question": "https://www.loc.gov/search/?fa=subject:colonial+question&fo=json"
+          },
+          {
+            "united states": "https://www.loc.gov/search/?fa=subject:united+states&fo=json"
+          }
+        ],
+        "language": "english",
+        "locResource": "https://www.loc.gov/resource/gdcmassbookdig.anticarnegiescra00camp/"
+      },
+      "candidateCount": 39,
+      "estimatedCandidateDensityPerMb": 724.5,
+      "samples": [
+        "This little volume is a veritable history of the anti-imperial craze, which was started in Pittsburg, No- vember, 1898, by Andrew Carnegie. The writers noted it from the first ripple, and the source from whence it came.",
+        "engaged in the final conquest of the Philippines, to prevent our flag from bein£ \"hauled down\" from where it has been planted. The flag that shrouds the forms of our dead he- roes. The flag that only waves over the land of the free."
+      ]
+    }
+  ],
+  "samples": [
+    {
+      "filename": "00000177.txt",
+      "itemId": "http://www.loc.gov/item/00000177/",
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000177.txt",
+      "title": "Our country in poem and prose; arranged and for collateral supplementary reading,",
+      "author": "Persons, Eleanor Alice. [from old catalog]",
+      "sampleIndex": 1,
+      "chars": 274,
+      "text": "The pupils' interest in history depends largely upon the amount of bright, entertaining material brought for- ward during the recitation. This volume is presented to the public in the hope that it may place directly in the hands of pupils the supplemental literature needed."
+    },
+    {
+      "filename": "00000177.txt",
+      "itemId": "http://www.loc.gov/item/00000177/",
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000177.txt",
+      "title": "Our country in poem and prose; arranged and for collateral supplementary reading,",
+      "author": "Persons, Eleanor Alice. [from old catalog]",
+      "sampleIndex": 2,
+      "chars": 282,
+      "text": "Selections from the works of Aldrich, Phcjebe Cary, Emerson, Fiske, Bret Harte, Holmes, Howells, Long- fellow, Stedman, Taylor, and Whittier are used by arrang- ment with and permission of Messrs. Houghton, Mifflin & Company, the authorized publishers of the works of these authors."
+    },
+    {
+      "filename": "00000433.txt",
+      "itemId": "http://www.loc.gov/item/00000433/",
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000433.txt",
+      "title": "The house of a hundred lights.",
+      "author": "Torrence, Ridgely, 1875-1950.",
+      "sampleIndex": 1,
+      "chars": 273,
+      "text": "when I was parch'd with Reason's drought. Said he, \"Trust me, I've probed these things; have utter faith in me, — and doubt! \" \" Though the sky reel and Day dissolve, and though a myriad suns fade out, One thing of Earth seems permanent and founded on Belief: 'tis — Doubt."
+    },
+    {
+      "filename": "00000108.txt",
+      "itemId": "http://www.loc.gov/item/00000108/",
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "sampleIndex": 1,
+      "chars": 219,
+      "text": "This little volume is a veritable history of the anti-imperial craze, which was started in Pittsburg, No- vember, 1898, by Andrew Carnegie. The writers noted it from the first ripple, and the source from whence it came."
+    },
+    {
+      "filename": "00000108.txt",
+      "itemId": "http://www.loc.gov/item/00000108/",
+      "textUrl": "https://data.labs.loc.gov/digitized-books/data/00000108.txt",
+      "title": "Anti-Carnegie scraps and comments,",
+      "author": "Campbell, M. F. [from old catalog]",
+      "sampleIndex": 2,
+      "chars": 232,
+      "text": "engaged in the final conquest of the Philippines, to prevent our flag from bein£ \"hauled down\" from where it has been planted. The flag that shrouds the forms of our dead he- roes. The flag that only waves over the land of the free."
+    }
+  ]
+}
