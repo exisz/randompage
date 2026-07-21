@@ -9,6 +9,7 @@ import Settings from './pages/Settings';
 import Today from './pages/Today';
 import BookSource from './pages/BookSource';
 import Playlist from './pages/Playlist';
+import Insights from './pages/Insights';
 import SignIn from './pages/SignIn';
 import Callback from './pages/Callback';
 import Landing from './pages/Landing';
@@ -25,6 +26,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/today" element={<Today />} />
         <Route path="/source" element={<BookSource />} />
         <Route path="/playlist/:shareId" element={<Playlist />} />
+        <Route path="/insights" element={<Insights />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/callback" element={<Callback />} />
       </Routes>

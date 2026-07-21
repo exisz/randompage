@@ -587,6 +587,20 @@ export default function Settings() {
             <Link to="/today" className="btn btn-primary btn-sm rounded-2xl">Open Today page</Link>
           </div>
         </div>
+        <div className="card overflow-hidden border border-accent/20 bg-accent/10 shadow mb-4">
+          <div className="card-body gap-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="card-title text-base">Insights / Wrap-up</h3>
+                <p className="text-sm opacity-70">
+                  See a private 7/30-day reflection from your own opened, saved, pushed, and reviewed RandomPage passages.
+                </p>
+              </div>
+              <span className="badge badge-accent badge-outline shrink-0">Private</span>
+            </div>
+            <Link to="/insights" className="btn btn-accent btn-sm rounded-2xl">Open private wrap-up</Link>
+          </div>
+        </div>
         <div className="card bg-base-200 shadow mb-4">
           <div className="card-body gap-3">
             <h3 className="card-title text-base">Account</h3>

@@ -1418,6 +1418,190 @@ passagesRouter.get('/reading/daily-recap', async (req: Request, res: Response) =
   }
 });
 
+type InsightPassage = {
+  id: string;
+  text?: string;
+  bookTitle: string;
+  author: string;
+  chapter?: string | null;
+  tags: string;
+  language?: string;
+};
+
+type InsightActivityRow = { passage: InsightPassage; createdAt?: Date; sentAt?: Date; readAt?: Date | null; reviewedAt?: Date };
+
+function addInsightCount(map: Map<string, number>, key: string | null | undefined, amount = 1) {
+  const cleaned = (key || '').trim();
+  if (!cleaned) return;
+  map.set(cleaned, (map.get(cleaned) || 0) + amount);
+}
+
+function topInsightEntries(map: Map<string, number>, limit: number) {
+  return Array.from(map.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([label, count]) => ({ label, count }));
+}
+
+function compactInsightPassage(passage: InsightPassage, reason: string) {
+  return {
+    id: passage.id,
+    bookTitle: passage.bookTitle,
+    author: passage.author,
+    chapter: passage.chapter || null,
+    tags: parsePassageTags(passage.tags).slice(0, 5),
+    snippet: (passage.text || '').replace(/\s+/g, ' ').trim().slice(0, 180),
+    reason,
+  };
+}
+
+function buildInsightWindow(days: 7 | 30, now: Date, rows: {
+  views: InsightActivityRow[];
+  pushReads: InsightActivityRow[];
+  pushes: InsightActivityRow[];
+  bookmarks: InsightActivityRow[];
+  reviews: InsightActivityRow[];
+  paths: Array<{ topic: string; started_at: string | number }>;
+  preferences: Array<{ tag: string; weight: number }>;
+}) {
+  const start = addUtcDays(now, -days);
+  const uniqueOpened = new Set(rows.views.map((row) => row.passage.id));
+  const topBooks = new Map<string, number>();
+  const topAuthors = new Map<string, number>();
+  const topTags = new Map<string, number>();
+  const sourceSeen = new Set<string>();
+  const discoveredSources: Array<{ bookTitle: string; author: string; firstSeenAt: string }> = [];
+
+  for (const row of [...rows.views, ...rows.pushReads, ...rows.bookmarks, ...rows.reviews]) {
+    const passage = row.passage;
+    addInsightCount(topBooks, passage.bookTitle);
+    addInsightCount(topAuthors, passage.author);
+    for (const tag of parsePassageTags(passage.tags)) addInsightCount(topTags, tag.toLowerCase());
+    const sourceKey = `${passage.bookTitle}::${passage.author}`;
+    if (!sourceSeen.has(sourceKey)) {
+      sourceSeen.add(sourceKey);
+      discoveredSources.push({ bookTitle: passage.bookTitle, author: passage.author, firstSeenAt: (row.createdAt || row.readAt || row.reviewedAt || row.sentAt || now).toISOString() });
+    }
+  }
+
+  const revisitSeed = new Map<string, ReturnType<typeof compactInsightPassage>>();
+  for (const row of rows.bookmarks.slice(0, 8)) revisitSeed.set(row.passage.id, compactInsightPassage(row.passage, 'Saved recently — a private page worth revisiting.'));
+  for (const row of rows.pushes.filter((row) => !row.readAt).slice(0, 8)) {
+    if (!revisitSeed.has(row.passage.id)) revisitSeed.set(row.passage.id, compactInsightPassage(row.passage, 'Delivered to your inbox but not opened yet.'));
+  }
+  for (const row of rows.pushReads.slice(0, 8)) {
+    if (!revisitSeed.has(row.passage.id)) revisitSeed.set(row.passage.id, compactInsightPassage(row.passage, 'Opened from push history — revisit while the thread is warm.'));
+  }
+
+  const activePaths = rows.paths.filter((row) => new Date(row.started_at).getTime() >= start.getTime()).map((row) => row.topic).slice(0, 3);
+  const positivePreferences = rows.preferences
+    .filter((pref) => !pref.tag.startsWith('control:') && !pref.tag.startsWith('avoid:') && pref.weight > 0)
+    .sort((a, b) => b.weight - a.weight || a.tag.localeCompare(b.tag))
+    .slice(0, 5)
+    .map((pref) => ({ tag: pref.tag, weight: pref.weight }));
+  const hasActivity = uniqueOpened.size > 0 || rows.bookmarks.length > 0 || rows.reviews.length > 0 || rows.pushReads.length > 0;
+
+  return {
+    days,
+    start: start.toISOString(),
+    end: now.toISOString(),
+    hasActivity,
+    summary: hasActivity
+      ? `In the last ${days} days, you opened ${uniqueOpened.size} page${uniqueOpened.size === 1 ? '' : 's'}, saved ${rows.bookmarks.length}, reviewed ${rows.reviews.length}, and read ${rows.pushReads.length} pushed page${rows.pushReads.length === 1 ? '' : 's'}.`
+      : `No private RandomPage activity found in the last ${days} days yet.`,
+    metrics: {
+      pagesOpened: uniqueOpened.size,
+      viewEvents: rows.views.length,
+      pushedPagesRead: rows.pushReads.length,
+      pushedPagesDelivered: rows.pushes.length,
+      savedPassages: rows.bookmarks.length,
+      reviewedPassages: rows.reviews.length,
+      activeReadingPaths: activePaths.length,
+    },
+    topBooks: topInsightEntries(topBooks, 5),
+    topAuthors: topInsightEntries(topAuthors, 5),
+    topTags: topInsightEntries(topTags, 8),
+    recentlyDiscoveredSources: discoveredSources.slice(0, 5),
+    activePaths,
+    positivePreferences,
+    revisitNext: Array.from(revisitSeed.values()).slice(0, 5),
+    emptyState: hasActivity ? null : 'Open, save, or review a few existing RandomPage book passages to build your private wrap-up.',
+  };
+}
+
+// GET /api/reading/insights-wrapup
+// Signed-in private 7/30-day wrap-up over existing user-owned RandomPage records only.
+passagesRouter.get('/reading/insights-wrapup', async (req: Request, res: Response) => {
+  try {
+    const claims = await verifyBearer(req.header('authorization'));
+    const prisma = getPrisma();
+    await ensureBrowsingEventsTable(prisma);
+    await ensureReadingPathsTable(prisma);
+
+    const userId = claims.sub as string;
+    const now = new Date();
+    const thirtyDayStart = addUtcDays(now, -30);
+    const sevenDayStart = addUtcDays(now, -7);
+
+    const [views, pushReads, pushes, bookmarks, reviews, paths, preferences] = await Promise.all([
+      prisma.browsingEvent.findMany({
+        where: { userId, action: 'view', createdAt: { gte: thirtyDayStart } },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.pushHistory.findMany({
+        where: { userId, readAt: { gte: thirtyDayStart } },
+        include: { passage: true },
+        orderBy: { readAt: 'desc' },
+      }),
+      prisma.pushHistory.findMany({
+        where: { userId, sentAt: { gte: thirtyDayStart } },
+        include: { passage: true },
+        orderBy: { sentAt: 'desc' },
+      }),
+      prisma.bookmark.findMany({
+        where: { userId, createdAt: { gte: thirtyDayStart } },
+        include: { passage: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.passageReview.findMany({
+        where: { userId, action: 'reviewed', reviewedAt: { gte: thirtyDayStart } },
+        include: { passage: true },
+        orderBy: { reviewedAt: 'desc' },
+      }),
+      prisma.$queryRaw<Array<{ topic: string; started_at: string | number }>>`
+        SELECT topic, started_at
+        FROM reading_paths
+        WHERE user_id = ${userId}
+          AND started_at >= ${thirtyDayStart}
+        ORDER BY started_at DESC
+        LIMIT 10
+      `,
+      prisma.userPreference.findMany({ where: { userId }, select: { tag: true, weight: true } }),
+    ]);
+
+    const rows = { views, pushReads, pushes, bookmarks, reviews, paths, preferences };
+    const sevenRows = {
+      views: views.filter((row) => row.createdAt >= sevenDayStart),
+      pushReads: pushReads.filter((row) => row.readAt && row.readAt >= sevenDayStart),
+      pushes: pushes.filter((row) => row.sentAt >= sevenDayStart),
+      bookmarks: bookmarks.filter((row) => row.createdAt >= sevenDayStart),
+      reviews: reviews.filter((row) => row.reviewedAt >= sevenDayStart),
+      paths,
+      preferences,
+    };
+
+    res.json({
+      title: 'Private reading insights wrap-up',
+      generatedAt: now.toISOString(),
+      privacy: 'signed-in user only; derived deterministically from browsing_events, push_history, bookmarks, passage_reviews, reading_paths, user_preferences, and passage metadata/tags. No external LLM, embeddings, summaries, social comparison, or new content source.',
+      windows: [buildInsightWindow(7, now, sevenRows), buildInsightWindow(30, now, rows)],
+    });
+  } catch (e: unknown) {
+    res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
 // GET /api/reading/stats
 passagesRouter.get('/reading/stats', async (req: Request, res: Response) => {
   try {
