@@ -65,7 +65,29 @@ function dayHeading(dayKey: string) {
   const yesterdayKey = localDayKey(addDays(new Date(), -1).toISOString());
   if (dayKey === todayKey) return 'Today';
   if (dayKey === yesterdayKey) return 'Yesterday';
-  return dayKey;
+  const [year, month, day] = dayKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return dayKey;
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function groupActivityCounts(items: HistoryItem[]) {
+  const opened = items.filter(item => item.kind === 'browsing' && item.action !== 'skip').length;
+  const pushed = items.filter(item => item.kind === 'push').length;
+  const skipped = items.filter(item => item.kind === 'browsing' && item.action === 'skip').length;
+  return { opened, pushed, skipped };
+}
+
+function resumeItemForGroup(items: HistoryItem[]) {
+  return items.find(item => item.kind === 'push' && !item.readAt)
+    || items.find(item => item.kind === 'browsing' && item.action !== 'skip')
+    || items[0]
+    || null;
+}
+
+function resumeUrlForItem(item: HistoryItem) {
+  const source = item.kind === 'push' || ('source' in item && item.source === 'push_inbox') ? 'push' : 'history';
+  return `/discover?passageId=${encodeURIComponent(item.passage.id)}&source=${source}`;
 }
 
 function itemSearchText(item: HistoryItem) {
@@ -205,11 +227,23 @@ export default function History() {
           </div>
         ) : (
           <div className="flex flex-col gap-5">
-            {groupedItems.map(group => (
+            {groupedItems.map(group => {
+              const counts = groupActivityCounts(group.items);
+              const resumeItem = resumeItemForGroup(group.items);
+              const resumeLabel = resumeItem?.kind === 'push' && !resumeItem.readAt ? 'Resume unread' : 'Resume day';
+              return (
               <section key={group.dayKey} className="flex flex-col gap-3" aria-labelledby={`history-day-${group.dayKey}`}>
-                <div className="sticky top-2 z-10 flex items-center gap-3 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 shadow-sm backdrop-blur">
-                  <h3 id={`history-day-${group.dayKey}`} className="font-serif text-lg">{dayHeading(group.dayKey)}</h3>
+                <div className="sticky top-2 z-10 flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 shadow-sm backdrop-blur">
+                  <h3 id={`history-day-${group.dayKey}`} className="mr-auto font-serif text-lg">{dayHeading(group.dayKey)}</h3>
                   <span className="badge badge-ghost badge-sm">{group.items.length} {group.items.length === 1 ? 'page' : 'pages'}</span>
+                  {counts.opened > 0 && <span className="badge badge-primary badge-outline badge-sm">{counts.opened} opened</span>}
+                  {counts.pushed > 0 && <span className="badge badge-secondary badge-outline badge-sm">{counts.pushed} pushed</span>}
+                  {counts.skipped > 0 && <span className="badge badge-ghost badge-sm">{counts.skipped} skipped</span>}
+                  {resumeItem && (
+                    <Link className={`btn btn-primary btn-xs ${offlineMode ? 'btn-disabled' : ''}`} to={resumeUrlForItem(resumeItem)}>
+                      {offlineMode ? 'Reconnect to resume' : resumeLabel}
+                    </Link>
+                  )}
                 </div>
                 {group.items.map(h => {
                   const isBrowsing = h.kind === 'browsing';
@@ -251,17 +285,16 @@ export default function History() {
                         <p className="opacity-75">{h.whyPersonalized.reason}</p>
                       </div>
                     )}
-                    {!isBrowsing && (
-                      <Link className={`btn btn-primary btn-xs self-start ${offlineMode ? 'btn-disabled' : ''}`} to={`/discover?passageId=${encodeURIComponent(h.passage.id)}&source=push`}>
-                        {offlineMode ? 'Reconnect to open' : isUnreadPush ? 'Open and mark read' : 'Open passage'}
-                      </Link>
-                    )}
+                    <Link className={`btn btn-primary btn-xs self-start ${offlineMode ? 'btn-disabled' : ''}`} to={resumeUrlForItem(h)}>
+                      {offlineMode ? 'Reconnect to open' : !isBrowsing && isUnreadPush ? 'Open and mark read' : 'Open passage'}
+                    </Link>
                   </div>
                     </div>
                   );
                 })}
               </section>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-17 — PLANET-3797 PWA home-screen shortcuts
+> 最后更新: 2026-07-22 — PLANET-3923 History day-grouped quick resume
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -32,7 +32,7 @@
 │  │    /              → Landing (→ /discover if authed)       │ │
 │  │    /discover      → 发现页 (随机片段 + Today fresh pages hands-free listening queue)                      │ │
 │  │    /bookmarks     → 书架 + Recall Cards + Themed Review（tag/collection/natural-language topic over saved passages）                                   │ │
-│  │    /history       → 浏览历史 + 推送收件箱（日分组 timeline + saved/push cards support Listen） │ │
+│  │    /history       → 浏览历史 + 推送收件箱（日分组 timeline + activity counts + quick resume + saved/push cards support Listen） │ │
 │  │    /today         → PWA-friendly Today shortcut/latest pushed passage │ │
 │  │    /source?title=...&author=... → book/source detail view with same-book passages + deterministic source vibe profile │ │
 │  │    /settings      → 设置/推送开关 + reading goals 个性化种子 │ │
@@ -358,6 +358,7 @@ exisz/randompage (GitHub)
 
 | 日期 | 变更 | 作者 |
 |------|------|------|
+| 2026-07-22 | PLANET-3923: History day-grouped recovery surface now labels local Today/Yesterday/readable dates, summarizes available per-day activity counts (opened/pushed/skipped), and adds quick resume links from each day group into the first unread/openable existing passage while preserving offline cached honesty and existing History card actions. Expanded `check:history-day-grouping`. | Engineer Pod |
 | 2026-07-22 | PLANET-3911: Added local Harvard Library Public Domain Corpus / Institutional Books 1.0 passage-source evaluation (`pnpm --filter @randompage/app eval:harvard-public-domain-corpus`). It samples the public metadata dataset, lists full-text shard accessibility, attempts a tiny gated OCR text sample only when `HF_TOKEN` is available, and writes JSON/Markdown artifacts without Turso writes, summaries, full-reader UI, or unreviewed Discover/push exposure. Initial unauthenticated verdict: metadata promising but OCR text access gated; obtain accepted HF/IDI access before a reviewed ingest queue. | Engineer Pod |
 | 2026-07-21 | PLANET-3897: Added private Insights/Wrap-up. `/api/reading/insights-wrapup` returns deterministic signed-in 7/30-day activity windows from existing RandomPage tables only (browsing_events, push_history, bookmarks, passage_reviews, reading_paths, user_preferences, passage metadata/tags); `/insights` and Settings entry show pages opened, saves, reviews, top books/authors/tags, discovered sources, and revisit suggestions without external LLMs, summaries, social comparison, or new content sources. Added `check:insights-wrapup`. | Engineer Pod |
 | 2026-07-21 | PLANET-3882: Added gated LOC reviewed ingest pipeline. `queue:loc-reviewed` writes metadata-only candidate/review artifacts from LOC eval/manifest rows with default `reviewed:false`; `ingest:loc-reviewed` fetches only reviewed LOC `.txt` files, dry-runs to report/sample artifacts by default, and production apply is blocked unless `--apply --ack-reviewed` plus Turso credentials are present. Added `check:loc-reviewed-ingest`; no summaries, full-reader UI, social behavior, or direct unreviewed Discover/push exposure. | Engineer Pod |

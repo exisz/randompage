@@ -9,6 +9,8 @@ const checks = [
   ['History groups filtered rows, preserving search/tag filters', history.includes('const groupedItems = useMemo') && history.includes('for (const item of filteredItems)')],
   ['History groups push reads by readAt before delivery time', history.includes('return item.readAt || item.sentAt')],
   ['History renders day headings with item counts', history.includes('dayHeading(group.dayKey)') && history.includes('group.items.length')],
+  ['History day headers summarize available activity counts', history.includes('function groupActivityCounts') && history.includes('opened') && history.includes('pushed')],
+  ['History day headers provide quick resume into an existing passage', history.includes('function resumeItemForGroup') && history.includes('Resume unread') && history.includes('Resume day') && history.includes('resumeUrlForItem')],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);
