@@ -73,7 +73,8 @@
     "queue:loc-reviewed": "node scripts/loc-reviewed-queue.mjs",
     "ingest:loc-reviewed": "node scripts/loc-reviewed-ingest.mjs",
     "check:loc-reviewed-ingest": "node scripts/check-loc-reviewed-ingest-policy.mjs",
-    "check:insights-wrapup": "node scripts/check-insights-wrapup-policy.mjs"
+    "check:insights-wrapup": "node scripts/check-insights-wrapup-policy.mjs",
+    "eval:harvard-public-domain-corpus": "node scripts/harvard-public-domain-corpus-eval.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
