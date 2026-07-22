@@ -2,7 +2,7 @@
 
 > 本文件是 RandomPage 的单一架构事实来源。所有架构变更必须先更新本文件。
 > 维护者: 团长 (master agent) + Engineer Pod（每次代码架构改动后更新）
-> 最后更新: 2026-07-22 — PLANET-3923 History day-grouped quick resume
+> 最后更新: 2026-07-23 — PLANET-3938 daily intent selector for today queue
 >
 > **2026-05-23 owner direction (PLANET-1964 follow-up)**：内容获取不再以 source-safety / license 作为主轴。产品验收看「能不能 fetch 、文本能不能抽、能不能切片、Discover/推送能不能起来」。下面“source policy” 描述是现有 cron 的运作状态，不是未来验收轴。
 
@@ -283,7 +283,7 @@ exisz/randompage (GitHub)
 - Discover current passage cards, Bookmarks saved/themed-review cards, and History browsing/push-inbox cards render the reusable Listen/Pause/Resume/Stop control when passage text is present. Discover also exposes a hands-free Start daily listening queue for Today’s fresh pages: browser speech plays the personalized 3–5 existing passages in sequence with pause/resume/next/stop, updates Media Session metadata as the active passage changes, opens each active passage through `/api/passages/:id?source=discover`, and highlights the currently spoken sentence/paragraph on the active card using speech boundary events with a first-chunk fallback, therefore recording the existing Discover view interaction instead of introducing a new audio/content model.
 - Unsupported browsers or devices without an installed voice get an inline fallback notice while the normal reading UI remains usable.
 - Static regressions: `pnpm --filter @randompage/app check:listen-control` and `pnpm --filter @randompage/app check:daily-queue`.
-- Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
+- Daily queue fallback policy: `/api/passages/daily-queue?limit=5` first prefers unread/avoid-free readable passages, then unread with avoided tags if needed, then personalized read-but-not-recent passages, and finally any readable existing RandomPage passage. PLANET-3938 adds an optional signed-in `intent=<reflective|practical|story|philosophy|history>` query from Discover’s Today intent chips; it temporarily boosts existing tag weights for this queue, records a private `user_preferences` control row (`control:daily-intent:*`), and returns per-card `dailyIntentReason` copy. If truly empty, response includes `emptyReason` + counts and Discover shows a retry action instead of stale sign-in-sync copy.
 - Personalized shelves policy (PLANET-3665): signed-in Discover calls `/api/passages/recommendation-shelves?excludeIds=` after loading the daily queue. The endpoint builds 2–4 StoryGraph-style shelves from existing RandomPage passages only: want-to-read source matches, saved-passage tag anchors, strongest private preference tags, reading-goal rows, and cold-start fallback tags. It excludes daily queue IDs where practical, returns reason copy plus 3–5 passage cards, and reuses existing open/listen/share/card/queue flows; anonymous/offline users do not receive private shelf data.
 
 ## Passage Sharing

@@ -27,7 +27,16 @@ const MAX_PREFERENCE_WEIGHT = 12;
 const DAILY_QUEUE_DEFAULT_LIMIT = 5;
 const DAILY_QUEUE_MAX_LIMIT = 20;
 const DAILY_READING_BUDGET_TAG = 'control:daily-reading-budget:minutes';
+const DAILY_INTENT_CONTROL_PREFIX = 'control:daily-intent:';
 const READING_PATH_DAYS = 30;
+
+const DAILY_INTENTS: Record<string, { label: string; tags: string[] }> = {
+  reflective: { label: 'Reflective', tags: ['contemplative', 'introspection', 'human-nature', 'wisdom', 'suffering'] },
+  practical: { label: 'Practical', tags: ['self-cultivation', 'discipline', 'decision-making', 'work', 'habit'] },
+  story: { label: 'Story', tags: ['fiction', 'adventure', 'character', 'relationships', 'literature'] },
+  philosophy: { label: 'Philosophy', tags: ['philosophy', 'morality', 'freedom', 'power', 'truth'] },
+  history: { label: 'History', tags: ['history', 'society', 'politics', 'power', 'war'] },
+};
 
 const RECOMMENDATION_SHELF_MAX_SHELVES = 4;
 const RECOMMENDATION_SHELF_ITEMS = 5;
@@ -113,6 +122,57 @@ function dailyReadingBudgetFromPreferences(preferences: Array<{ tag: string; wei
   const row = preferences.find((pref) => pref.tag === DAILY_READING_BUDGET_TAG);
   const minutes = row ? Number(row.weight) : DAILY_QUEUE_DEFAULT_LIMIT;
   return [3, 5, 10, 20].includes(minutes) ? minutes : DAILY_QUEUE_DEFAULT_LIMIT;
+}
+
+function normalizeDailyIntent(raw: unknown) {
+  if (typeof raw !== 'string') return null;
+  const normalized = raw.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+  return Object.prototype.hasOwnProperty.call(DAILY_INTENTS, normalized) ? normalized : null;
+}
+
+function preferenceMapWithDailyIntent(prefMap: Record<string, number>, intentId: string | null) {
+  if (!intentId) return prefMap;
+  const intent = DAILY_INTENTS[intentId];
+  if (!intent) return prefMap;
+  const boosted = { ...prefMap };
+  for (const tag of intent.tags) {
+    boosted[tag] = Math.min(MAX_PREFERENCE_WEIGHT, Math.max(Number(boosted[tag]) || 0, 6));
+  }
+  return boosted;
+}
+
+function explainDailyIntentReason(passage: { tags: string }, intentId: string | null) {
+  if (!intentId) return null;
+  const intent = DAILY_INTENTS[intentId];
+  if (!intent) return null;
+  const passageTags = new Set(parsePassageTags(passage.tags).map((tag) => tag.toLowerCase()));
+  const matched = intent.tags.filter((tag) => passageTags.has(tag));
+  return matched.length
+    ? `Because today you asked for ${intent.label.toLowerCase()} pages (${matched.slice(0, 2).join(' + ')}).`
+    : `Because today you asked for ${intent.label.toLowerCase()} pages.`;
+}
+
+async function recordDailyIntentSignal(prisma: ReturnType<typeof getPrisma>, userId: string, intentId: string | null) {
+  if (!intentId) return;
+  const intent = DAILY_INTENTS[intentId];
+  if (!intent) return;
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe(
+      'DELETE FROM user_preferences WHERE user_id = ? AND tag LIKE ?',
+      userId,
+      `${DAILY_INTENT_CONTROL_PREFIX}%`,
+    ),
+    prisma.userPreference.create({
+      data: {
+        id: nanoid(),
+        userId,
+        tag: `${DAILY_INTENT_CONTROL_PREFIX}${intentId}`,
+        weight: 1,
+        updatedAt: now,
+      },
+    }),
+  ]);
 }
 
 function takeQueueForBudget<T extends { text: string; language?: string | null }>(ranked: T[], targetMinutes: number, maxItems: number) {
@@ -1048,7 +1108,8 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     const userId = claims.sub as string;
     const requestedLimit = boundedDailyQueueLimit(req.query.limit);
     const today = utcDayKey(new Date());
-    const seed = `${userId}:${today}`;
+    const requestedIntent = normalizeDailyIntent(req.query.intent);
+    const seed = `${userId}:${today}:${requestedIntent ?? 'default'}`;
 
     const [allPassages, prefs, historyEvents, pushHistory] = await Promise.all([
       prisma.passage.findMany(),
@@ -1077,7 +1138,11 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
     ]);
     const recentIds = new Set([...recentHistoryIds, ...recentPushIds]);
     const { avoidTags } = splitPreferenceControls(prefs);
-    const prefMap = preferenceMapWithoutAvoids(prefs);
+    const basePrefMap = preferenceMapWithoutAvoids(prefs);
+    const prefMap = preferenceMapWithDailyIntent(basePrefMap, requestedIntent);
+    if (requestedIntent) {
+      await recordDailyIntentSignal(prisma, userId, requestedIntent);
+    }
     const configuredBudgetMinutes = dailyReadingBudgetFromPreferences(prefs);
     const targetMinutes = configuredBudgetMinutes;
     const maxQueueItems = Math.max(requestedLimit, Math.min(DAILY_QUEUE_MAX_LIMIT, targetMinutes + 2));
@@ -1096,6 +1161,7 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       queuePosition: index + 1,
       estimatedReadingMinutes: estimatePassageReadingMinutes(passage),
       whyPersonalized: explainRecommendation(passage, prefMap),
+      dailyIntentReason: explainDailyIntentReason(passage, requestedIntent),
     }));
 
     const emptyReason = queue.length === 0
@@ -1111,6 +1177,8 @@ passagesRouter.get('/passages/daily-queue', async (req: Request, res: Response) 
       freshOnly: poolChoice.freshOnly,
       fallbackUsed: poolChoice.fallbackUsed,
       strategy: poolChoice.strategy,
+      dailyIntent: requestedIntent ? { id: requestedIntent, label: DAILY_INTENTS[requestedIntent].label, tags: DAILY_INTENTS[requestedIntent].tags } : null,
+      intentSignalRecorded: Boolean(requestedIntent),
       emptyReason,
       counts: {
         totalPassages: allPassages.length,

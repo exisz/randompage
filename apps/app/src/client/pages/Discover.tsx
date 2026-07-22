@@ -67,6 +67,7 @@ interface DailyQueueItem extends Passage {
   queuePosition: number;
   estimatedReadingMinutes?: number;
   whyPersonalized?: RecommendationExplanation | null;
+  dailyIntentReason?: string | null;
 }
 
 interface DailyQueue {
@@ -76,6 +77,8 @@ interface DailyQueue {
   fallbackUsed: boolean;
   strategy: string;
   emptyReason: string | null;
+  dailyIntent?: { id: string; label: string; tags: string[] } | null;
+  intentSignalRecorded?: boolean;
   budgetMinutes?: number;
   totalEstimatedMinutes?: number;
 }
@@ -200,6 +203,17 @@ interface SpeechTextChunk {
   start: number;
   end: number;
 }
+
+
+type DailyIntentId = 'reflective' | 'practical' | 'story' | 'philosophy' | 'history';
+
+const DAILY_INTENT_CHIPS: Array<{ id: DailyIntentId; label: string; hint: string }> = [
+  { id: 'reflective', label: 'Reflective', hint: 'slow, inward pages' },
+  { id: 'practical', label: 'Practical', hint: 'useful ideas' },
+  { id: 'story', label: 'Story', hint: 'narrative momentum' },
+  { id: 'philosophy', label: 'Philosophy', hint: 'concepts and questions' },
+  { id: 'history', label: 'History', hint: 'power and society' },
+];
 
 const HIDDEN_TAGS = new Set(['en', 'zh', 'ja', 'fr', 'de', 'es', 'other']);
 
@@ -326,6 +340,8 @@ export default function Discover() {
   const [dailyRecap, setDailyRecap] = useState<DailyRecap | null>(null);
   const [dailyQueue, setDailyQueue] = useState<DailyQueue | null>(null);
   const [dailyQueueCachedAt, setDailyQueueCachedAt] = useState<string | null>(null);
+  const [dailyIntent, setDailyIntent] = useState<DailyIntentId | null>(null);
+  const [dailyIntentStatus, setDailyIntentStatus] = useState<string | null>(null);
   const [recommendationShelves, setRecommendationShelves] = useState<RecommendationShelf[]>([]);
   const [shelvesStatus, setShelvesStatus] = useState<string | null>(null);
   const [readingPath, setReadingPath] = useState<ReadingPath | null>(null);
@@ -433,7 +449,7 @@ export default function Discover() {
     }
   }, []);
 
-  const fetchDailyQueue = useCallback(async () => {
+  const fetchDailyQueue = useCallback(async (intentOverride?: DailyIntentId | null) => {
     try {
       const isAuth = await logtoClient.isAuthenticated();
       if (!isAuth) {
@@ -441,7 +457,10 @@ export default function Discover() {
         setDailyQueueCachedAt(null);
         return;
       }
-      const res = await apiFetch('/passages/daily-queue?limit=20');
+      const requestedIntent = intentOverride === undefined ? dailyIntent : intentOverride;
+      const params = new URLSearchParams({ limit: '20' });
+      if (requestedIntent) params.set('intent', requestedIntent);
+      const res = await apiFetch(`/passages/daily-queue?${params.toString()}`);
       if (res.status === 401 || res.status === 403) {
         setAuthed(false);
         setDailyQueue(null);
@@ -457,12 +476,21 @@ export default function Discover() {
         freshOnly: Boolean(data.freshOnly),
         fallbackUsed: Boolean(data.fallbackUsed),
         strategy: typeof data.strategy === 'string' ? data.strategy : '',
+        dailyIntent: data.dailyIntent ?? null,
+        intentSignalRecorded: Boolean(data.intentSignalRecorded),
         emptyReason: typeof data.emptyReason === 'string' ? data.emptyReason : null,
         budgetMinutes: typeof data.budgetMinutes === 'number' ? data.budgetMinutes : undefined,
         totalEstimatedMinutes: typeof data.totalEstimatedMinutes === 'number' ? data.totalEstimatedMinutes : undefined,
       } satisfies DailyQueue;
       setDailyQueue(nextQueue);
       setDailyQueueCachedAt(null);
+      if (requestedIntent) {
+        setDailyIntentStatus(data.intentSignalRecorded
+          ? `Today’s queue is tuned for ${data.dailyIntent?.label?.toLowerCase?.() ?? requestedIntent} pages, and the private intent signal was saved.`
+          : `Today’s queue is tuned for ${requestedIntent} pages.`);
+      } else {
+        setDailyIntentStatus(null);
+      }
       if (queue.length) {
         saveDailyQueueOfflineCache({
           queue,
@@ -512,7 +540,20 @@ export default function Discover() {
           : 'Could not load your daily queue. Check your connection and try Refresh queue.',
       });
     }
-  }, [fetchRecommendationShelves]);
+  }, [dailyIntent, fetchRecommendationShelves]);
+
+  const chooseDailyIntent = useCallback((intent: DailyIntentId | null) => {
+    if (!online) {
+      setDailyIntentStatus('Reconnect to tune a fresh daily queue. Cached pages stay available offline.');
+      return;
+    }
+    if (speechQueueAvailable()) window.speechSynthesis.cancel();
+    setQueuePlayback('idle');
+    setQueueActiveIndex(null);
+    setDailyIntent(intent);
+    setDailyIntentStatus(intent ? 'Refreshing today’s queue for your intent…' : 'Refreshing today’s queue in surprise mode…');
+    void fetchDailyQueue(intent);
+  }, [fetchDailyQueue, online]);
 
   const fetchReadingPath = useCallback(async () => {
     try {
@@ -1364,6 +1405,31 @@ export default function Discover() {
                   </div>
                   <span className="badge badge-primary badge-outline">{dailyQueue?.totalEstimatedMinutes ?? 0}/{dailyQueue?.budgetMinutes ?? 5} min</span>
                 </div>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-base-100/45 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/80">Today&apos;s intent</p>
+                      <p className="mt-1 text-xs leading-relaxed opacity-70">Pick one mood for this session; RandomPage reranks only existing book passages and saves the signal privately.</p>
+                    </div>
+                    <button type="button" className={`btn btn-xs rounded-xl ${dailyIntent === null ? 'btn-primary' : 'btn-ghost'}`} onClick={() => chooseDailyIntent(null)} disabled={!online}>Surprise</button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {DAILY_INTENT_CHIPS.map((intent) => (
+                      <button
+                        key={intent.id}
+                        type="button"
+                        className={`btn btn-xs h-auto min-h-0 rounded-xl py-2 ${dailyIntent === intent.id ? 'btn-primary' : 'btn-outline'}`}
+                        onClick={() => chooseDailyIntent(intent.id)}
+                        disabled={!online}
+                        title={intent.hint}
+                      >
+                        <span>{intent.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {dailyIntentStatus ? <p className="mt-2 text-xs text-primary/80" role="status">{dailyIntentStatus}</p> : null}
+                  {!online ? <p className="mt-2 text-xs opacity-60">Offline: intent tuning waits for your next fresh queue refresh.</p> : null}
+                </div>
                 {dailyQueue?.queue.length ? (
                   <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/10 p-3">
                     <div className="flex flex-wrap items-center gap-2">
@@ -1413,14 +1479,16 @@ export default function Discover() {
                         <span className="line-clamp-1 text-sm font-medium">{item.bookTitle}</span>
                       </div>
                       <div className="mt-1 line-clamp-1 text-xs opacity-60">{item.author} · {item.estimatedReadingMinutes ?? estimatePassageReadingMinutes(item)} min read</div>
-                      {item.whyPersonalized && (
+                      {item.dailyIntentReason ? (
+                        <div className="mt-1 line-clamp-1 text-xs text-primary/80">{item.dailyIntentReason}</div>
+                      ) : item.whyPersonalized ? (
                         <div className="mt-1 line-clamp-1 text-xs text-primary/80">{item.whyPersonalized.label}: {item.whyPersonalized.matchedTags.slice(0, 2).join(' + ')}</div>
-                      )}
+                      ) : null}
                     </button>
                   )) : (
                     <div className="rounded-2xl border border-dashed border-white/10 p-3 text-sm opacity-70">
                       <p>{dailyQueue?.emptyReason ?? 'No daily pages are available yet.'}</p>
-                      <button type="button" className="btn btn-outline btn-xs mt-3 rounded-xl" onClick={fetchDailyQueue}>Refresh queue</button>
+                      <button type="button" className="btn btn-outline btn-xs mt-3 rounded-xl" onClick={() => void fetchDailyQueue()}>Refresh queue</button>
                     </div>
                   )}
                 </div>
