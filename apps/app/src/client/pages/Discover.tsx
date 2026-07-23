@@ -206,6 +206,7 @@ interface SpeechTextChunk {
 
 
 type DailyIntentId = 'reflective' | 'practical' | 'story' | 'philosophy' | 'history';
+type GuidedReflectionAction = 'more_like_this' | 'less_like_this' | 'too_dense' | 'different_topic';
 
 const DAILY_INTENT_CHIPS: Array<{ id: DailyIntentId; label: string; hint: string }> = [
   { id: 'reflective', label: 'Reflective', hint: 'slow, inward pages' },
@@ -253,6 +254,19 @@ function shortExcerpt(text: string) {
   return normalized.length > 220
     ? `${normalized.slice(0, 220).trim()}…`
     : normalized;
+}
+
+function buildGuidedReflectionChoices(tags: string[]): Array<{ action: GuidedReflectionAction; label: string; confirmation: string; detail: string }> {
+  const primaryTag = tags.find((tag) => !['fiction', 'nonfiction', 'classic'].includes(tag.toLowerCase()));
+  const topicLabel = primaryTag ? `More ${primaryTag}` : 'More like this';
+  const topicConfirmation = primaryTag ? `Tuning toward ${primaryTag}.` : 'Tuning toward similar pages.';
+
+  return [
+    { action: 'more_like_this', label: topicLabel, confirmation: topicConfirmation, detail: 'Boost this page’s current book-passage tags, then open the next page.' },
+    { action: 'different_topic', label: 'Different topic', confirmation: 'Trying a different topic next.', detail: 'Nudge this topic down for the next passage.' },
+    { action: 'too_dense', label: 'Lighter page', confirmation: 'Looking for a lighter page next.', detail: 'Record that this page felt dense right now.' },
+    { action: 'less_like_this', label: 'Less like this', confirmation: 'Down-ranking similar pages.', detail: 'Reduce similar passage tags without hiding saved content.' },
+  ];
 }
 
 function splitSpeechText(text: string): SpeechTextChunk[] {
@@ -342,6 +356,8 @@ export default function Discover() {
   const [dailyQueueCachedAt, setDailyQueueCachedAt] = useState<string | null>(null);
   const [dailyIntent, setDailyIntent] = useState<DailyIntentId | null>(null);
   const [dailyIntentStatus, setDailyIntentStatus] = useState<string | null>(null);
+  const [guidedReflectionPending, setGuidedReflectionPending] = useState<GuidedReflectionAction | null>(null);
+  const [guidedReflectionStatus, setGuidedReflectionStatus] = useState<string | null>(null);
   const [recommendationShelves, setRecommendationShelves] = useState<RecommendationShelf[]>([]);
   const [shelvesStatus, setShelvesStatus] = useState<string | null>(null);
   const [readingPath, setReadingPath] = useState<ReadingPath | null>(null);
@@ -768,6 +784,35 @@ export default function Discover() {
     }
   }, [fetchDailyQueue, fetchDailyRecap, fetchDailyReview, fetchReadingChallenges, fetchReadingPath, fetchStats, fetchUnreadPush]);
 
+  const handleGuidedReflection = useCallback(async (action: GuidedReflectionAction, confirmation: string) => {
+    if (!passage?.id || guidedReflectionPending || !online) return;
+    if (!authed) {
+      setGuidedReflectionStatus('Sign in to make this reflection shape your next page.');
+      return;
+    }
+
+    setGuidedReflectionPending(action);
+    setGuidedReflectionStatus(null);
+    try {
+      const res = await apiFetch(`/passages/${encodeURIComponent(passage.id)}/feedback`, {
+        method: 'POST',
+        body: JSON.stringify({ action, source: 'discover' }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Reflection returned ${res.status}`);
+      }
+      setGuidedReflectionStatus(confirmation);
+      await fetchPassage(false, passage.id);
+      void fetchReadingChallenges();
+    } catch (e) {
+      console.error(e);
+      setGuidedReflectionStatus(e instanceof Error ? e.message : 'Could not save that reflection.');
+    } finally {
+      setGuidedReflectionPending(null);
+    }
+  }, [authed, fetchPassage, fetchReadingChallenges, guidedReflectionPending, online, passage?.id]);
+
   const fetchPassageById = useCallback(async (passageId: string, source?: string | null) => {
     setLoading(true);
     setBookmarked(false);
@@ -1071,6 +1116,7 @@ export default function Discover() {
   const isCurrentPassageSpeaking = Boolean(passage && activeQueueItem?.id === passage.id && queuePlayback !== 'idle');
   const activePassageSpeechChunks = passage ? splitSpeechText(passage.text) : [];
   const tags = parsePassageTags(passage?.tags);
+  const guidedReflectionChoices = buildGuidedReflectionChoices(tags);
   const accent = passageAccent(tags);
 
   return (
@@ -1633,6 +1679,39 @@ export default function Discover() {
                       </div>
                     </div>
                   )}
+
+                  <div className="mt-4 rounded-2xl border border-secondary/20 bg-secondary/10 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-secondary/90">What do you want next?</p>
+                        <p className="mt-1 text-xs opacity-65">Choose once; RandomPage records a private signal and opens the next existing book page.</p>
+                      </div>
+                      {guidedReflectionStatus && <span className="badge badge-secondary badge-outline">{guidedReflectionStatus}</span>}
+                    </div>
+                    {authed ? (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {guidedReflectionChoices.map((choice) => (
+                          <button
+                            key={`${choice.action}-${choice.label}`}
+                            type="button"
+                            className="btn btn-sm rounded-full border-secondary/30 bg-base-100/50"
+                            title={choice.detail}
+                            disabled={!online || Boolean(guidedReflectionPending) || loading}
+                            onClick={() => handleGuidedReflection(choice.action, choice.confirmation)}
+                          >
+                            {guidedReflectionPending === choice.action ? <span className="loading loading-spinner loading-xs" /> : null}
+                            {choice.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <p className="text-xs opacity-65">Sign in to make a reflection shape your next page.</p>
+                        <Link to="/signin" className="btn btn-ghost btn-xs rounded-xl">Sign in</Link>
+                      </div>
+                    )}
+                    {!online && <p className="mt-2 text-xs opacity-60">Reconnect to save reflection choices.</p>}
+                  </div>
 
                   <PassageFeedbackChips
                     passageId={passage.id}
